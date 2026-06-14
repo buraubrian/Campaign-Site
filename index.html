@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Chronicler's Tome</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" />
+<style>
+  /* ── Design Tokens ───────────────────────────────── */
+  :root {
+    --ink:        #0e0b14;
+    --parchment:  #1a1428;
+    --panel:      #201833;
+    --border:     #3d2f5c;
+    --gold:       #c9953a;
+    --gold-light: #e8bc6a;
+    --amethyst:   #7b4fa6;
+    --sapphire:   #2e6da4;
+    --ruby:       #9b2335;
+    --emerald:    #1e7a4a;
+    --hope:       #e8bc6a;
+    --fear:       #9b2335;
+    --text:       #e8dfc8;
+    --muted:      #9b8faa;
+    --radius:     6px;
+    --radius-lg:  12px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--ink);
+    color: var(--text);
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 17px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Ornate Background Pattern ─────────────────── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(123,79,166,0.18) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(46,109,164,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Header ─────────────────────────────────────── */
+  header {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 2.5rem 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(14,11,20,0.95) 0%, rgba(26,20,40,0.8) 100%);
+  }
+
+  .site-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(1.5rem, 4vw, 2.8rem);
+    color: var(--gold-light);
+    letter-spacing: 0.04em;
+    text-shadow: 0 0 40px rgba(201,149,58,0.4), 0 2px 4px rgba(0,0,0,0.8);
+    margin-bottom: 0.25rem;
+  }
+
+  .site-subtitle {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  /* ── Nav ─────────────────────────────────────────── */
+  nav {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.75rem 1rem;
+    background: rgba(14,11,20,0.9);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-btn {
+    font-family: 'Cinzel', serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    padding: 0.5rem 1.1rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .nav-btn:hover { color: var(--gold-light); border-color: var(--border); }
+  .nav-btn.active {
+    color: var(--gold-light);
+    border-color: var(--gold);
+    background: rgba(201,149,58,0.1);
+  }
+
+  /* ── Main Layout ─────────────────────────────────── */
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Section Headers ──────────────────────────────── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+  }
+  .section-header h2 {
+    font-family: 'Cinzel', serif;
+    font-size: 1.3rem;
+    color: var(--gold-light);
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .section-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+  }
+
+  /* ── Cards / Panels ──────────────────────────────── */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .card h3 {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    color: var(--gold);
+    margin-bottom: 1rem;
+    letter-spacing: 0.06em;
+  }
+
+  /* ── Form Elements ───────────────────────────────── */
+  label {
+    display: block;
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+  }
+
+  input[type="text"], input[type="number"], textarea, select {
+    width: 100%;
+    background: rgba(14,11,20,0.6);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'Crimson Pro', serif;
+    font-size: 1rem;
+    padding: 0.45rem 0.75rem;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  input[type="text"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
+    border-color: var(--amethyst);
+  }
+  textarea { resize: vertical; min-height: 80px; }
+  select option { background: var(--panel); }
+
+  .field-row {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+  /* ── Buttons ──────────────────────────────────────── */
+  .btn {
+    font-family: 'Cinzel', serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.55rem 1.25rem;
+    border-radius: var(--radius);
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-gold {
+    background: linear-gradient(135deg, #c9953a, #a07428);
+    border-color: var(--gold-light);
+    color: var(--ink);
+  }
+  .btn-gold:hover { background: linear-gradient(135deg, #e8bc6a, #c9953a); }
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--muted);
+  }
+  .btn-ghost:hover { border-color: var(--amethyst); color: var(--text); }
+  .btn-danger {
+    background: transparent;
+    border-color: var(--ruby);
+    color: var(--ruby);
+  }
+  .btn-danger:hover { background: rgba(155,35,53,0.15); }
+  .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.7rem; }
+
+  /* ── Pips (HP / Stress / Armor) ──────────────────── */
+  .pip-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .pip {
+    width: 22px; height: 22px;
+    border: 2px solid;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .pip-hp { border-color: var(--emerald); }
+  .pip-hp.filled { background: var(--emerald); }
+  .pip-stress { border-color: var(--ruby); }
+  .pip-stress.filled { background: var(--ruby); }
+  .pip-armor { border-color: var(--sapphire); }
+  .pip-armor.filled { background: var(--sapphire); }
+  .pip-hope { border-color: var(--hope); border-radius: 50%; }
+  .pip-hope.filled { background: var(--hope); }
+
+  /* ── Stat Block ──────────────────────────────────── */
+  .stat-box {
+    background: rgba(14,11,20,0.5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+  }
+  .stat-box .stat-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.25rem;
+    display: block;
+  }
+  .stat-box input[type="number"] {
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--gold-light);
+    border: none;
+    background: transparent;
+    padding: 0;
+    width: 100%;
+  }
+
+  /* ── Dice Roller ─────────────────────────────────── */
+  .dice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .die-btn {
+    aspect-ratio: 1;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    color: var(--text);
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .die-btn:hover {
+    border-color: var(--gold);
+    color: var(--gold-light);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(201,149,58,0.25);
+  }
+  .die-btn.hope-die {
+    border-color: var(--hope);
+    color: var(--hope);
+  }
+  .die-btn.fear-die {
+    border-color: var(--fear);
+    color: var(--fear);
+  }
+
+  #roll-result {
+    background: rgba(14,11,20,0.7);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    text-align: center;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .roll-total {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 3rem;
+    line-height: 1;
+  }
+  .roll-breakdown { font-size: 0.9rem; color: var(--muted); margin-top: 0.5rem; }
+  .roll-label { font-family: 'Cinzel', serif; font-size: 0.85rem; letter-spacing: 0.1em; margin-top: 0.4rem; }
+  .hope-result { color: var(--hope); }
+  .fear-result { color: var(--fear); }
+  .standard-result { color: var(--text); }
+
+  .modifier-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .modifier-row label { margin: 0; white-space: nowrap; }
+  .modifier-row input { width: 80px; }
+
+  /* ── Combat Tracker ──────────────────────────────── */
+  .combatant-list { list-style: none; margin-bottom: 1rem; }
+  .combatant-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.6rem 0.75rem;
+    border-radius: var(--radius);
+    margin-bottom: 0.4rem;
+    background: rgba(14,11,20,0.4);
+    border: 1px solid transparent;
+    transition: all 0.2s;
+  }
+  .combatant-row.active-turn {
+    border-color: var(--gold);
+    background: rgba(201,149,58,0.08);
+    box-shadow: 0 0 12px rgba(201,149,58,0.15);
+  }
+  .combatant-row.player { border-left: 3px solid var(--sapphire); }
+  .combatant-row.enemy  { border-left: 3px solid var(--ruby); }
+  .combatant-name { font-family: 'Cinzel', serif; font-size: 0.95rem; }
+  .turn-indicator {
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  #action-economy {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+  .action-token {
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid;
+  }
+  .token-action { border-color: var(--gold); color: var(--gold); }
+  .token-reaction { border-color: var(--amethyst); color: var(--amethyst); }
+  .token-used { opacity: 0.3; text-decoration: line-through; }
+
+  /* ── Wiki / Lore ─────────────────────────────────── */
+  .wiki-layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .wiki-sidebar {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    position: sticky;
+    top: 1rem;
+  }
+  .wiki-sidebar-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(14,11,20,0.4);
+  }
+  .wiki-nav-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(61,47,92,0.4);
+    padding: 0.65rem 1rem;
+    color: var(--muted);
+    font-family: 'Crimson Pro', serif;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .wiki-nav-item:hover, .wiki-nav-item.active {
+    color: var(--gold-light);
+    background: rgba(201,149,58,0.08);
+  }
+  .wiki-content { min-height: 300px; }
+  .wiki-entry { display: none; }
+  .wiki-entry.active { display: block; }
+  .wiki-entry h3 {
+    font-family: 'Cinzel', serif;
+    font-size: 1.4rem;
+    color: var(--gold-light);
+    margin-bottom: 0.5rem;
+  }
+  .wiki-entry .wiki-category {
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--amethyst);
+    margin-bottom: 1rem;
+  }
+  .wiki-entry p { color: var(--text); margin-bottom: 0.75rem; line-height: 1.7; }
+  .wiki-entry p em { color: var(--muted); font-style: italic; }
+  .wiki-add-form {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    margin-top: 1.5rem;
+  }
+  .wiki-add-form h4 {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    color: var(--gold);
+    letter-spacing: 0.08em;
+    margin-bottom: 1rem;
+  }
+
+  /* ── Handouts ────────────────────────────────────── */
+  .handout-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  .handout-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .handout-card:hover {
+    border-color: var(--gold);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  }
+  .handout-thumb {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    background: rgba(14,11,20,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+  }
+  .handout-info { padding: 0.75rem; }
+  .handout-info h4 {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    color: var(--gold);
+    margin-bottom: 0.2rem;
+  }
+  .handout-info p { font-size: 0.85rem; color: var(--muted); }
+  .handout-upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    text-align: center;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 1.5rem;
+  }
+  .handout-upload-zone:hover {
+    border-color: var(--amethyst);
+    color: var(--text);
+  }
+
+  /* ── Modal ───────────────────────────────────────── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    max-width: 700px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+  }
+  .modal-close {
+    position: absolute;
+    top: 1rem; right: 1rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: var(--radius);
+    padding: 0.25rem 0.6rem;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+  .modal-close:hover { color: var(--text); border-color: var(--text); }
+
+  /* ── Character Sheet ─────────────────────────────── */
+  .sheet-name {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.6rem;
+    color: var(--gold-light);
+    margin-bottom: 0.25rem;
+  }
+
+  /* ── Utility ─────────────────────────────────────── */
+  .saved-notice {
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--emerald);
+    opacity: 0;
+    transition: opacity 0.3s;
+    display: inline-block;
+    margin-left: 1rem;
+  }
+  .saved-notice.show { opacity: 1; }
+
+  .tag {
+    display: inline-block;
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid var(--amethyst);
+    color: var(--amethyst);
+    margin: 0.15rem;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1.25rem 0;
+  }
+
+  @media (max-width: 640px) {
+    .cols-2, .cols-3, .cols-4 { grid-template-columns: 1fr 1fr; }
+    .wiki-layout { grid-template-columns: 1fr; }
+    .combatant-row { grid-template-columns: 1fr 1fr auto; }
+    .combatant-row .combatant-evasion { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">The Chronicler's Tome</div>
+  <div class="site-subtitle">Campaign Companion &nbsp;·&nbsp; Daggerheart Edition</div>
+</header>
+
+<nav>
+  <button class="nav-btn active" onclick="switchTab('sheet')">Character</button>
+  <button class="nav-btn" onclick="switchTab('dice')">Dice Vault</button>
+  <button class="nav-btn" onclick="switchTab('combat')">Combat</button>
+  <button class="nav-btn" onclick="switchTab('wiki')">Lore & Wiki</button>
+  <button class="nav-btn" onclick="switchTab('handouts')">Handouts</button>
+</nav>
+
+<main>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- CHARACTER SHEET                                 -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="tab-sheet" class="tab-panel active">
+    <div class="section-header">
+      <h2>Character Sheet</h2>
+      <button class="btn btn-gold btn-sm" onclick="saveSheet()">Save Sheet</button>
+      <span class="saved-notice" id="sheet-saved">Saved!</span>
+    </div>
+
+    <div class="card">
+      <div class="field-row cols-2">
+        <div>
+          <label>Character Name</label>
+          <input type="text" id="char-name" placeholder="Name your hero…" />
+        </div>
+        <div>
+          <label>Player Name</label>
+          <input type="text" id="player-name" placeholder="Your name" />
+        </div>
+      </div>
+      <div class="field-row cols-3">
+        <div>
+          <label>Class</label>
+          <input type="text" id="char-class" placeholder="e.g. Seraph, Bard…" />
+        </div>
+        <div>
+          <label>Subclass</label>
+          <input type="text" id="char-subclass" placeholder="Subclass" />
+        </div>
+        <div>
+          <label>Level</label>
+          <input type="number" id="char-level" value="1" min="1" max="10" />
+        </div>
+      </div>
+      <div class="field-row cols-2">
+        <div>
+          <label>Ancestry</label>
+          <input type="text" id="char-ancestry" placeholder="e.g. Elf, Faun…" />
+        </div>
+        <div>
+          <label>Community</label>
+          <input type="text" id="char-community" placeholder="e.g. Loreborne, Wanderborne…" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Core Stats -->
+    <div class="card">
+      <h3>Core Attributes</h3>
+      <div class="field-row cols-3" style="margin-bottom:0">
+        <div class="stat-box">
+          <span class="stat-label">Agility</span>
+          <input type="number" id="stat-agility" value="0" />
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Strength</span>
+          <input type="number" id="stat-strength" value="0" />
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Finesse</span>
+          <input type="number" id="stat-finesse" value="0" />
+        </div>
+      </div>
+      <div style="height:0.75rem"></div>
+      <div class="field-row cols-3" style="margin-bottom:0">
+        <div class="stat-box">
+          <span class="stat-label">Instinct</span>
+          <input type="number" id="stat-instinct" value="0" />
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Presence</span>
+          <input type="number" id="stat-presence" value="0" />
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Knowledge</span>
+          <input type="number" id="stat-knowledge" value="0" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Defenses + Economy -->
+    <div class="card">
+      <h3>Defenses & Thresholds</h3>
+      <div class="field-row cols-4" style="margin-bottom:0">
+        <div class="stat-box">
+          <span class="stat-label">Evasion</span>
+          <input type="number" id="stat-evasion" value="10" />
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Minor Dmg</span>
+          <input type="number" id="stat-minor" value="5" />
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Major Dmg</span>
+          <input type="number" id="stat-major" value="10" />
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Severe Dmg</span>
+          <input type="number" id="stat-severe" value="15" />
+        </div>
+      </div>
+    </div>
+
+    <!-- HP, Stress, Armor, Hope -->
+    <div class="card">
+      <h3>Hit Points</h3>
+      <div class="field-row cols-2" style="align-items:start">
+        <div>
+          <label>Max HP</label>
+          <input type="number" id="max-hp" value="6" min="1" max="30" onchange="renderPips('hp')" />
+          <div style="margin-top:0.75rem">
+            <label>Current HP</label>
+            <div class="pip-row" id="pips-hp"></div>
+          </div>
+        </div>
+        <div>
+          <label>Max Stress</label>
+          <input type="number" id="max-stress" value="6" min="1" max="12" onchange="renderPips('stress')" />
+          <div style="margin-top:0.75rem">
+            <label>Current Stress</label>
+            <div class="pip-row" id="pips-stress"></div>
+          </div>
+        </div>
+      </div>
+      <hr class="divider" />
+      <div class="field-row cols-2" style="align-items:start;margin-bottom:0">
+        <div>
+          <label>Armor Slots</label>
+          <input type="number" id="max-armor" value="3" min="0" max="6" onchange="renderPips('armor')" />
+          <div style="margin-top:0.75rem">
+            <label>Armor Used</label>
+            <div class="pip-row" id="pips-armor"></div>
+          </div>
+        </div>
+        <div>
+          <label>Hope Tokens</label>
+          <input type="number" id="max-hope" value="6" min="1" max="10" onchange="renderPips('hope')" />
+          <div style="margin-top:0.75rem">
+            <label>Current Hope</label>
+            <div class="pip-row" id="pips-hope"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Experiences & Skills -->
+    <div class="card">
+      <h3>Experiences</h3>
+      <textarea id="char-experiences" placeholder="List your character's experiences, one per line…&#10;e.g. Former Knight of the Obsidian Throne (+2)&#10;Speaks Sylvan fluently (+1)"></textarea>
+    </div>
+
+    <!-- Equipment -->
+    <div class="card">
+      <h3>Equipment & Inventory</h3>
+      <div class="field-row cols-2">
+        <div>
+          <label>Primary Weapon</label>
+          <input type="text" id="weapon-primary" placeholder="Name + damage die" />
+        </div>
+        <div>
+          <label>Secondary Weapon</label>
+          <input type="text" id="weapon-secondary" placeholder="Name + damage die" />
+        </div>
+      </div>
+      <label>Inventory</label>
+      <textarea id="char-inventory" placeholder="Coins, items, armor, relics…"></textarea>
+    </div>
+
+    <!-- Notes -->
+    <div class="card">
+      <h3>Notes & Backstory</h3>
+      <textarea id="char-notes" placeholder="Backstory, goals, connections, secrets…" style="min-height:140px"></textarea>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- DICE VAULT                                      -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="tab-dice" class="tab-panel">
+    <div class="section-header"><h2>Dice Vault</h2></div>
+
+    <!-- Daggerheart Dual Roll -->
+    <div class="card">
+      <h3>Daggerheart Dual Roll (Hope & Fear)</h3>
+      <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">Roll both dice at once. The higher die sets the outcome — Hope or Fear — and they sum for your total.</p>
+      <div class="modifier-row">
+        <label>Modifier</label>
+        <input type="number" id="dh-mod" value="0" style="width:80px" />
+        <button class="btn btn-gold" onclick="rollDaggerheart()">⚄ Roll Hope & Fear</button>
+      </div>
+      <div id="dh-result" style="display:none;margin-top:1rem">
+        <div id="roll-result">
+          <div class="roll-total" id="dh-total">—</div>
+          <div class="roll-breakdown" id="dh-breakdown"></div>
+          <div class="roll-label" id="dh-label"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Standard Dice -->
+    <div class="card">
+      <h3>Standard Dice</h3>
+      <div class="modifier-row">
+        <label>Modifier</label>
+        <input type="number" id="std-mod" value="0" style="width:80px" />
+        <label style="margin-left:0.5rem">Dice Count</label>
+        <input type="number" id="std-count" value="1" min="1" max="20" style="width:80px" />
+      </div>
+      <div class="dice-grid">
+        <button class="die-btn" onclick="rollDie(4)">d4</button>
+        <button class="die-btn" onclick="rollDie(6)">d6</button>
+        <button class="die-btn" onclick="rollDie(8)">d8</button>
+        <button class="die-btn" onclick="rollDie(10)">d10</button>
+        <button class="die-btn" onclick="rollDie(12)">d12</button>
+        <button class="die-btn" onclick="rollDie(20)">d20</button>
+        <button class="die-btn" onclick="rollDie(100)">d100</button>
+      </div>
+      <div id="std-result" style="display:none">
+        <div id="roll-result-std">
+          <div class="roll-total standard-result" id="std-total">—</div>
+          <div class="roll-breakdown" id="std-breakdown"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Roll History -->
+    <div class="card">
+      <h3>Roll History</h3>
+      <div id="roll-history" style="font-size:0.9rem;color:var(--muted);min-height:40px">No rolls yet this session.</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- COMBAT TRACKER                                  -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="tab-combat" class="tab-panel">
+    <div class="section-header">
+      <h2>Combat Tracker</h2>
+      <div style="display:flex;gap:0.5rem;margin-left:auto">
+        <button class="btn btn-gold btn-sm" onclick="nextTurn()">Next Turn →</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetCombat()">Reset</button>
+      </div>
+    </div>
+
+    <!-- Add Combatant -->
+    <div class="card">
+      <h3>Add Combatant</h3>
+      <div class="field-row cols-4">
+        <div>
+          <label>Name</label>
+          <input type="text" id="c-name" placeholder="Combatant name" />
+        </div>
+        <div>
+          <label>Type</label>
+          <select id="c-type">
+            <option value="player">Player</option>
+            <option value="enemy">Enemy / NPC</option>
+          </select>
+        </div>
+        <div>
+          <label>HP</label>
+          <input type="number" id="c-hp" value="10" min="1" />
+        </div>
+        <div>
+          <label>Evasion</label>
+          <input type="number" id="c-evasion" value="10" min="1" />
+        </div>
+      </div>
+      <button class="btn btn-gold btn-sm" onclick="addCombatant()">+ Add to Tracker</button>
+    </div>
+
+    <!-- Round Info -->
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+      <div style="font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">
+        Round <span id="round-number" style="color:var(--gold-light);font-size:1.1rem">1</span>
+      </div>
+      <div style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--muted)">
+        Turn <span id="turn-number" style="color:var(--gold-light)">1</span>
+      </div>
+
+      <!-- Fear Token -->
+      <div style="margin-left:auto;display:flex;align-items:center;gap:0.5rem">
+        <span style="font-family:'Cinzel',serif;font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--fear)">Fear Tokens</span>
+        <button class="btn btn-sm" style="border-color:var(--fear);color:var(--fear)" onclick="changeFear(-1)">−</button>
+        <span id="fear-count" style="font-family:'Cinzel Decorative',serif;font-size:1.3rem;color:var(--fear)">0</span>
+        <button class="btn btn-sm" style="border-color:var(--fear);color:var(--fear)" onclick="changeFear(1)">+</button>
+      </div>
+    </div>
+
+    <!-- Combatant List -->
+    <ul class="combatant-list" id="combatant-list">
+      <li style="color:var(--muted);font-style:italic;padding:1rem;text-align:center">No combatants yet. Add players and enemies above.</li>
+    </ul>
+
+    <!-- Action Economy reminder -->
+    <div class="card" style="margin-top:0">
+      <h3>Daggerheart Action Economy</h3>
+      <div id="action-economy">
+        <span class="action-token token-action">Action</span>
+        <span class="action-token token-action">Move</span>
+        <span class="action-token token-reaction">Reaction</span>
+      </div>
+      <p style="font-size:0.85rem;color:var(--muted);margin-top:0.75rem">Each player takes one action and one move per turn. Fear tokens allow the GM to activate adversary abilities.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- LORE & WIKI                                     -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="tab-wiki" class="tab-panel">
+    <div class="section-header">
+      <h2>Lore & Wiki</h2>
+      <button class="btn btn-gold btn-sm" onclick="openWikiForm()">+ New Entry</button>
+    </div>
+
+    <div class="wiki-layout">
+      <!-- Sidebar -->
+      <div class="wiki-sidebar">
+        <div class="wiki-sidebar-title">Entries</div>
+        <div id="wiki-nav">
+          <!-- JS populated -->
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="wiki-content card" id="wiki-display">
+        <p style="color:var(--muted);font-style:italic">Select an entry from the sidebar, or create a new one.</p>
+      </div>
+    </div>
+
+    <!-- Add Entry Modal -->
+    <div class="modal-overlay" id="wiki-modal">
+      <div class="modal-box">
+        <button class="modal-close" onclick="closeWikiForm()">✕</button>
+        <h3 style="font-family:'Cinzel',serif;color:var(--gold-light);margin-bottom:1.25rem">New Lore Entry</h3>
+        <div class="field-row cols-2">
+          <div>
+            <label>Title</label>
+            <input type="text" id="wiki-title-input" placeholder="Entry name" />
+          </div>
+          <div>
+            <label>Category</label>
+            <select id="wiki-category-input">
+              <option>Location</option>
+              <option>Character / NPC</option>
+              <option>Faction</option>
+              <option>Lore / History</option>
+              <option>Item / Artifact</option>
+              <option>Session Notes</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom:1rem">
+          <label>Content</label>
+          <textarea id="wiki-body-input" style="min-height:180px" placeholder="Describe this entry…"></textarea>
+        </div>
+        <button class="btn btn-gold" onclick="saveWikiEntry()">Save Entry</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- HANDOUTS                                        -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section id="tab-handouts" class="tab-panel">
+    <div class="section-header"><h2>Handouts & Maps</h2></div>
+
+    <div class="handout-upload-zone" onclick="document.getElementById('handout-file').click()">
+      <div style="font-size:2rem;margin-bottom:0.5rem">📜</div>
+      <div style="font-family:'Cinzel',serif;font-size:0.85rem;color:var(--gold);letter-spacing:0.08em">Upload Image or Map</div>
+      <div style="font-size:0.85rem;margin-top:0.25rem">Click to browse · PNG, JPG, GIF, WebP</div>
+    </div>
+    <input type="file" id="handout-file" accept="image/*" style="display:none" onchange="addHandout(event)" />
+
+    <div class="handout-grid" id="handout-grid">
+      <!-- Sample starter cards -->
+      <div class="handout-card" onclick="viewHandout(this)">
+        <div class="handout-thumb">🗺️</div>
+        <div class="handout-info">
+          <h4>World Map</h4>
+          <p>Upload a map image to replace this placeholder.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div class="modal-overlay" id="handout-modal">
+      <div class="modal-box" style="max-width:90vw;max-height:90vh;padding:1rem;text-align:center">
+        <button class="modal-close" onclick="document.getElementById('handout-modal').classList.remove('open')">✕</button>
+        <img id="handout-preview" src="" alt="" style="max-width:100%;max-height:75vh;border-radius:var(--radius);object-fit:contain" />
+        <div id="handout-preview-title" style="font-family:'Cinzel',serif;color:var(--gold);margin-top:0.75rem"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+/* ══ TAB SWITCHING ══════════════════════════════════════ */
+function switchTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+/* ══ CHARACTER SHEET ════════════════════════════════════ */
+const SHEET_KEY = 'dh_sheet';
+
+const sheetFields = [
+  'char-name','player-name','char-class','char-subclass','char-level',
+  'char-ancestry','char-community',
+  'stat-agility','stat-strength','stat-finesse','stat-instinct','stat-presence','stat-knowledge',
+  'stat-evasion','stat-minor','stat-major','stat-severe',
+  'max-hp','max-stress','max-armor','max-hope',
+  'char-experiences','char-inventory','char-notes','weapon-primary','weapon-secondary'
+];
+
+const pipConfig = {
+  hp:     { max:'max-hp',     type:'pip-hp',     current:0 },
+  stress: { max:'max-stress', type:'pip-stress',  current:0 },
+  armor:  { max:'max-armor',  type:'pip-armor',   current:0 },
+  hope:   { max:'max-hope',   type:'pip-hope',    current:0 },
+};
+
+function renderPips(kind) {
+  const cfg = pipConfig[kind];
+  const max = parseInt(document.getElementById(cfg.max).value) || 0;
+  const container = document.getElementById('pips-' + kind);
+  if (!container) return;
+  // preserve filled count
+  const filled = container.querySelectorAll('.filled').length;
+  container.innerHTML = '';
+  for (let i = 0; i < max; i++) {
+    const pip = document.createElement('div');
+    pip.className = `pip ${cfg.type}${i < filled ? ' filled' : ''}`;
+    pip.onclick = () => togglePip(pip, kind, i);
+    container.appendChild(pip);
+  }
+}
+
+function togglePip(pip, kind, index) {
+  const container = document.getElementById('pips-' + kind);
+  const pips = container.querySelectorAll('.pip');
+  const filledCount = container.querySelectorAll('.filled').length;
+  if (pip.classList.contains('filled')) {
+    // unfill this and all after
+    pips.forEach((p, i) => { if (i >= index) p.classList.remove('filled'); });
+  } else {
+    // fill up to here
+    pips.forEach((p, i) => { if (i <= index) p.classList.add('filled'); });
+  }
+  saveSheet(true);
+}
+
+function saveSheet(silent = false) {
+  const data = {};
+  sheetFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) data[id] = el.value;
+  });
+  // save pip states
+  ['hp','stress','armor','hope'].forEach(kind => {
+    const container = document.getElementById('pips-' + kind);
+    if (container) data['pips-' + kind] = container.querySelectorAll('.filled').length;
+  });
+  localStorage.setItem(SHEET_KEY, JSON.stringify(data));
+  if (!silent) {
+    const notice = document.getElementById('sheet-saved');
+    notice.classList.add('show');
+    setTimeout(() => notice.classList.remove('show'), 2000);
+  }
+}
+
+function loadSheet() {
+  const raw = localStorage.getItem(SHEET_KEY);
+  if (!raw) { ['hp','stress','armor','hope'].forEach(renderPips); return; }
+  const data = JSON.parse(raw);
+  sheetFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && data[id] !== undefined) el.value = data[id];
+  });
+  ['hp','stress','armor','hope'].forEach(kind => {
+    renderPips(kind);
+    const saved = data['pips-' + kind] || 0;
+    const container = document.getElementById('pips-' + kind);
+    if (!container) return;
+    const pips = container.querySelectorAll('.pip');
+    pips.forEach((p, i) => { if (i < saved) p.classList.add('filled'); });
+  });
+}
+
+/* ══ DICE ROLLER ════════════════════════════════════════ */
+let rollHistory = [];
+
+function d(sides) { return Math.floor(Math.random() * sides) + 1; }
+
+function rollDaggerheart() {
+  const mod = parseInt(document.getElementById('dh-mod').value) || 0;
+  const hope = d(12);
+  const fear = d(12);
+  const total = hope + fear + mod;
+  const hopeWins = hope >= fear;
+  const label = hopeWins ? '✦ With Hope' : '⚠ With Fear';
+
+  document.getElementById('dh-result').style.display = 'block';
+  document.getElementById('dh-total').textContent = total;
+  document.getElementById('dh-total').className = 'roll-total ' + (hopeWins ? 'hope-result' : 'fear-result');
+  document.getElementById('dh-breakdown').textContent =
+    `Hope d12: ${hope}  ·  Fear d12: ${fear}${mod ? '  ·  Mod: ' + (mod >= 0 ? '+' : '') + mod : ''}`;
+  document.getElementById('dh-label').textContent = label;
+  document.getElementById('dh-label').className = 'roll-label ' + (hopeWins ? 'hope-result' : 'fear-result');
+
+  addHistory(`Dual Roll → ${total} (${label}, Hope:${hope} Fear:${fear}${mod ? ' +'+mod : ''})`);
+}
+
+function rollDie(sides) {
+  const count = parseInt(document.getElementById('std-count').value) || 1;
+  const mod = parseInt(document.getElementById('std-mod').value) || 0;
+  const rolls = Array.from({ length: count }, () => d(sides));
+  const sum = rolls.reduce((a, b) => a + b, 0) + mod;
+
+  document.getElementById('std-result').style.display = 'block';
+  document.getElementById('std-total').textContent = sum;
+  const parts = count > 1 ? `[${rolls.join(', ')}]` : '';
+  document.getElementById('std-breakdown').textContent =
+    `${count}d${sides}${mod ? (mod >= 0 ? '+' : '') + mod : ''} ${parts}`;
+
+  addHistory(`${count}d${sides}${mod ? (mod>=0?'+':'')+mod:''} → ${sum}${parts ? ' '+parts : ''}`);
+}
+
+function addHistory(entry) {
+  rollHistory.unshift(entry);
+  if (rollHistory.length > 12) rollHistory.pop();
+  const el = document.getElementById('roll-history');
+  el.innerHTML = rollHistory
+    .map((r, i) => `<div style="padding:0.2rem 0;border-bottom:1px solid rgba(61,47,92,0.3);${i===0?'color:var(--text)':''}">${r}</div>`)
+    .join('');
+}
+
+/* ══ COMBAT TRACKER ═════════════════════════════════════ */
+let combatants = [];
+let currentTurn = 0;
+let round = 1;
+let fearTokens = 0;
+
+function addCombatant() {
+  const name = document.getElementById('c-name').value.trim();
+  if (!name) { alert('Enter a combatant name.'); return; }
+  const hp = parseInt(document.getElementById('c-hp').value) || 10;
+  combatants.push({
+    name,
+    type: document.getElementById('c-type').value,
+    maxHp: hp, hp,
+    evasion: parseInt(document.getElementById('c-evasion').value) || 10,
+  });
+  document.getElementById('c-name').value = '';
+  renderCombatants();
+}
+
+function renderCombatants() {
+  const list = document.getElementById('combatant-list');
+  if (combatants.length === 0) {
+    list.innerHTML = '<li style="color:var(--muted);font-style:italic;padding:1rem;text-align:center">No combatants yet.</li>';
+    return;
+  }
+  list.innerHTML = combatants.map((c, i) => `
+    <li class="combatant-row ${c.type}${i === currentTurn ? ' active-turn' : ''}">
+      <div class="combatant-name">
+        ${i === currentTurn ? '<span class="turn-indicator">▶ </span>' : ''}${c.name}
+        <span style="font-size:0.75rem;color:var(--muted);margin-left:0.5rem">${c.type === 'player' ? 'PC' : 'Enemy'}</span>
+      </div>
+      <div>
+        <label style="margin-bottom:0.2rem">HP</label>
+        <div style="display:flex;gap:0.3rem;align-items:center">
+          <button class="btn btn-sm btn-ghost" onclick="changeHP(${i}, -1)">−</button>
+          <span style="font-family:'Cinzel',serif;color:${c.hp <= c.maxHp * 0.25 ? 'var(--ruby)' : 'var(--emerald)'}">${c.hp}/${c.maxHp}</span>
+          <button class="btn btn-sm btn-ghost" onclick="changeHP(${i}, 1)">+</button>
+        </div>
+      </div>
+      <div class="combatant-evasion">
+        <label style="margin-bottom:0.2rem">Evasion</label>
+        <div style="font-family:'Cinzel',serif;color:var(--sapphire)">${c.evasion}</div>
+      </div>
+      <div>
+        <label style="margin-bottom:0.2rem">Status</label>
+        <input type="text" placeholder="Condition…" value="${c.condition||''}" onchange="combatants[${i}].condition=this.value"
+          style="font-size:0.85rem;padding:0.25rem 0.5rem" />
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="removeCombatant(${i})">✕</button>
+    </li>
+  `).join('');
+}
+
+function changeHP(i, delta) {
+  combatants[i].hp = Math.max(0, Math.min(combatants[i].maxHp, combatants[i].hp + delta));
+  renderCombatants();
+}
+
+function removeCombatant(i) {
+  combatants.splice(i, 1);
+  if (currentTurn >= combatants.length) currentTurn = 0;
+  renderCombatants();
+}
+
+function nextTurn() {
+  if (combatants.length === 0) return;
+  currentTurn = (currentTurn + 1) % combatants.length;
+  if (currentTurn === 0) round++;
+  document.getElementById('round-number').textContent = round;
+  document.getElementById('turn-number').textContent = currentTurn + 1;
+  renderCombatants();
+}
+
+function resetCombat() {
+  if (!confirm('Reset all combat? This clears all combatants.')) return;
+  combatants = []; currentTurn = 0; round = 1; fearTokens = 0;
+  document.getElementById('round-number').textContent = 1;
+  document.getElementById('turn-number').textContent = 1;
+  document.getElementById('fear-count').textContent = 0;
+  renderCombatants();
+}
+
+function changeFear(delta) {
+  fearTokens = Math.max(0, fearTokens + delta);
+  document.getElementById('fear-count').textContent = fearTokens;
+}
+
+/* ══ WIKI ════════════════════════════════════════════════ */
+const WIKI_KEY = 'dh_wiki';
+let wikiEntries = [];
+let activeWikiIndex = -1;
+
+function loadWiki() {
+  const raw = localStorage.getItem(WIKI_KEY);
+  wikiEntries = raw ? JSON.parse(raw) : defaultWikiEntries();
+  renderWikiNav();
+  if (wikiEntries.length > 0) showWikiEntry(0);
+}
+
+function defaultWikiEntries() {
+  return [
+    {
+      title: 'Welcome',
+      category: 'Other',
+      body: 'This is your campaign wiki. Add entries for locations, NPCs, factions, history, and session notes. Everything saves automatically to your browser. Click "+ New Entry" above to get started.'
+    }
+  ];
+}
+
+function renderWikiNav() {
+  const nav = document.getElementById('wiki-nav');
+  if (wikiEntries.length === 0) {
+    nav.innerHTML = '<div style="padding:0.75rem 1rem;color:var(--muted);font-size:0.9rem;font-style:italic">No entries yet.</div>';
+    return;
+  }
+  const categories = [...new Set(wikiEntries.map(e => e.category))];
+  nav.innerHTML = categories.map(cat => {
+    const entries = wikiEntries.filter(e => e.category === cat);
+    return `<div>
+      <div style="font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;
+        color:var(--amethyst);padding:0.5rem 1rem 0.25rem;background:rgba(14,11,20,0.3)">${cat}</div>
+      ${entries.map(e => {
+        const idx = wikiEntries.indexOf(e);
+        return `<button class="wiki-nav-item${idx === activeWikiIndex ? ' active' : ''}" onclick="showWikiEntry(${idx})">${e.title}</button>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+
+function showWikiEntry(index) {
+  activeWikiIndex = index;
+  const entry = wikiEntries[index];
+  const display = document.getElementById('wiki-display');
+  display.innerHTML = `
+    <div class="wiki-entry active">
+      <div class="wiki-category">${entry.category}</div>
+      <h3>${entry.title}</h3>
+      ${entry.body.split('\n\n').map(p => `<p>${p}</p>`).join('')}
+      <hr class="divider" />
+      <button class="btn btn-danger btn-sm" onclick="deleteWikiEntry(${index})">Delete Entry</button>
+    </div>
+  `;
+  renderWikiNav();
+}
+
+function openWikiForm() {
+  document.getElementById('wiki-title-input').value = '';
+  document.getElementById('wiki-body-input').value = '';
+  document.getElementById('wiki-modal').classList.add('open');
+}
+function closeWikiForm() {
+  document.getElementById('wiki-modal').classList.remove('open');
+}
+
+function saveWikiEntry() {
+  const title = document.getElementById('wiki-title-input').value.trim();
+  const body = document.getElementById('wiki-body-input').value.trim();
+  if (!title || !body) { alert('Please fill in both title and content.'); return; }
+  wikiEntries.push({
+    title,
+    category: document.getElementById('wiki-category-input').value,
+    body
+  });
+  localStorage.setItem(WIKI_KEY, JSON.stringify(wikiEntries));
+  closeWikiForm();
+  renderWikiNav();
+  showWikiEntry(wikiEntries.length - 1);
+}
+
+function deleteWikiEntry(index) {
+  if (!confirm(`Delete "${wikiEntries[index].title}"?`)) return;
+  wikiEntries.splice(index, 1);
+  localStorage.setItem(WIKI_KEY, JSON.stringify(wikiEntries));
+  activeWikiIndex = -1;
+  renderWikiNav();
+  const display = document.getElementById('wiki-display');
+  if (wikiEntries.length > 0) showWikiEntry(0);
+  else display.innerHTML = '<p style="color:var(--muted);font-style:italic">No entries. Create one above.</p>';
+}
+
+/* ══ HANDOUTS ════════════════════════════════════════════ */
+const HANDOUT_KEY = 'dh_handouts';
+let handouts = [];
+
+function loadHandouts() {
+  const raw = localStorage.getItem(HANDOUT_KEY);
+  if (raw) {
+    handouts = JSON.parse(raw);
+    renderHandouts();
+  }
+}
+
+function addHandout(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    handouts.push({ name: file.name.replace(/\.[^.]+$/, ''), src: e.target.result });
+    // Don't store large images in localStorage, show in session only
+    renderHandouts();
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function renderHandouts() {
+  const grid = document.getElementById('handout-grid');
+  grid.innerHTML = handouts.map((h, i) => `
+    <div class="handout-card" onclick="viewHandoutByIndex(${i})">
+      <img src="${h.src}" class="handout-thumb" style="display:block;width:100%;height:150px;object-fit:cover" alt="${h.name}" />
+      <div class="handout-info">
+        <h4>${h.name}</h4>
+        <p>Click to view full size</p>
+      </div>
+    </div>
+  `).join('') + `
+    <div class="handout-card" onclick="document.getElementById('handout-file').click()" style="display:flex;align-items:center;justify-content:center;min-height:180px;cursor:pointer;border-style:dashed">
+      <div style="text-align:center;color:var(--muted)">
+        <div style="font-size:2rem">+</div>
+        <div style="font-family:'Cinzel',serif;font-size:0.75rem;letter-spacing:0.1em">Add Image</div>
+      </div>
+    </div>
+  `;
+}
+
+function viewHandout(card) {
+  document.getElementById('handout-modal').classList.add('open');
+  document.getElementById('handout-preview').src = '';
+  document.getElementById('handout-preview-title').textContent = card.querySelector('h4')?.textContent || '';
+}
+
+function viewHandoutByIndex(i) {
+  const h = handouts[i];
+  document.getElementById('handout-preview').src = h.src;
+  document.getElementById('handout-preview-title').textContent = h.name;
+  document.getElementById('handout-modal').classList.add('open');
+}
+
+/* ══ INIT ════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  loadSheet();
+  loadWiki();
+  loadHandouts();
+  // Auto-save sheet on change
+  document.querySelectorAll('#tab-sheet input, #tab-sheet textarea, #tab-sheet select')
+    .forEach(el => el.addEventListener('change', () => saveSheet(true)));
+});
+</script>
+</body>
+</html>

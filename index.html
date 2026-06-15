@@ -5,1414 +5,1552 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>The Chronicler's Tome</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  /* ── Design Tokens ───────────────────────────────── */
-  :root {
-    --ink:        #0e0b14;
-    --parchment:  #1a1428;
-    --panel:      #201833;
-    --border:     #3d2f5c;
-    --gold:       #c9953a;
-    --gold-light: #e8bc6a;
-    --amethyst:   #7b4fa6;
-    --sapphire:   #2e6da4;
-    --ruby:       #9b2335;
-    --emerald:    #1e7a4a;
-    --hope:       #e8bc6a;
-    --fear:       #9b2335;
-    --text:       #e8dfc8;
-    --muted:      #9b8faa;
-    --radius:     6px;
-    --radius-lg:  12px;
-  }
+:root {
+  --ink:        #0e0b14;
+  --parchment:  #1a1428;
+  --panel:      #201833;
+  --panel2:     #271e3a;
+  --border:     #3d2f5c;
+  --gold:       #c9953a;
+  --gold-light: #e8bc6a;
+  --amethyst:   #7b4fa6;
+  --sapphire:   #2e6da4;
+  --ruby:       #9b2335;
+  --emerald:    #1e7a4a;
+  --text:       #e8dfc8;
+  --muted:      #9b8faa;
+  --radius:     6px;
+  --radius-lg:  12px;
+  --gm-color:   #c9953a;
+  --player-color: #2e6da4;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 17px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(123,79,166,0.18) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(46,109,164,0.12) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ── Typography ── */
+h1,h2,h3,h4 { font-family: 'Cinzel', serif; }
+.display { font-family: 'Cinzel Decorative', serif; }
 
-  body {
-    background: var(--ink);
-    color: var(--text);
-    font-family: 'Crimson Pro', Georgia, serif;
-    font-size: 17px;
-    line-height: 1.6;
-    min-height: 100vh;
-  }
+/* ── Layout ── */
+.page { position: relative; z-index: 1; display: none; min-height: 100vh; }
+.page.active { display: block; }
 
-  /* ── Ornate Background Pattern ─────────────────── */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(123,79,166,0.18) 0%, transparent 70%),
-      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(46,109,164,0.12) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-  }
+/* ── Header ── */
+.app-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.85rem 1.5rem;
+  background: rgba(14,11,20,0.95);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+}
+.app-logo { font-family: 'Cinzel Decorative', serif; font-size: 1.1rem; color: var(--gold-light); text-shadow: 0 0 20px rgba(201,149,58,0.3); }
+.header-right { display: flex; align-items: center; gap: 0.75rem; }
+.user-badge {
+  font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 0.3rem 0.75rem; border-radius: 999px;
+  border: 1px solid var(--border); color: var(--muted);
+}
+.user-badge.gm { border-color: var(--gm-color); color: var(--gm-color); }
 
-  /* ── Header ─────────────────────────────────────── */
-  header {
-    position: relative;
-    z-index: 10;
-    text-align: center;
-    padding: 2.5rem 1rem 1.5rem;
-    border-bottom: 1px solid var(--border);
-    background: linear-gradient(180deg, rgba(14,11,20,0.95) 0%, rgba(26,20,40,0.8) 100%);
-  }
+/* ── Auth Page ── */
+.auth-wrap {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem;
+}
+.auth-box {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 2.5rem; width: 100%; max-width: 420px;
+}
+.auth-title { font-family: 'Cinzel Decorative', serif; font-size: 1.5rem; color: var(--gold-light); text-align: center; margin-bottom: 0.25rem; }
+.auth-sub { text-align: center; color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; font-family: 'Cinzel', serif; letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.7rem; }
+.auth-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+.auth-tab { flex: 1; background: transparent; border: none; padding: 0.65rem; font-family: 'Cinzel', serif; font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+.auth-tab.active { color: var(--gold-light); border-bottom-color: var(--gold); }
 
-  .site-title {
-    font-family: 'Cinzel Decorative', serif;
-    font-size: clamp(1.5rem, 4vw, 2.8rem);
-    color: var(--gold-light);
-    letter-spacing: 0.04em;
-    text-shadow: 0 0 40px rgba(201,149,58,0.4), 0 2px 4px rgba(0,0,0,0.8);
-    margin-bottom: 0.25rem;
-  }
+/* ── Forms ── */
+.field { margin-bottom: 1rem; }
+label { display: block; font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
+input[type="text"], input[type="email"], input[type="password"], input[type="number"], textarea, select {
+  width: 100%; background: rgba(14,11,20,0.6); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text); font-family: 'Crimson Pro', serif;
+  font-size: 1rem; padding: 0.5rem 0.75rem; transition: border-color 0.2s; outline: none;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--amethyst); }
+textarea { resize: vertical; min-height: 80px; }
+select option { background: var(--panel); }
+.field-row { display: grid; gap: 0.75rem; margin-bottom: 0.75rem; }
+.cols-2 { grid-template-columns: 1fr 1fr; }
+.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.cols-4 { grid-template-columns: repeat(4,1fr); }
 
-  .site-subtitle {
-    font-family: 'Cinzel', serif;
-    font-size: 0.85rem;
-    color: var(--muted);
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-  }
+/* ── Buttons ── */
+.btn { font-family: 'Cinzel', serif; font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.55rem 1.25rem; border-radius: var(--radius); border: 1px solid; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem; }
+.btn-gold { background: linear-gradient(135deg,#c9953a,#a07428); border-color: var(--gold-light); color: var(--ink); font-weight: 600; }
+.btn-gold:hover { background: linear-gradient(135deg,#e8bc6a,#c9953a); }
+.btn-ghost { background: transparent; border-color: var(--border); color: var(--muted); }
+.btn-ghost:hover { border-color: var(--amethyst); color: var(--text); }
+.btn-danger { background: transparent; border-color: var(--ruby); color: var(--ruby); }
+.btn-danger:hover { background: rgba(155,35,53,0.15); }
+.btn-sapphire { background: rgba(46,109,164,0.15); border-color: var(--sapphire); color: #7bb8e8; }
+.btn-sapphire:hover { background: rgba(46,109,164,0.3); }
+.btn-sm { padding: 0.35rem 0.8rem; font-size: 0.7rem; }
+.btn-full { width: 100%; justify-content: center; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* ── Nav ─────────────────────────────────────────── */
-  nav {
-    position: relative;
-    z-index: 10;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.25rem;
-    padding: 0.75rem 1rem;
-    background: rgba(14,11,20,0.9);
-    border-bottom: 1px solid var(--border);
-  }
+/* ── Cards ── */
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.25rem; }
+.card h3 { font-family: 'Cinzel', serif; font-size: 1rem; color: var(--gold); margin-bottom: 1rem; letter-spacing: 0.06em; }
+.card-sm { padding: 1rem; }
 
-  .nav-btn {
-    font-family: 'Cinzel', serif;
-    font-size: 0.8rem;
-    letter-spacing: 0.1em;
-    padding: 0.5rem 1.1rem;
-    border: 1px solid transparent;
-    border-radius: var(--radius);
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.2s;
-    text-transform: uppercase;
-  }
-  .nav-btn:hover { color: var(--gold-light); border-color: var(--border); }
-  .nav-btn.active {
-    color: var(--gold-light);
-    border-color: var(--gold);
-    background: rgba(201,149,58,0.1);
-  }
+/* ── Section Header ── */
+.section-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+.section-header h2 { font-family: 'Cinzel', serif; font-size: 1.2rem; color: var(--gold-light); letter-spacing: 0.08em; white-space: nowrap; }
+.section-header::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg,var(--border),transparent); }
+.section-actions { display: flex; gap: 0.5rem; margin-left: auto; flex-shrink: 0; }
 
-  /* ── Main Layout ─────────────────────────────────── */
-  main {
-    position: relative;
-    z-index: 1;
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 2rem 1rem 4rem;
-  }
+/* ── Main Content ── */
+.main-content { max-width: 1100px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
 
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+/* ── Nav Tabs ── */
+.tab-nav { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.75rem 1.5rem; background: rgba(14,11,20,0.9); border-bottom: 1px solid var(--border); }
+.tab-btn { font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.45rem 1rem; border: 1px solid transparent; border-radius: var(--radius); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+.tab-btn:hover { color: var(--gold-light); border-color: var(--border); }
+.tab-btn.active { color: var(--gold-light); border-color: var(--gold); background: rgba(201,149,58,0.1); }
+.tab-btn.gm-tab { color: var(--muted); }
+.tab-btn.gm-tab:hover, .tab-btn.gm-tab.active { color: var(--gm-color); border-color: var(--gm-color); background: rgba(201,149,58,0.08); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
 
-  /* ── Section Headers ──────────────────────────────── */
-  .section-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.75rem;
-  }
-  .section-header h2 {
-    font-family: 'Cinzel', serif;
-    font-size: 1.3rem;
-    color: var(--gold-light);
-    letter-spacing: 0.08em;
-    white-space: nowrap;
-  }
-  .section-header::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, var(--border), transparent);
-  }
+/* ── Home / Dashboard ── */
+.hero { text-align: center; padding: 3rem 1rem 2rem; }
+.hero-title { font-family: 'Cinzel Decorative', serif; font-size: clamp(2rem,5vw,3.5rem); color: var(--gold-light); text-shadow: 0 0 60px rgba(201,149,58,0.3); margin-bottom: 0.5rem; }
+.hero-sub { font-family: 'Cinzel', serif; font-size: 0.85rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+.campaign-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap: 1rem; }
+.campaign-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 1.5rem; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+}
+.campaign-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg,var(--amethyst),var(--sapphire)); }
+.campaign-card.gm-card::before { background: linear-gradient(90deg,var(--gold),var(--amethyst)); }
+.campaign-card:hover { border-color: var(--amethyst); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.campaign-card h3 { font-family: 'Cinzel', serif; font-size: 1.05rem; color: var(--gold-light); margin-bottom: 0.35rem; }
+.campaign-card p { font-size: 0.9rem; color: var(--muted); margin-bottom: 0.75rem; }
+.campaign-role { font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 999px; border: 1px solid; display: inline-block; }
+.role-gm { border-color: var(--gold); color: var(--gold); }
+.role-player { border-color: var(--sapphire); color: #7bb8e8; }
+.char-mini-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 0.75rem; }
+.char-mini-card { background: var(--panel2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem; cursor: pointer; transition: all 0.2s; }
+.char-mini-card:hover { border-color: var(--gold); }
+.char-mini-card h4 { font-family: 'Cinzel', serif; font-size: 0.95rem; color: var(--gold-light); margin-bottom: 0.2rem; }
+.char-mini-card p { font-size: 0.85rem; color: var(--muted); }
 
-  /* ── Cards / Panels ──────────────────────────────── */
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-  .card h3 {
-    font-family: 'Cinzel', serif;
-    font-size: 1rem;
-    color: var(--gold);
-    margin-bottom: 1rem;
-    letter-spacing: 0.06em;
-  }
+/* ── Stat Box ── */
+.stat-box { background: rgba(14,11,20,0.5); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.65rem 0.5rem; text-align: center; }
+.stat-label { font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 0.2rem; }
+.stat-val { font-family: 'Cinzel', serif; font-size: 1.5rem; color: var(--gold-light); }
+.stat-box input[type="number"] { text-align: center; font-size: 1.4rem; font-weight: 600; color: var(--gold-light); border: none; background: transparent; padding: 0; width: 100%; }
 
-  /* ── Form Elements ───────────────────────────────── */
-  label {
-    display: block;
-    font-family: 'Cinzel', serif;
-    font-size: 0.72rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 0.3rem;
-  }
+/* ── Pips ── */
+.pip-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 0.5rem; }
+.pip { width: 20px; height: 20px; border: 2px solid; border-radius: 3px; cursor: pointer; transition: background 0.15s; }
+.pip-hp { border-color: var(--emerald); } .pip-hp.on { background: var(--emerald); }
+.pip-stress { border-color: var(--ruby); } .pip-stress.on { background: var(--ruby); }
+.pip-armor { border-color: var(--sapphire); } .pip-armor.on { background: var(--sapphire); }
+.pip-hope { border-color: var(--hope,#e8bc6a); border-radius: 50%; } .pip-hope.on { background: var(--hope,#e8bc6a); }
 
-  input[type="text"], input[type="number"], textarea, select {
-    width: 100%;
-    background: rgba(14,11,20,0.6);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text);
-    font-family: 'Crimson Pro', serif;
-    font-size: 1rem;
-    padding: 0.45rem 0.75rem;
-    transition: border-color 0.2s;
-    outline: none;
-  }
-  input[type="text"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
-    border-color: var(--amethyst);
-  }
-  textarea { resize: vertical; min-height: 80px; }
-  select option { background: var(--panel); }
+/* ── NPC / Encounter Cards ── */
+.npc-card { background: var(--panel2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem; margin-bottom: 0.75rem; display: flex; gap: 1rem; align-items: flex-start; }
+.npc-badge { font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.2rem 0.55rem; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+.type-enemy { border-color: var(--ruby); color: var(--ruby); }
+.type-npc { border-color: var(--sapphire); color: #7bb8e8; }
+.type-boss { border-color: var(--gold); color: var(--gold); }
+.type-ally { border-color: var(--emerald); color: #5ecb8a; }
+.encounter-card { background: var(--panel2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem; margin-bottom: 0.75rem; cursor: pointer; transition: all 0.2s; }
+.encounter-card:hover { border-color: var(--amethyst); }
+.encounter-status { font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.2rem 0.55rem; border-radius: 999px; border: 1px solid; }
+.status-prep { border-color: var(--muted); color: var(--muted); }
+.status-active { border-color: var(--gold); color: var(--gold); }
+.status-completed { border-color: var(--emerald); color: #5ecb8a; }
 
-  .field-row {
-    display: grid;
-    gap: 1rem;
-    margin-bottom: 1rem;
-  }
-  .cols-2 { grid-template-columns: 1fr 1fr; }
-  .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
-  .cols-4 { grid-template-columns: repeat(4, 1fr); }
+/* ── Combat Tracker ── */
+.combatant-row { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; align-items: center; padding: 0.6rem 0.75rem; border-radius: var(--radius); margin-bottom: 0.35rem; background: rgba(14,11,20,0.4); border: 1px solid transparent; transition: all 0.2s; }
+.combatant-row.active-turn { border-color: var(--gold); background: rgba(201,149,58,0.08); box-shadow: 0 0 12px rgba(201,149,58,0.15); }
+.combatant-row.player-type { border-left: 3px solid var(--sapphire); }
+.combatant-row.enemy-type { border-left: 3px solid var(--ruby); }
 
-  /* ── Buttons ──────────────────────────────────────── */
-  .btn {
-    font-family: 'Cinzel', serif;
-    font-size: 0.78rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 0.55rem 1.25rem;
-    border-radius: var(--radius);
-    border: 1px solid;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn-gold {
-    background: linear-gradient(135deg, #c9953a, #a07428);
-    border-color: var(--gold-light);
-    color: var(--ink);
-  }
-  .btn-gold:hover { background: linear-gradient(135deg, #e8bc6a, #c9953a); }
-  .btn-ghost {
-    background: transparent;
-    border-color: var(--border);
-    color: var(--muted);
-  }
-  .btn-ghost:hover { border-color: var(--amethyst); color: var(--text); }
-  .btn-danger {
-    background: transparent;
-    border-color: var(--ruby);
-    color: var(--ruby);
-  }
-  .btn-danger:hover { background: rgba(155,35,53,0.15); }
-  .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.7rem; }
+/* ── Dice ── */
+.dice-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(75px,1fr)); gap: 0.65rem; margin-bottom: 1.25rem; }
+.die-btn { aspect-ratio: 1; background: var(--panel); border: 2px solid var(--border); border-radius: var(--radius-lg); color: var(--text); font-family: 'Cinzel', serif; font-size: 1rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+.die-btn:hover { border-color: var(--gold); color: var(--gold-light); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(201,149,58,0.2); }
+.roll-result-box { background: rgba(14,11,20,0.7); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; text-align: center; min-height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.roll-total { font-family: 'Cinzel Decorative', serif; font-size: 3rem; line-height: 1; }
+.roll-breakdown { font-size: 0.88rem; color: var(--muted); margin-top: 0.4rem; }
+.hope-col { color: var(--gold-light); }
+.fear-col { color: var(--ruby); }
 
-  /* ── Pips (HP / Stress / Armor) ──────────────────── */
-  .pip-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .pip {
-    width: 22px; height: 22px;
-    border: 2px solid;
-    border-radius: 3px;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .pip-hp { border-color: var(--emerald); }
-  .pip-hp.filled { background: var(--emerald); }
-  .pip-stress { border-color: var(--ruby); }
-  .pip-stress.filled { background: var(--ruby); }
-  .pip-armor { border-color: var(--sapphire); }
-  .pip-armor.filled { background: var(--sapphire); }
-  .pip-hope { border-color: var(--hope); border-radius: 50%; }
-  .pip-hope.filled { background: var(--hope); }
+/* ── Wiki ── */
+.wiki-layout { display: grid; grid-template-columns: 200px 1fr; gap: 1.25rem; align-items: start; }
+.wiki-sidebar { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; position: sticky; top: 70px; }
+.wiki-sidebar-title { font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); padding: 0.65rem 0.9rem; border-bottom: 1px solid var(--border); background: rgba(14,11,20,0.4); }
+.wiki-nav-btn { display: block; width: 100%; text-align: left; background: transparent; border: none; border-bottom: 1px solid rgba(61,47,92,0.4); padding: 0.6rem 0.9rem; color: var(--muted); font-family: 'Crimson Pro', serif; font-size: 0.95rem; cursor: pointer; transition: all 0.15s; }
+.wiki-nav-btn:hover, .wiki-nav-btn.active { color: var(--gold-light); background: rgba(201,149,58,0.08); }
+.wiki-cat-label { font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--amethyst); padding: 0.45rem 0.9rem 0.2rem; background: rgba(14,11,20,0.3); display: block; }
 
-  /* ── Stat Block ──────────────────────────────────── */
-  .stat-box {
-    background: rgba(14,11,20,0.5);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 0.75rem 0.5rem;
-    text-align: center;
-  }
-  .stat-box .stat-label {
-    font-family: 'Cinzel', serif;
-    font-size: 0.65rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 0.25rem;
-    display: block;
-  }
-  .stat-box input[type="number"] {
-    text-align: center;
-    font-size: 1.4rem;
-    font-weight: 600;
-    color: var(--gold-light);
-    border: none;
-    background: transparent;
-    padding: 0;
-    width: 100%;
-  }
+/* ── Handouts Grid ── */
+.handout-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr)); gap: 0.85rem; }
+.handout-card { background: var(--panel2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; cursor: pointer; transition: all 0.2s; }
+.handout-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+.handout-thumb { width: 100%; height: 130px; object-fit: cover; display: block; background: rgba(14,11,20,0.6); }
+.handout-info { padding: 0.65rem; }
+.handout-info h4 { font-family: 'Cinzel', serif; font-size: 0.82rem; color: var(--gold); }
+.handout-info p { font-size: 0.8rem; color: var(--muted); }
+.upload-zone { border: 2px dashed var(--border); border-radius: var(--radius-lg); padding: 1.75rem; text-align: center; color: var(--muted); cursor: pointer; transition: all 0.2s; margin-bottom: 1.25rem; }
+.upload-zone:hover { border-color: var(--amethyst); color: var(--text); }
 
-  /* ── Dice Roller ─────────────────────────────────── */
-  .dice-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-  }
-  .die-btn {
-    aspect-ratio: 1;
-    background: var(--panel);
-    border: 2px solid var(--border);
-    border-radius: var(--radius-lg);
-    color: var(--text);
-    font-family: 'Cinzel', serif;
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .die-btn:hover {
-    border-color: var(--gold);
-    color: var(--gold-light);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(201,149,58,0.25);
-  }
-  .die-btn.hope-die {
-    border-color: var(--hope);
-    color: var(--hope);
-  }
-  .die-btn.fear-die {
-    border-color: var(--fear);
-    color: var(--fear);
-  }
+/* ── Modal ── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; }
+.modal-box h3 { font-family: 'Cinzel', serif; color: var(--gold-light); margin-bottom: 1.25rem; font-size: 1.1rem; }
+.modal-close { position: absolute; top: 1rem; right: 1rem; background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: var(--radius); padding: 0.25rem 0.6rem; cursor: pointer; font-size: 1rem; }
+.modal-close:hover { color: var(--text); border-color: var(--text); }
 
-  #roll-result {
-    background: rgba(14,11,20,0.7);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 1.5rem;
-    text-align: center;
-    min-height: 100px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-  .roll-total {
-    font-family: 'Cinzel Decorative', serif;
-    font-size: 3rem;
-    line-height: 1;
-  }
-  .roll-breakdown { font-size: 0.9rem; color: var(--muted); margin-top: 0.5rem; }
-  .roll-label { font-family: 'Cinzel', serif; font-size: 0.85rem; letter-spacing: 0.1em; margin-top: 0.4rem; }
-  .hope-result { color: var(--hope); }
-  .fear-result { color: var(--fear); }
-  .standard-result { color: var(--text); }
+/* ── Toast ── */
+#toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 0.75rem 1.25rem; font-family: 'Cinzel', serif; font-size: 0.8rem; letter-spacing: 0.08em; z-index: 300; opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none; }
+#toast.show { opacity: 1; transform: translateY(0); }
+#toast.success { border-color: var(--emerald); color: #5ecb8a; }
+#toast.error { border-color: var(--ruby); color: #e87b8a; }
 
-  .modifier-row {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-  }
-  .modifier-row label { margin: 0; white-space: nowrap; }
-  .modifier-row input { width: 80px; }
+/* ── Divider ── */
+hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
 
-  /* ── Combat Tracker ──────────────────────────────── */
-  .combatant-list { list-style: none; margin-bottom: 1rem; }
-  .combatant-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr auto;
-    gap: 0.5rem;
-    align-items: center;
-    padding: 0.6rem 0.75rem;
-    border-radius: var(--radius);
-    margin-bottom: 0.4rem;
-    background: rgba(14,11,20,0.4);
-    border: 1px solid transparent;
-    transition: all 0.2s;
-  }
-  .combatant-row.active-turn {
-    border-color: var(--gold);
-    background: rgba(201,149,58,0.08);
-    box-shadow: 0 0 12px rgba(201,149,58,0.15);
-  }
-  .combatant-row.player { border-left: 3px solid var(--sapphire); }
-  .combatant-row.enemy  { border-left: 3px solid var(--ruby); }
-  .combatant-name { font-family: 'Cinzel', serif; font-size: 0.95rem; }
-  .turn-indicator {
-    font-family: 'Cinzel', serif;
-    font-size: 0.75rem;
-    color: var(--gold);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-  #action-economy {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border);
-  }
-  .action-token {
-    font-family: 'Cinzel', serif;
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 0.3rem 0.75rem;
-    border-radius: 999px;
-    border: 1px solid;
-  }
-  .token-action { border-color: var(--gold); color: var(--gold); }
-  .token-reaction { border-color: var(--amethyst); color: var(--amethyst); }
-  .token-used { opacity: 0.3; text-decoration: line-through; }
+/* ── Loading ── */
+.loading { text-align: center; padding: 3rem; color: var(--muted); font-family: 'Cinzel', serif; font-size: 0.85rem; letter-spacing: 0.1em; }
+.empty-state { text-align: center; padding: 2.5rem; color: var(--muted); font-style: italic; }
 
-  /* ── Wiki / Lore ─────────────────────────────────── */
-  .wiki-layout {
-    display: grid;
-    grid-template-columns: 220px 1fr;
-    gap: 1.5rem;
-    align-items: start;
-  }
-  .wiki-sidebar {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    position: sticky;
-    top: 1rem;
-  }
-  .wiki-sidebar-title {
-    font-family: 'Cinzel', serif;
-    font-size: 0.75rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--muted);
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border);
-    background: rgba(14,11,20,0.4);
-  }
-  .wiki-nav-item {
-    display: block;
-    width: 100%;
-    text-align: left;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid rgba(61,47,92,0.4);
-    padding: 0.65rem 1rem;
-    color: var(--muted);
-    font-family: 'Crimson Pro', serif;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .wiki-nav-item:hover, .wiki-nav-item.active {
-    color: var(--gold-light);
-    background: rgba(201,149,58,0.08);
-  }
-  .wiki-content { min-height: 300px; }
-  .wiki-entry { display: none; }
-  .wiki-entry.active { display: block; }
-  .wiki-entry h3 {
-    font-family: 'Cinzel', serif;
-    font-size: 1.4rem;
-    color: var(--gold-light);
-    margin-bottom: 0.5rem;
-  }
-  .wiki-entry .wiki-category {
-    font-family: 'Cinzel', serif;
-    font-size: 0.72rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--amethyst);
-    margin-bottom: 1rem;
-  }
-  .wiki-entry p { color: var(--text); margin-bottom: 0.75rem; line-height: 1.7; }
-  .wiki-entry p em { color: var(--muted); font-style: italic; }
-  .wiki-add-form {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 1.25rem;
-    margin-top: 1.5rem;
-  }
-  .wiki-add-form h4 {
-    font-family: 'Cinzel', serif;
-    font-size: 0.85rem;
-    color: var(--gold);
-    letter-spacing: 0.08em;
-    margin-bottom: 1rem;
-  }
+/* ── Player sheet visibility toggle ── */
+.visibility-badge { font-family:'Cinzel',serif; font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; padding:0.2rem 0.55rem; border-radius:999px; border:1px solid; cursor:pointer; transition:all 0.2s; }
+.vis-hidden { border-color:var(--ruby); color:var(--ruby); }
+.vis-shown { border-color:var(--emerald); color:#5ecb8a; }
 
-  /* ── Handouts ────────────────────────────────────── */
-  .handout-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
-  }
-  .handout-card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .handout-card:hover {
-    border-color: var(--gold);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
-  }
-  .handout-thumb {
-    width: 100%;
-    aspect-ratio: 4/3;
-    object-fit: cover;
-    background: rgba(14,11,20,0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2.5rem;
-  }
-  .handout-info { padding: 0.75rem; }
-  .handout-info h4 {
-    font-family: 'Cinzel', serif;
-    font-size: 0.85rem;
-    color: var(--gold);
-    margin-bottom: 0.2rem;
-  }
-  .handout-info p { font-size: 0.85rem; color: var(--muted); }
-  .handout-upload-zone {
-    border: 2px dashed var(--border);
-    border-radius: var(--radius-lg);
-    padding: 2rem;
-    text-align: center;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-bottom: 1.5rem;
-  }
-  .handout-upload-zone:hover {
-    border-color: var(--amethyst);
-    color: var(--text);
-  }
-
-  /* ── Modal ───────────────────────────────────────── */
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal-box {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 2rem;
-    max-width: 700px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-    position: relative;
-  }
-  .modal-close {
-    position: absolute;
-    top: 1rem; right: 1rem;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    border-radius: var(--radius);
-    padding: 0.25rem 0.6rem;
-    cursor: pointer;
-    font-size: 1rem;
-  }
-  .modal-close:hover { color: var(--text); border-color: var(--text); }
-
-  /* ── Character Sheet ─────────────────────────────── */
-  .sheet-name {
-    font-family: 'Cinzel Decorative', serif;
-    font-size: 1.6rem;
-    color: var(--gold-light);
-    margin-bottom: 0.25rem;
-  }
-
-  /* ── Utility ─────────────────────────────────────── */
-  .saved-notice {
-    font-family: 'Cinzel', serif;
-    font-size: 0.72rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--emerald);
-    opacity: 0;
-    transition: opacity 0.3s;
-    display: inline-block;
-    margin-left: 1rem;
-  }
-  .saved-notice.show { opacity: 1; }
-
-  .tag {
-    display: inline-block;
-    font-family: 'Cinzel', serif;
-    font-size: 0.65rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 0.2rem 0.55rem;
-    border-radius: 999px;
-    border: 1px solid var(--amethyst);
-    color: var(--amethyst);
-    margin: 0.15rem;
-  }
-
-  .divider {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 1.25rem 0;
-  }
-
-  @media (max-width: 640px) {
-    .cols-2, .cols-3, .cols-4 { grid-template-columns: 1fr 1fr; }
-    .wiki-layout { grid-template-columns: 1fr; }
-    .combatant-row { grid-template-columns: 1fr 1fr auto; }
-    .combatant-row .combatant-evasion { display: none; }
-  }
+@media (max-width:640px) {
+  .cols-2,.cols-3,.cols-4 { grid-template-columns:1fr 1fr; }
+  .wiki-layout { grid-template-columns:1fr; }
+  .combatant-row { grid-template-columns:1fr 1fr auto; }
+}
 </style>
 </head>
 <body>
 
-<header>
-  <div class="site-title">The Chronicler's Tome</div>
-  <div class="site-subtitle">Campaign Companion &nbsp;·&nbsp; Daggerheart Edition</div>
-</header>
+<!-- ══ TOAST ══ -->
+<div id="toast"></div>
 
-<nav>
-  <button class="nav-btn active" onclick="switchTab('sheet')">Character</button>
-  <button class="nav-btn" onclick="switchTab('dice')">Dice Vault</button>
-  <button class="nav-btn" onclick="switchTab('combat')">Combat</button>
-  <button class="nav-btn" onclick="switchTab('wiki')">Lore & Wiki</button>
-  <button class="nav-btn" onclick="switchTab('handouts')">Handouts</button>
-</nav>
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- AUTH PAGE                                              -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="page-auth" class="page active">
+  <div class="auth-wrap">
+    <div class="auth-box">
+      <div class="auth-title">The Chronicler's Tome</div>
+      <div class="auth-sub">TTRPG Campaign Platform</div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="authTab('login')">Sign In</button>
+        <button class="auth-tab" onclick="authTab('signup')">Create Account</button>
+      </div>
 
-<main>
+      <!-- Login -->
+      <div id="auth-login">
+        <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="your@email.com" /></div>
+        <div class="field"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••" /></div>
+        <button class="btn btn-gold btn-full" onclick="doLogin()">Enter the Tome</button>
+      </div>
 
-  <!-- ══════════════════════════════════════════════ -->
-  <!-- CHARACTER SHEET                                 -->
-  <!-- ══════════════════════════════════════════════ -->
-  <section id="tab-sheet" class="tab-panel active">
-    <div class="section-header">
-      <h2>Character Sheet</h2>
-      <button class="btn btn-gold btn-sm" onclick="saveSheet()">Save Sheet</button>
-      <span class="saved-notice" id="sheet-saved">Saved!</span>
+      <!-- Signup -->
+      <div id="auth-signup" style="display:none">
+        <div class="field"><label>Display Name</label><input type="text" id="signup-name" placeholder="How others see you" /></div>
+        <div class="field"><label>Username</label><input type="text" id="signup-user" placeholder="unique_handle" /></div>
+        <div class="field"><label>Email</label><input type="email" id="signup-email" placeholder="your@email.com" /></div>
+        <div class="field"><label>Password</label><input type="password" id="signup-pass" placeholder="Min 6 characters" /></div>
+        <button class="btn btn-gold btn-full" onclick="doSignup()">Begin Your Journey</button>
+      </div>
+      <div id="auth-msg" style="margin-top:1rem;font-size:0.9rem;text-align:center;color:var(--ruby)"></div>
     </div>
+  </div>
+</div>
 
-    <div class="card">
-      <div class="field-row cols-2">
-        <div>
-          <label>Character Name</label>
-          <input type="text" id="char-name" placeholder="Name your hero…" />
-        </div>
-        <div>
-          <label>Player Name</label>
-          <input type="text" id="player-name" placeholder="Your name" />
-        </div>
-      </div>
-      <div class="field-row cols-3">
-        <div>
-          <label>Class</label>
-          <input type="text" id="char-class" placeholder="e.g. Seraph, Bard…" />
-        </div>
-        <div>
-          <label>Subclass</label>
-          <input type="text" id="char-subclass" placeholder="Subclass" />
-        </div>
-        <div>
-          <label>Level</label>
-          <input type="number" id="char-level" value="1" min="1" max="10" />
-        </div>
-      </div>
-      <div class="field-row cols-2">
-        <div>
-          <label>Ancestry</label>
-          <input type="text" id="char-ancestry" placeholder="e.g. Elf, Faun…" />
-        </div>
-        <div>
-          <label>Community</label>
-          <input type="text" id="char-community" placeholder="e.g. Loreborne, Wanderborne…" />
-        </div>
-      </div>
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- MAIN APP                                               -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="page-app" class="page">
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="app-logo">The Chronicler's Tome</div>
+    <div class="header-right">
+      <span class="user-badge" id="header-username"></span>
+      <button class="btn btn-ghost btn-sm" onclick="goHome()">Home</button>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Sign Out</button>
     </div>
+  </header>
 
-    <!-- Core Stats -->
-    <div class="card">
-      <h3>Core Attributes</h3>
-      <div class="field-row cols-3" style="margin-bottom:0">
-        <div class="stat-box">
-          <span class="stat-label">Agility</span>
-          <input type="number" id="stat-agility" value="0" />
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">Strength</span>
-          <input type="number" id="stat-strength" value="0" />
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">Finesse</span>
-          <input type="number" id="stat-finesse" value="0" />
-        </div>
-      </div>
-      <div style="height:0.75rem"></div>
-      <div class="field-row cols-3" style="margin-bottom:0">
-        <div class="stat-box">
-          <span class="stat-label">Instinct</span>
-          <input type="number" id="stat-instinct" value="0" />
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">Presence</span>
-          <input type="number" id="stat-presence" value="0" />
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">Knowledge</span>
-          <input type="number" id="stat-knowledge" value="0" />
-        </div>
-      </div>
+  <!-- HOME -->
+  <div id="view-home" class="view">
+    <div class="hero">
+      <div class="hero-title">Your Chronicle</div>
+      <div class="hero-sub">Campaigns · Characters · Adventures</div>
     </div>
-
-    <!-- Defenses + Economy -->
-    <div class="card">
-      <h3>Defenses & Thresholds</h3>
-      <div class="field-row cols-4" style="margin-bottom:0">
-        <div class="stat-box">
-          <span class="stat-label">Evasion</span>
-          <input type="number" id="stat-evasion" value="10" />
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">Minor Dmg</span>
-          <input type="number" id="stat-minor" value="5" />
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">Major Dmg</span>
-          <input type="number" id="stat-major" value="10" />
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">Severe Dmg</span>
-          <input type="number" id="stat-severe" value="15" />
+    <div class="main-content">
+      <!-- Characters -->
+      <div class="section-header">
+        <h2>My Characters</h2>
+        <div class="section-actions">
+          <button class="btn btn-gold btn-sm" onclick="openCharCreator()">+ New Character</button>
         </div>
       </div>
+      <div id="my-characters" class="char-mini-grid"><div class="loading">Loading characters…</div></div>
+      <hr style="margin:2rem 0">
+      <!-- Campaigns -->
+      <div class="section-header">
+        <h2>My Campaigns</h2>
+        <div class="section-actions">
+          <button class="btn btn-gold btn-sm" onclick="openModal('modal-new-campaign')">+ New Campaign</button>
+        </div>
+      </div>
+      <div id="my-campaigns" class="campaign-grid"><div class="loading">Loading campaigns…</div></div>
     </div>
+  </div>
 
-    <!-- HP, Stress, Armor, Hope -->
-    <div class="card">
-      <h3>Hit Points</h3>
-      <div class="field-row cols-2" style="align-items:start">
-        <div>
-          <label>Max HP</label>
-          <input type="number" id="max-hp" value="6" min="1" max="30" onchange="renderPips('hp')" />
-          <div style="margin-top:0.75rem">
-            <label>Current HP</label>
-            <div class="pip-row" id="pips-hp"></div>
-          </div>
-        </div>
-        <div>
-          <label>Max Stress</label>
-          <input type="number" id="max-stress" value="6" min="1" max="12" onchange="renderPips('stress')" />
-          <div style="margin-top:0.75rem">
-            <label>Current Stress</label>
-            <div class="pip-row" id="pips-stress"></div>
-          </div>
+  <!-- CAMPAIGN VIEW -->
+  <div id="view-campaign" class="view" style="display:none">
+    <div class="tab-nav" id="campaign-tabs"></div>
+    <div class="main-content">
+      <!-- Player Tabs -->
+      <div id="tab-my-sheet" class="tab-panel"></div>
+      <div id="tab-wiki" class="tab-panel"></div>
+      <div id="tab-handouts" class="tab-panel"></div>
+      <div id="tab-dice" class="tab-panel"></div>
+      <!-- GM Tabs -->
+      <div id="tab-players" class="tab-panel"></div>
+      <div id="tab-npcs" class="tab-panel"></div>
+      <div id="tab-encounters" class="tab-panel"></div>
+      <div id="tab-gm-notes" class="tab-panel"></div>
+    </div>
+  </div>
+
+  <!-- CHARACTER CREATOR / EDITOR (full page) -->
+  <div id="view-char-editor" class="view" style="display:none">
+    <div class="main-content">
+      <div class="section-header">
+        <h2 id="char-editor-title">New Character</h2>
+        <div class="section-actions">
+          <button class="btn btn-ghost btn-sm" onclick="goHome()">← Back</button>
+          <button class="btn btn-gold btn-sm" onclick="saveCharacter()">Save Character</button>
         </div>
       </div>
-      <hr class="divider" />
-      <div class="field-row cols-2" style="align-items:start;margin-bottom:0">
-        <div>
-          <label>Armor Slots</label>
-          <input type="number" id="max-armor" value="3" min="0" max="6" onchange="renderPips('armor')" />
-          <div style="margin-top:0.75rem">
-            <label>Armor Used</label>
-            <div class="pip-row" id="pips-armor"></div>
-          </div>
-        </div>
-        <div>
-          <label>Hope Tokens</label>
-          <input type="number" id="max-hope" value="6" min="1" max="10" onchange="renderPips('hope')" />
-          <div style="margin-top:0.75rem">
-            <label>Current Hope</label>
-            <div class="pip-row" id="pips-hope"></div>
-          </div>
-        </div>
+      <div id="char-editor-content"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- MODALS                                                 -->
+<!-- ══════════════════════════════════════════════════════ -->
+
+<!-- New Campaign -->
+<div class="modal-overlay" id="modal-new-campaign">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-new-campaign')">✕</button>
+    <h3>Create New Campaign</h3>
+    <div class="field"><label>Campaign Name</label><input type="text" id="nc-name" placeholder="Name your campaign" /></div>
+    <div class="field"><label>Game System</label><input type="text" id="nc-system" value="Daggerheart" /></div>
+    <div class="field"><label>Description</label><textarea id="nc-desc" placeholder="A brief description for your players…"></textarea></div>
+    <button class="btn btn-gold" onclick="createCampaign()">Create Campaign</button>
+  </div>
+</div>
+
+<!-- Add Player -->
+<div class="modal-overlay" id="modal-add-player">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-add-player')">✕</button>
+    <h3>Add Player to Campaign</h3>
+    <div class="field"><label>Player Username</label><input type="text" id="ap-username" placeholder="Exact username" /></div>
+    <button class="btn btn-gold" onclick="addPlayerToCampaign()">Add Player</button>
+  </div>
+</div>
+
+<!-- New NPC -->
+<div class="modal-overlay" id="modal-new-npc">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-new-npc')">✕</button>
+    <h3>Create NPC / Enemy</h3>
+    <div class="field-row cols-2">
+      <div class="field"><label>Name</label><input type="text" id="npc-name" placeholder="Name" /></div>
+      <div class="field"><label>Type</label>
+        <select id="npc-type">
+          <option value="npc">NPC</option>
+          <option value="enemy">Enemy</option>
+          <option value="boss">Boss</option>
+          <option value="ally">Ally</option>
+        </select>
       </div>
     </div>
-
-    <!-- Experiences & Skills -->
-    <div class="card">
-      <h3>Experiences</h3>
-      <textarea id="char-experiences" placeholder="List your character's experiences, one per line…&#10;e.g. Former Knight of the Obsidian Throne (+2)&#10;Speaks Sylvan fluently (+1)"></textarea>
+    <div class="field"><label>Description</label><textarea id="npc-desc" placeholder="Appearance, personality, role…"></textarea></div>
+    <div class="field-row cols-3">
+      <div class="field"><label>HP</label><input type="number" id="npc-hp" value="10" /></div>
+      <div class="field"><label>Evasion</label><input type="number" id="npc-evasion" value="10" /></div>
+      <div class="field"><label>Attack Bonus</label><input type="number" id="npc-atk" value="0" /></div>
     </div>
-
-    <!-- Equipment -->
-    <div class="card">
-      <h3>Equipment & Inventory</h3>
-      <div class="field-row cols-2">
-        <div>
-          <label>Primary Weapon</label>
-          <input type="text" id="weapon-primary" placeholder="Name + damage die" />
-        </div>
-        <div>
-          <label>Secondary Weapon</label>
-          <input type="text" id="weapon-secondary" placeholder="Name + damage die" />
-        </div>
-      </div>
-      <label>Inventory</label>
-      <textarea id="char-inventory" placeholder="Coins, items, armor, relics…"></textarea>
-    </div>
-
-    <!-- Notes -->
-    <div class="card">
-      <h3>Notes & Backstory</h3>
-      <textarea id="char-notes" placeholder="Backstory, goals, connections, secrets…" style="min-height:140px"></textarea>
-    </div>
-
-  </section>
-
-  <!-- ══════════════════════════════════════════════ -->
-  <!-- DICE VAULT                                      -->
-  <!-- ══════════════════════════════════════════════ -->
-  <section id="tab-dice" class="tab-panel">
-    <div class="section-header"><h2>Dice Vault</h2></div>
-
-    <!-- Daggerheart Dual Roll -->
-    <div class="card">
-      <h3>Daggerheart Dual Roll (Hope & Fear)</h3>
-      <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">Roll both dice at once. The higher die sets the outcome — Hope or Fear — and they sum for your total.</p>
-      <div class="modifier-row">
-        <label>Modifier</label>
-        <input type="number" id="dh-mod" value="0" style="width:80px" />
-        <button class="btn btn-gold" onclick="rollDaggerheart()">⚄ Roll Hope & Fear</button>
-      </div>
-      <div id="dh-result" style="display:none;margin-top:1rem">
-        <div id="roll-result">
-          <div class="roll-total" id="dh-total">—</div>
-          <div class="roll-breakdown" id="dh-breakdown"></div>
-          <div class="roll-label" id="dh-label"></div>
-        </div>
+    <div class="field-row cols-2">
+      <div class="field"><label>Damage Dice</label><input type="text" id="npc-dmg" value="1d6" /></div>
+      <div class="field" style="display:flex;align-items:flex-end;gap:0.5rem">
+        <label style="white-space:nowrap">Show to players?</label>
+        <select id="npc-visible"><option value="false">Hidden</option><option value="true">Visible</option></select>
       </div>
     </div>
+    <div class="field"><label>GM Notes</label><textarea id="npc-notes" placeholder="Secret info, tactics, lore…"></textarea></div>
+    <button class="btn btn-gold" onclick="saveNPC()">Save NPC</button>
+  </div>
+</div>
 
-    <!-- Standard Dice -->
-    <div class="card">
-      <h3>Standard Dice</h3>
-      <div class="modifier-row">
-        <label>Modifier</label>
-        <input type="number" id="std-mod" value="0" style="width:80px" />
-        <label style="margin-left:0.5rem">Dice Count</label>
-        <input type="number" id="std-count" value="1" min="1" max="20" style="width:80px" />
-      </div>
-      <div class="dice-grid">
-        <button class="die-btn" onclick="rollDie(4)">d4</button>
-        <button class="die-btn" onclick="rollDie(6)">d6</button>
-        <button class="die-btn" onclick="rollDie(8)">d8</button>
-        <button class="die-btn" onclick="rollDie(10)">d10</button>
-        <button class="die-btn" onclick="rollDie(12)">d12</button>
-        <button class="die-btn" onclick="rollDie(20)">d20</button>
-        <button class="die-btn" onclick="rollDie(100)">d100</button>
-      </div>
-      <div id="std-result" style="display:none">
-        <div id="roll-result-std">
-          <div class="roll-total standard-result" id="std-total">—</div>
-          <div class="roll-breakdown" id="std-breakdown"></div>
-        </div>
-      </div>
-    </div>
+<!-- New Encounter -->
+<div class="modal-overlay" id="modal-new-encounter">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-new-encounter')">✕</button>
+    <h3>New Encounter</h3>
+    <div class="field"><label>Encounter Name</label><input type="text" id="enc-name" placeholder="e.g. Ambush at the Crossroads" /></div>
+    <div class="field"><label>Description / Setup</label><textarea id="enc-desc" placeholder="Scene description, environmental details…"></textarea></div>
+    <div class="field"><label>GM Notes</label><textarea id="enc-notes" placeholder="Tactics, rewards, triggers…"></textarea></div>
+    <button class="btn btn-gold" onclick="saveEncounter()">Create Encounter</button>
+  </div>
+</div>
 
-    <!-- Roll History -->
-    <div class="card">
-      <h3>Roll History</h3>
-      <div id="roll-history" style="font-size:0.9rem;color:var(--muted);min-height:40px">No rolls yet this session.</div>
-    </div>
-  </section>
-
-  <!-- ══════════════════════════════════════════════ -->
-  <!-- COMBAT TRACKER                                  -->
-  <!-- ══════════════════════════════════════════════ -->
-  <section id="tab-combat" class="tab-panel">
-    <div class="section-header">
-      <h2>Combat Tracker</h2>
-      <div style="display:flex;gap:0.5rem;margin-left:auto">
-        <button class="btn btn-gold btn-sm" onclick="nextTurn()">Next Turn →</button>
-        <button class="btn btn-ghost btn-sm" onclick="resetCombat()">Reset</button>
+<!-- New Wiki Entry -->
+<div class="modal-overlay" id="modal-new-wiki">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-new-wiki')">✕</button>
+    <h3>New Wiki Entry</h3>
+    <div class="field-row cols-2">
+      <div class="field"><label>Title</label><input type="text" id="wiki-title-in" placeholder="Entry title" /></div>
+      <div class="field"><label>Category</label>
+        <select id="wiki-cat-in">
+          <option>Location</option><option>Character / NPC</option><option>Faction</option>
+          <option>Lore / History</option><option>Item / Artifact</option><option>Session Notes</option><option>Other</option>
+        </select>
       </div>
     </div>
-
-    <!-- Add Combatant -->
-    <div class="card">
-      <h3>Add Combatant</h3>
-      <div class="field-row cols-4">
-        <div>
-          <label>Name</label>
-          <input type="text" id="c-name" placeholder="Combatant name" />
-        </div>
-        <div>
-          <label>Type</label>
-          <select id="c-type">
-            <option value="player">Player</option>
-            <option value="enemy">Enemy / NPC</option>
-          </select>
-        </div>
-        <div>
-          <label>HP</label>
-          <input type="number" id="c-hp" value="10" min="1" />
-        </div>
-        <div>
-          <label>Evasion</label>
-          <input type="number" id="c-evasion" value="10" min="1" />
-        </div>
-      </div>
-      <button class="btn btn-gold btn-sm" onclick="addCombatant()">+ Add to Tracker</button>
+    <div class="field"><label>Content</label><textarea id="wiki-body-in" style="min-height:160px" placeholder="Write the entry…"></textarea></div>
+    <div class="field" style="display:flex;align-items:center;gap:0.75rem">
+      <label style="white-space:nowrap;margin:0">Visible to players?</label>
+      <select id="wiki-vis-in"><option value="true">Yes</option><option value="false">GM Only</option></select>
     </div>
+    <button class="btn btn-gold" onclick="saveWikiEntry()">Save Entry</button>
+  </div>
+</div>
 
-    <!-- Round Info -->
-    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
-      <div style="font-family:'Cinzel',serif;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">
-        Round <span id="round-number" style="color:var(--gold-light);font-size:1.1rem">1</span>
-      </div>
-      <div style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--muted)">
-        Turn <span id="turn-number" style="color:var(--gold-light)">1</span>
-      </div>
+<!-- Assign Character to Campaign -->
+<div class="modal-overlay" id="modal-assign-char">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-assign-char')">✕</button>
+    <h3>Assign Character to Campaign</h3>
+    <p style="color:var(--muted);margin-bottom:1rem;font-size:0.9rem">Choose a character to bring into this campaign.</p>
+    <div id="assign-char-list"></div>
+  </div>
+</div>
 
-      <!-- Fear Token -->
-      <div style="margin-left:auto;display:flex;align-items:center;gap:0.5rem">
-        <span style="font-family:'Cinzel',serif;font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--fear)">Fear Tokens</span>
-        <button class="btn btn-sm" style="border-color:var(--fear);color:var(--fear)" onclick="changeFear(-1)">−</button>
-        <span id="fear-count" style="font-family:'Cinzel Decorative',serif;font-size:1.3rem;color:var(--fear)">0</span>
-        <button class="btn btn-sm" style="border-color:var(--fear);color:var(--fear)" onclick="changeFear(1)">+</button>
-      </div>
-    </div>
+<!-- Handout lightbox -->
+<div class="modal-overlay" id="modal-handout">
+  <div class="modal-box" style="max-width:90vw;text-align:center;padding:1rem">
+    <button class="modal-close" onclick="closeModal('modal-handout')">✕</button>
+    <img id="handout-preview-img" src="" alt="" style="max-width:100%;max-height:75vh;border-radius:var(--radius);object-fit:contain" />
+    <div id="handout-preview-title" style="font-family:'Cinzel',serif;color:var(--gold);margin-top:0.75rem"></div>
+  </div>
+</div>
 
-    <!-- Combatant List -->
-    <ul class="combatant-list" id="combatant-list">
-      <li style="color:var(--muted);font-style:italic;padding:1rem;text-align:center">No combatants yet. Add players and enemies above.</li>
-    </ul>
-
-    <!-- Action Economy reminder -->
-    <div class="card" style="margin-top:0">
-      <h3>Daggerheart Action Economy</h3>
-      <div id="action-economy">
-        <span class="action-token token-action">Action</span>
-        <span class="action-token token-action">Move</span>
-        <span class="action-token token-reaction">Reaction</span>
-      </div>
-      <p style="font-size:0.85rem;color:var(--muted);margin-top:0.75rem">Each player takes one action and one move per turn. Fear tokens allow the GM to activate adversary abilities.</p>
-    </div>
-  </section>
-
-  <!-- ══════════════════════════════════════════════ -->
-  <!-- LORE & WIKI                                     -->
-  <!-- ══════════════════════════════════════════════ -->
-  <section id="tab-wiki" class="tab-panel">
-    <div class="section-header">
-      <h2>Lore & Wiki</h2>
-      <button class="btn btn-gold btn-sm" onclick="openWikiForm()">+ New Entry</button>
-    </div>
-
-    <div class="wiki-layout">
-      <!-- Sidebar -->
-      <div class="wiki-sidebar">
-        <div class="wiki-sidebar-title">Entries</div>
-        <div id="wiki-nav">
-          <!-- JS populated -->
-        </div>
-      </div>
-
-      <!-- Content -->
-      <div class="wiki-content card" id="wiki-display">
-        <p style="color:var(--muted);font-style:italic">Select an entry from the sidebar, or create a new one.</p>
-      </div>
-    </div>
-
-    <!-- Add Entry Modal -->
-    <div class="modal-overlay" id="wiki-modal">
-      <div class="modal-box">
-        <button class="modal-close" onclick="closeWikiForm()">✕</button>
-        <h3 style="font-family:'Cinzel',serif;color:var(--gold-light);margin-bottom:1.25rem">New Lore Entry</h3>
-        <div class="field-row cols-2">
-          <div>
-            <label>Title</label>
-            <input type="text" id="wiki-title-input" placeholder="Entry name" />
-          </div>
-          <div>
-            <label>Category</label>
-            <select id="wiki-category-input">
-              <option>Location</option>
-              <option>Character / NPC</option>
-              <option>Faction</option>
-              <option>Lore / History</option>
-              <option>Item / Artifact</option>
-              <option>Session Notes</option>
-              <option>Other</option>
-            </select>
-          </div>
-        </div>
-        <div style="margin-bottom:1rem">
-          <label>Content</label>
-          <textarea id="wiki-body-input" style="min-height:180px" placeholder="Describe this entry…"></textarea>
-        </div>
-        <button class="btn btn-gold" onclick="saveWikiEntry()">Save Entry</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- ══════════════════════════════════════════════ -->
-  <!-- HANDOUTS                                        -->
-  <!-- ══════════════════════════════════════════════ -->
-  <section id="tab-handouts" class="tab-panel">
-    <div class="section-header"><h2>Handouts & Maps</h2></div>
-
-    <div class="handout-upload-zone" onclick="document.getElementById('handout-file').click()">
-      <div style="font-size:2rem;margin-bottom:0.5rem">📜</div>
-      <div style="font-family:'Cinzel',serif;font-size:0.85rem;color:var(--gold);letter-spacing:0.08em">Upload Image or Map</div>
-      <div style="font-size:0.85rem;margin-top:0.25rem">Click to browse · PNG, JPG, GIF, WebP</div>
-    </div>
-    <input type="file" id="handout-file" accept="image/*" style="display:none" onchange="addHandout(event)" />
-
-    <div class="handout-grid" id="handout-grid">
-      <!-- Sample starter cards -->
-      <div class="handout-card" onclick="viewHandout(this)">
-        <div class="handout-thumb">🗺️</div>
-        <div class="handout-info">
-          <h4>World Map</h4>
-          <p>Upload a map image to replace this placeholder.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Lightbox -->
-    <div class="modal-overlay" id="handout-modal">
-      <div class="modal-box" style="max-width:90vw;max-height:90vh;padding:1rem;text-align:center">
-        <button class="modal-close" onclick="document.getElementById('handout-modal').classList.remove('open')">✕</button>
-        <img id="handout-preview" src="" alt="" style="max-width:100%;max-height:75vh;border-radius:var(--radius);object-fit:contain" />
-        <div id="handout-preview-title" style="font-family:'Cinzel',serif;color:var(--gold);margin-top:0.75rem"></div>
-      </div>
-    </div>
-  </section>
-
-</main>
+<input type="file" id="handout-upload-input" accept="image/*" style="display:none" onchange="uploadHandout(event)" />
 
 <script>
-/* ══ TAB SWITCHING ══════════════════════════════════════ */
-function switchTab(id) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + id).classList.add('active');
-  event.currentTarget.classList.add('active');
+/* ═══════════════════════════════════════════════════════
+   CONFIG — paste your keys here
+════════════════════════════════════════════════════════ */
+const SUPABASE_URL = 'https://jwmiremdbaceiuwqqqac.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_FcQaA7_ueKQYUyc8I7Dtlg_rXuMDY2X';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ═══════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════════ */
+let currentUser = null;
+let currentProfile = null;
+let currentCampaign = null;
+let currentCampaignRole = null; // 'gm' | 'player'
+let editingCharId = null;
+let editingNpcId = null;
+let currentWikiEntries = [];
+let activeWikiIdx = -1;
+let combatants = [];
+let combatTurn = 0;
+let combatRound = 1;
+let fearTokens = 0;
+let rollHistory = [];
+
+/* ═══════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════════ */
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) await initApp(session.user);
+
+  sb.auth.onAuthStateChange(async (_event, session) => {
+    if (session) await initApp(session.user);
+    else showPage('page-auth');
+  });
+})();
+
+async function initApp(user) {
+  currentUser = user;
+  const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  currentProfile = profile;
+  document.getElementById('header-username').textContent = profile?.display_name || profile?.username || user.email;
+  showPage('page-app');
+  goHome();
 }
 
-/* ══ CHARACTER SHEET ════════════════════════════════════ */
-const SHEET_KEY = 'dh_sheet';
+/* ═══════════════════════════════════════════════════════
+   AUTH
+════════════════════════════════════════════════════════ */
+function authTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='signup')));
+  document.getElementById('auth-login').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('auth-signup').style.display = tab === 'signup' ? 'block' : 'none';
+  document.getElementById('auth-msg').textContent = '';
+}
 
-const sheetFields = [
-  'char-name','player-name','char-class','char-subclass','char-level',
-  'char-ancestry','char-community',
-  'stat-agility','stat-strength','stat-finesse','stat-instinct','stat-presence','stat-knowledge',
-  'stat-evasion','stat-minor','stat-major','stat-severe',
-  'max-hp','max-stress','max-armor','max-hope',
-  'char-experiences','char-inventory','char-notes','weapon-primary','weapon-secondary'
-];
+async function doLogin() {
+  const email = document.getElementById('login-email').value;
+  const pass = document.getElementById('login-pass').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) document.getElementById('auth-msg').textContent = error.message;
+}
 
-const pipConfig = {
-  hp:     { max:'max-hp',     type:'pip-hp',     current:0 },
-  stress: { max:'max-stress', type:'pip-stress',  current:0 },
-  armor:  { max:'max-armor',  type:'pip-armor',   current:0 },
-  hope:   { max:'max-hope',   type:'pip-hope',    current:0 },
-};
+async function doSignup() {
+  const name = document.getElementById('signup-name').value.trim();
+  const username = document.getElementById('signup-user').value.trim().toLowerCase().replace(/\s+/g,'_');
+  const email = document.getElementById('signup-email').value;
+  const pass = document.getElementById('signup-pass').value;
+  if (!name || !username) { document.getElementById('auth-msg').textContent = 'Please fill in all fields.'; return; }
+  const { error } = await sb.auth.signUp({ email, password: pass, options: { data: { display_name: name, username } } });
+  if (error) document.getElementById('auth-msg').textContent = error.message;
+  else document.getElementById('auth-msg').style.color = '#5ecb8a', document.getElementById('auth-msg').textContent = 'Account created! Check your email to confirm, then sign in.';
+}
 
-function renderPips(kind) {
-  const cfg = pipConfig[kind];
-  const max = parseInt(document.getElementById(cfg.max).value) || 0;
-  const container = document.getElementById('pips-' + kind);
+async function doLogout() {
+  await sb.auth.signOut();
+  currentUser = null; currentProfile = null; currentCampaign = null;
+  showPage('page-auth');
+}
+
+/* ═══════════════════════════════════════════════════════
+   NAVIGATION
+════════════════════════════════════════════════════════ */
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function showView(id) {
+  document.querySelectorAll('#page-app .view').forEach(v => v.style.display = 'none');
+  document.getElementById(id).style.display = 'block';
+}
+function showTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  document.querySelector(`.tab-btn[data-tab="${id}"]`)?.classList.add('active');
+}
+function goHome() { showView('view-home'); loadHome(); }
+
+/* ═══════════════════════════════════════════════════════
+   HOME
+════════════════════════════════════════════════════════ */
+async function loadHome() {
+  loadMyCharacters();
+  loadMyCampaigns();
+}
+
+async function loadMyCharacters() {
+  const el = document.getElementById('my-characters');
+  const { data: chars } = await sb.from('characters').select('*').eq('owner_id', currentUser.id).order('created_at', { ascending: false });
+  if (!chars || chars.length === 0) {
+    el.innerHTML = '<div class="empty-state">No characters yet. Create your first hero!</div>'; return;
+  }
+  el.innerHTML = chars.map(c => `
+    <div class="char-mini-card" onclick="openCharEditor('${c.id}')">
+      <h4>${c.name}</h4>
+      <p>${[c.class, c.subclass].filter(Boolean).join(' · ') || 'No class set'}</p>
+      <p style="margin-top:0.25rem">Level ${c.level || 1} · ${c.ancestry || 'Unknown ancestry'}</p>
+    </div>
+  `).join('');
+}
+
+async function loadMyCampaigns() {
+  const el = document.getElementById('my-campaigns');
+  // campaigns I GM
+  const { data: gmCamps } = await sb.from('campaigns').select('*').eq('gm_id', currentUser.id);
+  // campaigns I'm a player in
+  const { data: memberRows } = await sb.from('campaign_members').select('campaign_id, campaigns(*)').eq('player_id', currentUser.id);
+  const playerCamps = (memberRows || []).map(r => r.campaigns).filter(Boolean);
+  const all = [
+    ...(gmCamps || []).map(c => ({...c, role:'gm'})),
+    ...playerCamps.map(c => ({...c, role:'player'}))
+  ];
+  if (all.length === 0) {
+    el.innerHTML = '<div class="empty-state">No campaigns yet. Create one or ask your GM to add you!</div>'; return;
+  }
+  el.innerHTML = all.map(c => `
+    <div class="campaign-card ${c.role==='gm'?'gm-card':''}" onclick="openCampaign('${c.id}','${c.role}')">
+      <h3>${c.name}</h3>
+      <p>${c.description || c.game_system || 'No description'}</p>
+      <span class="campaign-role role-${c.role}">${c.role === 'gm' ? '⚔ Game Master' : '🎲 Player'}</span>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════════════════════
+   CREATE CAMPAIGN
+════════════════════════════════════════════════════════ */
+async function createCampaign() {
+  const name = document.getElementById('nc-name').value.trim();
+  if (!name) { toast('Enter a campaign name', 'error'); return; }
+  const { data, error } = await sb.from('campaigns').insert({
+    name, game_system: document.getElementById('nc-system').value,
+    description: document.getElementById('nc-desc').value,
+    gm_id: currentUser.id
+  }).select().single();
+  if (error) { toast(error.message, 'error'); return; }
+  closeModal('modal-new-campaign');
+  toast('Campaign created!', 'success');
+  loadMyCampaigns();
+}
+
+/* ═══════════════════════════════════════════════════════
+   OPEN CAMPAIGN
+════════════════════════════════════════════════════════ */
+async function openCampaign(campaignId, role) {
+  const { data: camp } = await sb.from('campaigns').select('*').eq('id', campaignId).single();
+  currentCampaign = camp;
+  currentCampaignRole = role;
+  buildCampaignTabs(role);
+  showView('view-campaign');
+  showTab('my-sheet');
+  loadSheetTab();
+}
+
+function buildCampaignTabs(role) {
+  const isGM = role === 'gm';
+  const tabs = [
+    { id:'my-sheet', label:'My Character' },
+    { id:'wiki', label:'Lore & Wiki' },
+    { id:'handouts', label:'Handouts' },
+    { id:'dice', label:'Dice Vault' },
+    ...(isGM ? [
+      { id:'players', label:'Players', gm:true },
+      { id:'npcs', label:'NPCs & Enemies', gm:true },
+      { id:'encounters', label:'Encounters', gm:true },
+      { id:'gm-notes', label:'Session Notes', gm:true },
+    ] : [])
+  ];
+  document.getElementById('campaign-tabs').innerHTML =
+    `<span style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--gold-light);margin-right:0.5rem;letter-spacing:0.05em">${currentCampaign.name}</span>` +
+    tabs.map(t => `<button class="tab-btn${t.gm?' gm-tab':''}" data-tab="${t.id}" onclick="switchCampaignTab('${t.id}')">${t.label}</button>`).join('');
+}
+
+function switchCampaignTab(id) {
+  showTab(id);
+  if (id === 'my-sheet') loadSheetTab();
+  if (id === 'wiki') loadWikiTab();
+  if (id === 'handouts') loadHandoutsTab();
+  if (id === 'dice') loadDiceTab();
+  if (id === 'players') loadPlayersTab();
+  if (id === 'npcs') loadNPCsTab();
+  if (id === 'encounters') loadEncountersTab();
+  if (id === 'gm-notes') loadGMNotesTab();
+}
+
+/* ═══════════════════════════════════════════════════════
+   CHARACTER SHEET TAB (in campaign)
+════════════════════════════════════════════════════════ */
+async function loadSheetTab() {
+  const el = document.getElementById('tab-my-sheet');
+  // find character assigned to this campaign owned by current user
+  const { data: chars } = await sb.from('characters').select('*').eq('owner_id', currentUser.id).eq('campaign_id', currentCampaign.id);
+  if (!chars || chars.length === 0) {
+    el.innerHTML = `
+      <div class="section-header"><h2>My Character</h2></div>
+      <div class="card" style="text-align:center;padding:2.5rem">
+        <p style="color:var(--muted);margin-bottom:1.25rem">You haven't assigned a character to this campaign yet.</p>
+        <button class="btn btn-gold" onclick="openModal('modal-assign-char');loadAssignCharList()">Assign a Character</button>
+        <span style="margin:0 0.75rem;color:var(--muted)">or</span>
+        <button class="btn btn-ghost" onclick="openCharCreatorForCampaign()">Create New Character</button>
+      </div>`;
+    return;
+  }
+  const c = chars[0];
+  el.innerHTML = renderSheetHTML(c);
+  renderAllPips(c);
+}
+
+function renderSheetHTML(c) {
+  return `
+  <div class="section-header">
+    <h2>${c.name || 'Unnamed Hero'}</h2>
+    <div class="section-actions">
+      <button class="btn btn-gold btn-sm" onclick="saveSheetInline('${c.id}')">Save Sheet</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="field-row cols-3">
+      <div><label>Character Name</label><input type="text" id="s-name" value="${c.name||''}" /></div>
+      <div><label>Class</label><input type="text" id="s-class" value="${c.class||''}" /></div>
+      <div><label>Subclass</label><input type="text" id="s-subclass" value="${c.subclass||''}" /></div>
+    </div>
+    <div class="field-row cols-3">
+      <div><label>Ancestry</label><input type="text" id="s-ancestry" value="${c.ancestry||''}" /></div>
+      <div><label>Community</label><input type="text" id="s-community" value="${c.community||''}" /></div>
+      <div><label>Level</label><input type="number" id="s-level" value="${c.level||1}" min="1" max="10" /></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Attributes</h3>
+    <div class="field-row cols-3" style="margin-bottom:0.75rem">
+      <div class="stat-box"><span class="stat-label">Agility</span><input type="number" id="s-agility" value="${c.agility||0}" /></div>
+      <div class="stat-box"><span class="stat-label">Strength</span><input type="number" id="s-strength" value="${c.strength||0}" /></div>
+      <div class="stat-box"><span class="stat-label">Finesse</span><input type="number" id="s-finesse" value="${c.finesse||0}" /></div>
+    </div>
+    <div class="field-row cols-3" style="margin-bottom:0">
+      <div class="stat-box"><span class="stat-label">Instinct</span><input type="number" id="s-instinct" value="${c.instinct||0}" /></div>
+      <div class="stat-box"><span class="stat-label">Presence</span><input type="number" id="s-presence" value="${c.presence||0}" /></div>
+      <div class="stat-box"><span class="stat-label">Knowledge</span><input type="number" id="s-knowledge" value="${c.knowledge||0}" /></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Defenses & Thresholds</h3>
+    <div class="field-row cols-4" style="margin-bottom:0">
+      <div class="stat-box"><span class="stat-label">Evasion</span><input type="number" id="s-evasion" value="${c.evasion||10}" /></div>
+      <div class="stat-box"><span class="stat-label">Minor</span><input type="number" id="s-minor" value="${c.minor_threshold||5}" /></div>
+      <div class="stat-box"><span class="stat-label">Major</span><input type="number" id="s-major" value="${c.major_threshold||10}" /></div>
+      <div class="stat-box"><span class="stat-label">Severe</span><input type="number" id="s-severe" value="${c.severe_threshold||15}" /></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Hit Points, Stress & Resources</h3>
+    <div class="field-row cols-2">
+      <div>
+        <label>Max HP <input type="number" id="s-max-hp" value="${c.max_hp||6}" min="1" max="30" style="width:60px;display:inline;margin-left:0.5rem" onchange="rebuildPips('hp',this.value,${c.current_hp||c.max_hp||6})" /></label>
+        <div class="pip-row" id="pip-hp"></div>
+      </div>
+      <div>
+        <label>Max Stress <input type="number" id="s-max-stress" value="${c.max_stress||6}" min="1" max="12" style="width:60px;display:inline;margin-left:0.5rem" onchange="rebuildPips('stress',this.value,${c.current_stress||0})" /></label>
+        <div class="pip-row" id="pip-stress"></div>
+      </div>
+    </div>
+    <div class="field-row cols-2" style="margin-bottom:0">
+      <div>
+        <label>Armor Slots <input type="number" id="s-max-armor" value="${c.max_armor||3}" min="0" max="6" style="width:60px;display:inline;margin-left:0.5rem" onchange="rebuildPips('armor',this.value,${c.current_armor||0})" /></label>
+        <div class="pip-row" id="pip-armor"></div>
+      </div>
+      <div>
+        <label>Hope <input type="number" id="s-max-hope" value="${c.max_hope||6}" min="1" max="10" style="width:60px;display:inline;margin-left:0.5rem" onchange="rebuildPips('hope',this.value,${c.current_hope||c.max_hope||6})" /></label>
+        <div class="pip-row" id="pip-hope"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Experiences</h3>
+    <textarea id="s-experiences">${c.experiences||''}</textarea>
+  </div>
+  <div class="card">
+    <h3>Weapons & Inventory</h3>
+    <div class="field-row cols-2">
+      <div><label>Primary Weapon</label><input type="text" id="s-wpn1" value="${c.weapon_primary||''}" /></div>
+      <div><label>Secondary Weapon</label><input type="text" id="s-wpn2" value="${c.weapon_secondary||''}" /></div>
+    </div>
+    <label>Inventory</label>
+    <textarea id="s-inventory">${c.inventory||''}</textarea>
+  </div>
+  <div class="card">
+    <h3>Notes & Backstory</h3>
+    <textarea id="s-notes" style="min-height:130px">${c.notes||''}</textarea>
+  </div>
+  <input type="hidden" id="s-char-id" value="${c.id}" />
+  <input type="hidden" id="s-cur-hp" value="${c.current_hp||c.max_hp||6}" />
+  <input type="hidden" id="s-cur-stress" value="${c.current_stress||0}" />
+  <input type="hidden" id="s-cur-armor" value="${c.current_armor||0}" />
+  <input type="hidden" id="s-cur-hope" value="${c.current_hope||c.max_hope||6}" />
+  `;
+}
+
+function renderAllPips(c) {
+  buildPips('hp', c.max_hp||6, c.current_hp||c.max_hp||6);
+  buildPips('stress', c.max_stress||6, c.current_stress||0);
+  buildPips('armor', c.max_armor||3, c.current_armor||0);
+  buildPips('hope', c.max_hope||6, c.current_hope||c.max_hope||6);
+}
+
+function buildPips(kind, max, filled) {
+  const container = document.getElementById('pip-' + kind);
   if (!container) return;
-  // preserve filled count
-  const filled = container.querySelectorAll('.filled').length;
   container.innerHTML = '';
   for (let i = 0; i < max; i++) {
     const pip = document.createElement('div');
-    pip.className = `pip ${cfg.type}${i < filled ? ' filled' : ''}`;
-    pip.onclick = () => togglePip(pip, kind, i);
+    pip.className = `pip pip-${kind}${i < filled ? ' on' : ''}`;
+    pip.onclick = () => togglePip(kind, i, max);
     container.appendChild(pip);
   }
 }
 
-function togglePip(pip, kind, index) {
-  const container = document.getElementById('pips-' + kind);
+function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseInt(cur)||0); }
+
+function togglePip(kind, idx, max) {
+  const container = document.getElementById('pip-' + kind);
   const pips = container.querySelectorAll('.pip');
-  const filledCount = container.querySelectorAll('.filled').length;
-  if (pip.classList.contains('filled')) {
-    // unfill this and all after
-    pips.forEach((p, i) => { if (i >= index) p.classList.remove('filled'); });
+  const filledCount = container.querySelectorAll('.on').length;
+  if (idx < filledCount) {
+    pips.forEach((p,i) => { if(i>=idx) p.classList.remove('on'); });
   } else {
-    // fill up to here
-    pips.forEach((p, i) => { if (i <= index) p.classList.add('filled'); });
+    pips.forEach((p,i) => { if(i<=idx) p.classList.add('on'); });
   }
-  saveSheet(true);
+  document.getElementById('s-cur-' + kind).value = container.querySelectorAll('.on').length;
 }
 
-function saveSheet(silent = false) {
-  const data = {};
-  sheetFields.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) data[id] = el.value;
-  });
-  // save pip states
-  ['hp','stress','armor','hope'].forEach(kind => {
-    const container = document.getElementById('pips-' + kind);
-    if (container) data['pips-' + kind] = container.querySelectorAll('.filled').length;
-  });
-  localStorage.setItem(SHEET_KEY, JSON.stringify(data));
-  if (!silent) {
-    const notice = document.getElementById('sheet-saved');
-    notice.classList.add('show');
-    setTimeout(() => notice.classList.remove('show'), 2000);
-  }
+async function saveSheetInline(charId) {
+  const id = charId || document.getElementById('s-char-id')?.value;
+  if (!id) return;
+  const updates = {
+    name: v('s-name'), class: v('s-class'), subclass: v('s-subclass'),
+    ancestry: v('s-ancestry'), community: v('s-community'), level: n('s-level'),
+    agility: n('s-agility'), strength: n('s-strength'), finesse: n('s-finesse'),
+    instinct: n('s-instinct'), presence: n('s-presence'), knowledge: n('s-knowledge'),
+    evasion: n('s-evasion'), minor_threshold: n('s-minor'), major_threshold: n('s-major'), severe_threshold: n('s-severe'),
+    max_hp: n('s-max-hp'), current_hp: n('s-cur-hp'),
+    max_stress: n('s-max-stress'), current_stress: n('s-cur-stress'),
+    max_armor: n('s-max-armor'), current_armor: n('s-cur-armor'),
+    max_hope: n('s-max-hope'), current_hope: n('s-cur-hope'),
+    experiences: v('s-experiences'), inventory: v('s-inventory'), notes: v('s-notes'),
+    weapon_primary: v('s-wpn1'), weapon_secondary: v('s-wpn2'),
+    updated_at: new Date().toISOString()
+  };
+  const { error } = await sb.from('characters').update(updates).eq('id', id);
+  if (error) toast(error.message, 'error');
+  else toast('Character saved!', 'success');
 }
 
-function loadSheet() {
-  const raw = localStorage.getItem(SHEET_KEY);
-  if (!raw) { ['hp','stress','armor','hope'].forEach(renderPips); return; }
-  const data = JSON.parse(raw);
-  sheetFields.forEach(id => {
-    const el = document.getElementById(id);
-    if (el && data[id] !== undefined) el.value = data[id];
-  });
-  ['hp','stress','armor','hope'].forEach(kind => {
-    renderPips(kind);
-    const saved = data['pips-' + kind] || 0;
-    const container = document.getElementById('pips-' + kind);
-    if (!container) return;
-    const pips = container.querySelectorAll('.pip');
-    pips.forEach((p, i) => { if (i < saved) p.classList.add('filled'); });
-  });
+/* ═══════════════════════════════════════════════════════
+   CHARACTER CREATOR (full page)
+════════════════════════════════════════════════════════ */
+function openCharCreator(campaignId) {
+  editingCharId = null;
+  document.getElementById('char-editor-title').textContent = 'New Character';
+  document.getElementById('char-editor-content').innerHTML = charEditorHTML({});
+  showView('view-char-editor');
+  buildPips('hp',6,6); buildPips('stress',6,0); buildPips('armor',3,0); buildPips('hope',6,6);
 }
 
-/* ══ DICE ROLLER ════════════════════════════════════════ */
-let rollHistory = [];
-
-function d(sides) { return Math.floor(Math.random() * sides) + 1; }
-
-function rollDaggerheart() {
-  const mod = parseInt(document.getElementById('dh-mod').value) || 0;
-  const hope = d(12);
-  const fear = d(12);
-  const total = hope + fear + mod;
-  const hopeWins = hope >= fear;
-  const label = hopeWins ? '✦ With Hope' : '⚠ With Fear';
-
-  document.getElementById('dh-result').style.display = 'block';
-  document.getElementById('dh-total').textContent = total;
-  document.getElementById('dh-total').className = 'roll-total ' + (hopeWins ? 'hope-result' : 'fear-result');
-  document.getElementById('dh-breakdown').textContent =
-    `Hope d12: ${hope}  ·  Fear d12: ${fear}${mod ? '  ·  Mod: ' + (mod >= 0 ? '+' : '') + mod : ''}`;
-  document.getElementById('dh-label').textContent = label;
-  document.getElementById('dh-label').className = 'roll-label ' + (hopeWins ? 'hope-result' : 'fear-result');
-
-  addHistory(`Dual Roll → ${total} (${label}, Hope:${hope} Fear:${fear}${mod ? ' +'+mod : ''})`);
+function openCharCreatorForCampaign() {
+  openCharCreator(currentCampaign?.id);
 }
 
-function rollDie(sides) {
-  const count = parseInt(document.getElementById('std-count').value) || 1;
-  const mod = parseInt(document.getElementById('std-mod').value) || 0;
-  const rolls = Array.from({ length: count }, () => d(sides));
-  const sum = rolls.reduce((a, b) => a + b, 0) + mod;
-
-  document.getElementById('std-result').style.display = 'block';
-  document.getElementById('std-total').textContent = sum;
-  const parts = count > 1 ? `[${rolls.join(', ')}]` : '';
-  document.getElementById('std-breakdown').textContent =
-    `${count}d${sides}${mod ? (mod >= 0 ? '+' : '') + mod : ''} ${parts}`;
-
-  addHistory(`${count}d${sides}${mod ? (mod>=0?'+':'')+mod:''} → ${sum}${parts ? ' '+parts : ''}`);
+async function openCharEditor(charId) {
+  const { data: c } = await sb.from('characters').select('*').eq('id', charId).single();
+  editingCharId = charId;
+  document.getElementById('char-editor-title').textContent = c.name || 'Edit Character';
+  document.getElementById('char-editor-content').innerHTML = charEditorHTML(c);
+  showView('view-char-editor');
+  renderAllPips(c);
 }
 
-function addHistory(entry) {
-  rollHistory.unshift(entry);
-  if (rollHistory.length > 12) rollHistory.pop();
-  const el = document.getElementById('roll-history');
-  el.innerHTML = rollHistory
-    .map((r, i) => `<div style="padding:0.2rem 0;border-bottom:1px solid rgba(61,47,92,0.3);${i===0?'color:var(--text)':''}">${r}</div>`)
-    .join('');
-}
-
-/* ══ COMBAT TRACKER ═════════════════════════════════════ */
-let combatants = [];
-let currentTurn = 0;
-let round = 1;
-let fearTokens = 0;
-
-function addCombatant() {
-  const name = document.getElementById('c-name').value.trim();
-  if (!name) { alert('Enter a combatant name.'); return; }
-  const hp = parseInt(document.getElementById('c-hp').value) || 10;
-  combatants.push({
-    name,
-    type: document.getElementById('c-type').value,
-    maxHp: hp, hp,
-    evasion: parseInt(document.getElementById('c-evasion').value) || 10,
-  });
-  document.getElementById('c-name').value = '';
-  renderCombatants();
-}
-
-function renderCombatants() {
-  const list = document.getElementById('combatant-list');
-  if (combatants.length === 0) {
-    list.innerHTML = '<li style="color:var(--muted);font-style:italic;padding:1rem;text-align:center">No combatants yet.</li>';
-    return;
-  }
-  list.innerHTML = combatants.map((c, i) => `
-    <li class="combatant-row ${c.type}${i === currentTurn ? ' active-turn' : ''}">
-      <div class="combatant-name">
-        ${i === currentTurn ? '<span class="turn-indicator">▶ </span>' : ''}${c.name}
-        <span style="font-size:0.75rem;color:var(--muted);margin-left:0.5rem">${c.type === 'player' ? 'PC' : 'Enemy'}</span>
+function charEditorHTML(c) {
+  return `
+  <div class="card">
+    <div class="field-row cols-2">
+      <div><label>Character Name</label><input type="text" id="s-name" value="${c.name||''}" placeholder="Your hero's name" /></div>
+      <div><label>Player Name</label><input type="text" id="s-player" value="${c.player_name||''}" placeholder="Your name" /></div>
+    </div>
+    <div class="field-row cols-3">
+      <div><label>Class</label><input type="text" id="s-class" value="${c.class||''}" /></div>
+      <div><label>Subclass</label><input type="text" id="s-subclass" value="${c.subclass||''}" /></div>
+      <div><label>Level</label><input type="number" id="s-level" value="${c.level||1}" min="1" max="10" /></div>
+    </div>
+    <div class="field-row cols-2">
+      <div><label>Ancestry</label><input type="text" id="s-ancestry" value="${c.ancestry||''}" /></div>
+      <div><label>Community</label><input type="text" id="s-community" value="${c.community||''}" /></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Attributes</h3>
+    <div class="field-row cols-3" style="margin-bottom:0.75rem">
+      <div class="stat-box"><span class="stat-label">Agility</span><input type="number" id="s-agility" value="${c.agility||0}" /></div>
+      <div class="stat-box"><span class="stat-label">Strength</span><input type="number" id="s-strength" value="${c.strength||0}" /></div>
+      <div class="stat-box"><span class="stat-label">Finesse</span><input type="number" id="s-finesse" value="${c.finesse||0}" /></div>
+    </div>
+    <div class="field-row cols-3" style="margin-bottom:0">
+      <div class="stat-box"><span class="stat-label">Instinct</span><input type="number" id="s-instinct" value="${c.instinct||0}" /></div>
+      <div class="stat-box"><span class="stat-label">Presence</span><input type="number" id="s-presence" value="${c.presence||0}" /></div>
+      <div class="stat-box"><span class="stat-label">Knowledge</span><input type="number" id="s-knowledge" value="${c.knowledge||0}" /></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Defenses</h3>
+    <div class="field-row cols-4" style="margin-bottom:0">
+      <div class="stat-box"><span class="stat-label">Evasion</span><input type="number" id="s-evasion" value="${c.evasion||10}" /></div>
+      <div class="stat-box"><span class="stat-label">Minor</span><input type="number" id="s-minor" value="${c.minor_threshold||5}" /></div>
+      <div class="stat-box"><span class="stat-label">Major</span><input type="number" id="s-major" value="${c.major_threshold||10}" /></div>
+      <div class="stat-box"><span class="stat-label">Severe</span><input type="number" id="s-severe" value="${c.severe_threshold||15}" /></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Resources</h3>
+    <div class="field-row cols-2">
+      <div>
+        <label>Max HP <input type="number" id="s-max-hp" value="${c.max_hp||6}" min="1" max="30" style="width:55px;display:inline;margin-left:0.5rem" onchange="rebuildPips('hp',this.value,this.value)" /></label>
+        <div class="pip-row" id="pip-hp"></div>
       </div>
       <div>
-        <label style="margin-bottom:0.2rem">HP</label>
-        <div style="display:flex;gap:0.3rem;align-items:center">
-          <button class="btn btn-sm btn-ghost" onclick="changeHP(${i}, -1)">−</button>
-          <span style="font-family:'Cinzel',serif;color:${c.hp <= c.maxHp * 0.25 ? 'var(--ruby)' : 'var(--emerald)'}">${c.hp}/${c.maxHp}</span>
-          <button class="btn btn-sm btn-ghost" onclick="changeHP(${i}, 1)">+</button>
-        </div>
+        <label>Max Stress <input type="number" id="s-max-stress" value="${c.max_stress||6}" min="1" max="12" style="width:55px;display:inline;margin-left:0.5rem" /></label>
+        <div class="pip-row" id="pip-stress"></div>
       </div>
-      <div class="combatant-evasion">
-        <label style="margin-bottom:0.2rem">Evasion</label>
-        <div style="font-family:'Cinzel',serif;color:var(--sapphire)">${c.evasion}</div>
+    </div>
+    <div class="field-row cols-2" style="margin-bottom:0">
+      <div>
+        <label>Armor Slots <input type="number" id="s-max-armor" value="${c.max_armor||3}" min="0" max="6" style="width:55px;display:inline;margin-left:0.5rem" /></label>
+        <div class="pip-row" id="pip-armor"></div>
       </div>
       <div>
-        <label style="margin-bottom:0.2rem">Status</label>
-        <input type="text" placeholder="Condition…" value="${c.condition||''}" onchange="combatants[${i}].condition=this.value"
-          style="font-size:0.85rem;padding:0.25rem 0.5rem" />
+        <label>Hope <input type="number" id="s-max-hope" value="${c.max_hope||6}" min="1" max="10" style="width:55px;display:inline;margin-left:0.5rem" /></label>
+        <div class="pip-row" id="pip-hope"></div>
       </div>
-      <button class="btn btn-danger btn-sm" onclick="removeCombatant(${i})">✕</button>
-    </li>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Weapons & Inventory</h3>
+    <div class="field-row cols-2">
+      <div><label>Primary Weapon</label><input type="text" id="s-wpn1" value="${c.weapon_primary||''}" /></div>
+      <div><label>Secondary Weapon</label><input type="text" id="s-wpn2" value="${c.weapon_secondary||''}" /></div>
+    </div>
+    <label>Inventory</label>
+    <textarea id="s-inventory">${c.inventory||''}</textarea>
+  </div>
+  <div class="card">
+    <h3>Experiences</h3>
+    <textarea id="s-experiences">${c.experiences||''}</textarea>
+  </div>
+  <div class="card">
+    <h3>Notes & Backstory</h3>
+    <textarea id="s-notes" style="min-height:130px">${c.notes||''}</textarea>
+  </div>
+  <input type="hidden" id="s-char-id" value="${c.id||''}" />
+  <input type="hidden" id="s-cur-hp" value="${c.current_hp||c.max_hp||6}" />
+  <input type="hidden" id="s-cur-stress" value="${c.current_stress||0}" />
+  <input type="hidden" id="s-cur-armor" value="${c.current_armor||0}" />
+  <input type="hidden" id="s-cur-hope" value="${c.current_hope||c.max_hope||6}" />
+  `;
+}
+
+async function saveCharacter() {
+  const isNew = !editingCharId;
+  const payload = {
+    owner_id: currentUser.id,
+    name: v('s-name') || 'Unnamed Hero',
+    player_name: v('s-player'),
+    class: v('s-class'), subclass: v('s-subclass'), level: n('s-level'),
+    ancestry: v('s-ancestry'), community: v('s-community'),
+    agility: n('s-agility'), strength: n('s-strength'), finesse: n('s-finesse'),
+    instinct: n('s-instinct'), presence: n('s-presence'), knowledge: n('s-knowledge'),
+    evasion: n('s-evasion'), minor_threshold: n('s-minor'), major_threshold: n('s-major'), severe_threshold: n('s-severe'),
+    max_hp: n('s-max-hp'), current_hp: n('s-cur-hp'),
+    max_stress: n('s-max-stress'), current_stress: n('s-cur-stress'),
+    max_armor: n('s-max-armor'), current_armor: n('s-cur-armor'),
+    max_hope: n('s-max-hope'), current_hope: n('s-cur-hope'),
+    experiences: v('s-experiences'), inventory: v('s-inventory'), notes: v('s-notes'),
+    weapon_primary: v('s-wpn1'), weapon_secondary: v('s-wpn2'),
+    updated_at: new Date().toISOString()
+  };
+  let error;
+  if (isNew) {
+    ({ error } = await sb.from('characters').insert(payload));
+  } else {
+    ({ error } = await sb.from('characters').update(payload).eq('id', editingCharId));
+  }
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Character saved!', 'success');
+  goHome();
+}
+
+/* ═══════════════════════════════════════════════════════
+   ASSIGN CHARACTER TO CAMPAIGN
+════════════════════════════════════════════════════════ */
+async function loadAssignCharList() {
+  const { data: chars } = await sb.from('characters').select('*').eq('owner_id', currentUser.id);
+  const el = document.getElementById('assign-char-list');
+  if (!chars || chars.length === 0) {
+    el.innerHTML = '<p style="color:var(--muted)">You have no characters. Create one first.</p>'; return;
+  }
+  el.innerHTML = chars.map(c => `
+    <div class="char-mini-card" style="margin-bottom:0.75rem;cursor:pointer" onclick="assignChar('${c.id}')">
+      <h4>${c.name}</h4>
+      <p>${c.class||'No class'} · Level ${c.level||1}</p>
+    </div>
   `).join('');
 }
 
-function changeHP(i, delta) {
-  combatants[i].hp = Math.max(0, Math.min(combatants[i].maxHp, combatants[i].hp + delta));
-  renderCombatants();
+async function assignChar(charId) {
+  const { error } = await sb.from('characters').update({ campaign_id: currentCampaign.id }).eq('id', charId);
+  if (error) { toast(error.message, 'error'); return; }
+  closeModal('modal-assign-char');
+  toast('Character assigned!', 'success');
+  loadSheetTab();
 }
 
-function removeCombatant(i) {
-  combatants.splice(i, 1);
-  if (currentTurn >= combatants.length) currentTurn = 0;
-  renderCombatants();
-}
-
-function nextTurn() {
-  if (combatants.length === 0) return;
-  currentTurn = (currentTurn + 1) % combatants.length;
-  if (currentTurn === 0) round++;
-  document.getElementById('round-number').textContent = round;
-  document.getElementById('turn-number').textContent = currentTurn + 1;
-  renderCombatants();
-}
-
-function resetCombat() {
-  if (!confirm('Reset all combat? This clears all combatants.')) return;
-  combatants = []; currentTurn = 0; round = 1; fearTokens = 0;
-  document.getElementById('round-number').textContent = 1;
-  document.getElementById('turn-number').textContent = 1;
-  document.getElementById('fear-count').textContent = 0;
-  renderCombatants();
-}
-
-function changeFear(delta) {
-  fearTokens = Math.max(0, fearTokens + delta);
-  document.getElementById('fear-count').textContent = fearTokens;
-}
-
-/* ══ WIKI ════════════════════════════════════════════════ */
-const WIKI_KEY = 'dh_wiki';
-let wikiEntries = [];
-let activeWikiIndex = -1;
-
-function loadWiki() {
-  const raw = localStorage.getItem(WIKI_KEY);
-  wikiEntries = raw ? JSON.parse(raw) : defaultWikiEntries();
-  renderWikiNav();
-  if (wikiEntries.length > 0) showWikiEntry(0);
-}
-
-function defaultWikiEntries() {
-  return [
-    {
-      title: 'Welcome',
-      category: 'Other',
-      body: 'This is your campaign wiki. Add entries for locations, NPCs, factions, history, and session notes. Everything saves automatically to your browser. Click "+ New Entry" above to get started.'
+/* ═══════════════════════════════════════════════════════
+   PLAYERS TAB (GM)
+════════════════════════════════════════════════════════ */
+async function loadPlayersTab() {
+  const el = document.getElementById('tab-players');
+  const { data: members } = await sb.from('campaign_members').select('*, profiles(*)').eq('campaign_id', currentCampaign.id);
+  const { data: chars } = await sb.from('characters').select('*').eq('campaign_id', currentCampaign.id);
+  el.innerHTML = `
+    <div class="section-header"><h2>Players</h2>
+      <div class="section-actions"><button class="btn btn-gold btn-sm" onclick="openModal('modal-add-player')">+ Add Player</button></div>
+    </div>
+    ${(!members || members.length===0) ? '<div class="empty-state">No players added yet.</div>' :
+      members.map(m => {
+        const pChar = (chars||[]).find(c => c.owner_id === m.player_id);
+        return `
+        <div class="card card-sm">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-family:'Cinzel',serif;color:var(--gold-light)">${m.profiles?.display_name || m.profiles?.username || 'Unknown'}</div>
+              <div style="font-size:0.85rem;color:var(--muted)">@${m.profiles?.username || ''}</div>
+              ${pChar ? `<div style="margin-top:0.5rem;font-size:0.9rem"><strong style="color:var(--gold)">${pChar.name}</strong> — ${pChar.class||'No class'} Lv.${pChar.level||1}</div>` : '<div style="margin-top:0.5rem;font-size:0.85rem;color:var(--muted)">No character assigned</div>'}
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="removePlayer('${m.player_id}')">Remove</button>
+          </div>
+        </div>`;
+      }).join('')
     }
-  ];
+  `;
+}
+
+async function addPlayerToCampaign() {
+  const username = document.getElementById('ap-username').value.trim().toLowerCase();
+  if (!username) return;
+  const { data: profile } = await sb.from('profiles').select('*').eq('username', username).single();
+  if (!profile) { toast('User not found', 'error'); return; }
+  const { error } = await sb.from('campaign_members').insert({ campaign_id: currentCampaign.id, player_id: profile.id, role: 'player' });
+  if (error) { toast(error.message, 'error'); return; }
+  closeModal('modal-add-player');
+  toast(`${profile.display_name || username} added!`, 'success');
+  loadPlayersTab();
+}
+
+async function removePlayer(playerId) {
+  if (!confirm('Remove this player from the campaign?')) return;
+  await sb.from('campaign_members').delete().eq('campaign_id', currentCampaign.id).eq('player_id', playerId);
+  toast('Player removed', 'success');
+  loadPlayersTab();
+}
+
+/* ═══════════════════════════════════════════════════════
+   NPCs TAB (GM)
+════════════════════════════════════════════════════════ */
+async function loadNPCsTab() {
+  const el = document.getElementById('tab-npcs');
+  const { data: npcs } = await sb.from('npcs').select('*').eq('campaign_id', currentCampaign.id).order('created_at');
+  el.innerHTML = `
+    <div class="section-header"><h2>NPCs & Enemies</h2>
+      <div class="section-actions"><button class="btn btn-gold btn-sm" onclick="editingNpcId=null;openModal('modal-new-npc')">+ New NPC</button></div>
+    </div>
+    ${(!npcs||npcs.length===0) ? '<div class="empty-state">No NPCs yet. Build your cast of characters and enemies.</div>' :
+      npcs.map(n => `
+        <div class="npc-card">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:0.4rem">
+              <span style="font-family:'Cinzel',serif;color:var(--gold-light)">${n.name}</span>
+              <span class="npc-badge type-${n.type}">${n.type}</span>
+              <span class="visibility-badge ${n.is_visible_to_players?'vis-shown':'vis-hidden'}" onclick="toggleNPCVisibility('${n.id}',${n.is_visible_to_players})">${n.is_visible_to_players?'Visible to Players':'GM Only'}</span>
+            </div>
+            ${n.description ? `<p style="font-size:0.9rem;color:var(--muted);margin-bottom:0.4rem">${n.description}</p>` : ''}
+            <div style="font-size:0.85rem;display:flex;gap:1rem;flex-wrap:wrap">
+              <span>HP: <strong style="color:var(--emerald)">${n.hp}</strong></span>
+              <span>Evasion: <strong style="color:var(--sapphire)">${n.evasion}</strong></span>
+              <span>Attack: <strong style="color:var(--gold)">+${n.attack_bonus}</strong></span>
+              <span>Damage: <strong style="color:var(--ruby)">${n.damage_dice}</strong></span>
+            </div>
+            ${n.notes ? `<p style="font-size:0.82rem;color:var(--muted);margin-top:0.4rem;font-style:italic">${n.notes}</p>` : ''}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.4rem">
+            <button class="btn btn-ghost btn-sm" onclick="addNPCToEncounter('${n.id}','${n.name}',${n.hp},${n.evasion})">+ Encounter</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteNPC('${n.id}')">Delete</button>
+          </div>
+        </div>
+      `).join('')
+    }
+  `;
+}
+
+async function saveNPC() {
+  const payload = {
+    campaign_id: currentCampaign.id, created_by: currentUser.id,
+    name: document.getElementById('npc-name').value.trim(),
+    type: document.getElementById('npc-type').value,
+    description: document.getElementById('npc-desc').value,
+    hp: parseInt(document.getElementById('npc-hp').value)||10,
+    evasion: parseInt(document.getElementById('npc-evasion').value)||10,
+    attack_bonus: parseInt(document.getElementById('npc-atk').value)||0,
+    damage_dice: document.getElementById('npc-dmg').value||'1d6',
+    notes: document.getElementById('npc-notes').value,
+    is_visible_to_players: document.getElementById('npc-visible').value === 'true'
+  };
+  if (!payload.name) { toast('Enter a name', 'error'); return; }
+  const { error } = await sb.from('npcs').insert(payload);
+  if (error) { toast(error.message, 'error'); return; }
+  closeModal('modal-new-npc');
+  toast('NPC saved!', 'success');
+  loadNPCsTab();
+}
+
+async function deleteNPC(id) {
+  if (!confirm('Delete this NPC?')) return;
+  await sb.from('npcs').delete().eq('id', id);
+  toast('Deleted', 'success'); loadNPCsTab();
+}
+
+async function toggleNPCVisibility(id, current) {
+  await sb.from('npcs').update({ is_visible_to_players: !current }).eq('id', id);
+  loadNPCsTab();
+}
+
+/* ═══════════════════════════════════════════════════════
+   ENCOUNTERS TAB (GM)
+════════════════════════════════════════════════════════ */
+async function loadEncountersTab() {
+  const el = document.getElementById('tab-encounters');
+  const { data: encs } = await sb.from('encounters').select('*').eq('campaign_id', currentCampaign.id).order('created_at');
+  el.innerHTML = `
+    <div class="section-header"><h2>Encounters</h2>
+      <div class="section-actions"><button class="btn btn-gold btn-sm" onclick="openModal('modal-new-encounter')">+ New Encounter</button></div>
+    </div>
+    ${(!encs||encs.length===0) ? '<div class="empty-state">No encounters yet. Build your battles!</div>' :
+      encs.map(e => `
+        <div class="encounter-card" onclick="openEncounterTracker('${e.id}')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-family:'Cinzel',serif;color:var(--gold-light);margin-bottom:0.25rem">${e.name}</div>
+              ${e.description ? `<p style="font-size:0.88rem;color:var(--muted)">${e.description}</p>` : ''}
+              <div style="margin-top:0.4rem;font-size:0.8rem;color:var(--muted)">${(e.combatants||[]).length} combatants</div>
+            </div>
+            <span class="encounter-status status-${e.status}">${e.status}</span>
+          </div>
+        </div>
+      `).join('')
+    }
+  `;
+}
+
+async function saveEncounter() {
+  const payload = {
+    campaign_id: currentCampaign.id, created_by: currentUser.id,
+    name: document.getElementById('enc-name').value.trim(),
+    description: document.getElementById('enc-desc').value,
+    notes: document.getElementById('enc-notes').value,
+    status: 'prep', combatants: []
+  };
+  if (!payload.name) { toast('Enter an encounter name', 'error'); return; }
+  const { error } = await sb.from('encounters').insert(payload);
+  if (error) { toast(error.message, 'error'); return; }
+  closeModal('modal-new-encounter');
+  toast('Encounter created!', 'success');
+  loadEncountersTab();
+}
+
+async function openEncounterTracker(encId) {
+  const { data: enc } = await sb.from('encounters').select('*').eq('id', encId).single();
+  combatants = enc.combatants || [];
+  combatTurn = 0; combatRound = 1; fearTokens = 0;
+  const el = document.getElementById('tab-encounters');
+  el.innerHTML = `
+    <div class="section-header">
+      <h2>${enc.name}</h2>
+      <div class="section-actions">
+        <button class="btn btn-ghost btn-sm" onclick="loadEncountersTab()">← Back</button>
+        <button class="btn btn-gold btn-sm" onclick="nextCombatTurn()">Next Turn →</button>
+        <button class="btn btn-ghost btn-sm" onclick="saveCombatants('${enc.id}')">Save State</button>
+      </div>
+    </div>
+    ${enc.description ? `<p style="color:var(--muted);margin-bottom:1rem">${enc.description}</p>` : ''}
+    <div class="card card-sm" style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;margin-bottom:1rem">
+      <span style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--muted)">Round <span id="enc-round" style="color:var(--gold-light);font-size:1.1rem">${combatRound}</span></span>
+      <span style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--muted)">Turn <span id="enc-turn" style="color:var(--gold-light)">${combatTurn+1}</span></span>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:0.5rem">
+        <span style="font-family:'Cinzel',serif;font-size:0.75rem;color:var(--ruby);text-transform:uppercase;letter-spacing:0.1em">Fear</span>
+        <button class="btn btn-sm" style="border-color:var(--ruby);color:var(--ruby)" onclick="changeFear(-1)">−</button>
+        <span id="enc-fear" style="font-family:'Cinzel Decorative',serif;font-size:1.3rem;color:var(--ruby)">${fearTokens}</span>
+        <button class="btn btn-sm" style="border-color:var(--ruby);color:var(--ruby)" onclick="changeFear(1)">+</button>
+      </div>
+    </div>
+    <div class="card card-sm" style="margin-bottom:1rem">
+      <h3 style="margin-bottom:0.75rem">Add Combatant</h3>
+      <div class="field-row cols-4" style="margin-bottom:0.5rem">
+        <div><label>Name</label><input type="text" id="cc-name" /></div>
+        <div><label>Type</label><select id="cc-type"><option value="player">Player</option><option value="enemy">Enemy</option></select></div>
+        <div><label>HP</label><input type="number" id="cc-hp" value="10" /></div>
+        <div><label>Evasion</label><input type="number" id="cc-ev" value="10" /></div>
+      </div>
+      <button class="btn btn-gold btn-sm" onclick="addEncCombatant('${enc.id}')">+ Add</button>
+    </div>
+    <div id="enc-combatant-list"></div>
+  `;
+  renderEncCombatants();
+}
+
+function renderEncCombatants() {
+  const el = document.getElementById('enc-combatant-list');
+  if (!el) return;
+  if (combatants.length === 0) { el.innerHTML = '<div class="empty-state">No combatants. Add players and enemies above.</div>'; return; }
+  el.innerHTML = combatants.map((c, i) => `
+    <div class="combatant-row ${c.type}-type${i===combatTurn?' active-turn':''}">
+      <div style="font-family:'Cinzel',serif;font-size:0.9rem">${i===combatTurn?'▶ ':''}${c.name} <span style="font-size:0.7rem;color:var(--muted)">${c.type}</span></div>
+      <div style="display:flex;gap:0.3rem;align-items:center">
+        <button class="btn btn-sm btn-ghost" onclick="changeEncHP(${i},-1)">−</button>
+        <span style="font-family:'Cinzel',serif;color:${c.hp<=0?'var(--ruby)':'var(--emerald)'};">${c.hp}/${c.maxHp}</span>
+        <button class="btn btn-sm btn-ghost" onclick="changeEncHP(${i},1)">+</button>
+      </div>
+      <div style="font-family:'Cinzel',serif;font-size:0.85rem;color:var(--sapphire)">Ev: ${c.evasion}</div>
+      <button class="btn btn-danger btn-sm" onclick="removeEncCombatant(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+function addEncCombatant(encId) {
+  const name = document.getElementById('cc-name').value.trim();
+  if (!name) return;
+  const hp = parseInt(document.getElementById('cc-hp').value)||10;
+  combatants.push({ name, type: document.getElementById('cc-type').value, hp, maxHp: hp, evasion: parseInt(document.getElementById('cc-ev').value)||10 });
+  document.getElementById('cc-name').value = '';
+  renderEncCombatants();
+}
+
+function changeEncHP(i, d) { combatants[i].hp = Math.max(0, Math.min(combatants[i].maxHp, combatants[i].hp+d)); renderEncCombatants(); }
+function removeEncCombatant(i) { combatants.splice(i,1); if(combatTurn>=combatants.length) combatTurn=0; renderEncCombatants(); }
+
+function nextCombatTurn() {
+  if (!combatants.length) return;
+  combatTurn = (combatTurn+1) % combatants.length;
+  if (combatTurn===0) combatRound++;
+  document.getElementById('enc-round').textContent = combatRound;
+  document.getElementById('enc-turn').textContent = combatTurn+1;
+  renderEncCombatants();
+}
+
+function changeFear(d) {
+  fearTokens = Math.max(0, fearTokens+d);
+  const el = document.getElementById('enc-fear');
+  if (el) el.textContent = fearTokens;
+}
+
+async function saveCombatants(encId) {
+  await sb.from('encounters').update({ combatants, status: 'active' }).eq('id', encId);
+  toast('Combat state saved!', 'success');
+}
+
+function addNPCToEncounter(id, name, hp, evasion) {
+  toast(`${name} ready to add to an encounter — open an encounter and add them as a combatant.`, 'success');
+}
+
+/* ═══════════════════════════════════════════════════════
+   GM NOTES TAB
+════════════════════════════════════════════════════════ */
+async function loadGMNotesTab() {
+  const el = document.getElementById('tab-gm-notes');
+  const storageKey = `gm_notes_${currentCampaign.id}`;
+  const saved = localStorage.getItem(storageKey) || '';
+  el.innerHTML = `
+    <div class="section-header"><h2>Session Notes</h2>
+      <div class="section-actions"><button class="btn btn-gold btn-sm" onclick="saveGMNotes('${storageKey}')">Save Notes</button></div>
+    </div>
+    <div class="card">
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem">Private GM notes — stored locally on this device. Use for session prep, plot hooks, secrets.</p>
+      <textarea id="gm-notes-area" style="min-height:400px;font-size:1rem">${saved}</textarea>
+    </div>
+  `;
+}
+
+function saveGMNotes(key) {
+  localStorage.setItem(key, document.getElementById('gm-notes-area').value);
+  toast('Notes saved!', 'success');
+}
+
+/* ═══════════════════════════════════════════════════════
+   WIKI TAB
+════════════════════════════════════════════════════════ */
+async function loadWikiTab() {
+  const el = document.getElementById('tab-wiki');
+  const isGM = currentCampaignRole === 'gm';
+  const { data: entries } = await sb.from('wiki_entries').select('*').eq('campaign_id', currentCampaign.id).order('category').order('created_at');
+  currentWikiEntries = entries || [];
+  el.innerHTML = `
+    <div class="section-header"><h2>Lore & Wiki</h2>
+      ${isGM ? '<div class="section-actions"><button class="btn btn-gold btn-sm" onclick="openModal(\'modal-new-wiki\')">+ New Entry</button></div>' : ''}
+    </div>
+    <div class="wiki-layout">
+      <div class="wiki-sidebar"><div class="wiki-sidebar-title">Entries</div><div id="wiki-nav-inner"></div></div>
+      <div class="card" id="wiki-display-inner"><p class="empty-state">Select an entry from the sidebar.</p></div>
+    </div>
+  `;
+  renderWikiNav();
+  if (currentWikiEntries.length > 0) showWikiEntry(0);
 }
 
 function renderWikiNav() {
-  const nav = document.getElementById('wiki-nav');
-  if (wikiEntries.length === 0) {
-    nav.innerHTML = '<div style="padding:0.75rem 1rem;color:var(--muted);font-size:0.9rem;font-style:italic">No entries yet.</div>';
-    return;
-  }
-  const categories = [...new Set(wikiEntries.map(e => e.category))];
-  nav.innerHTML = categories.map(cat => {
-    const entries = wikiEntries.filter(e => e.category === cat);
-    return `<div>
-      <div style="font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;
-        color:var(--amethyst);padding:0.5rem 1rem 0.25rem;background:rgba(14,11,20,0.3)">${cat}</div>
-      ${entries.map(e => {
-        const idx = wikiEntries.indexOf(e);
-        return `<button class="wiki-nav-item${idx === activeWikiIndex ? ' active' : ''}" onclick="showWikiEntry(${idx})">${e.title}</button>`;
-      }).join('')}
-    </div>`;
+  const nav = document.getElementById('wiki-nav-inner');
+  if (!nav) return;
+  const visible = currentWikiEntries.filter(e => currentCampaignRole==='gm' || e.is_visible_to_players);
+  if (visible.length===0) { nav.innerHTML = '<div style="padding:0.75rem;color:var(--muted);font-size:0.9rem;font-style:italic">No entries yet.</div>'; return; }
+  const cats = [...new Set(visible.map(e=>e.category))];
+  nav.innerHTML = cats.map(cat => {
+    const catEntries = visible.filter(e=>e.category===cat);
+    return `<span class="wiki-cat-label">${cat}</span>` + catEntries.map(e => {
+      const idx = currentWikiEntries.indexOf(e);
+      return `<button class="wiki-nav-btn${idx===activeWikiIdx?' active':''}" onclick="showWikiEntry(${idx})">${e.title}</button>`;
+    }).join('');
   }).join('');
 }
 
-function showWikiEntry(index) {
-  activeWikiIndex = index;
-  const entry = wikiEntries[index];
-  const display = document.getElementById('wiki-display');
+function showWikiEntry(idx) {
+  activeWikiIdx = idx;
+  const e = currentWikiEntries[idx];
+  const display = document.getElementById('wiki-display-inner');
+  const isGM = currentCampaignRole === 'gm';
   display.innerHTML = `
-    <div class="wiki-entry active">
-      <div class="wiki-category">${entry.category}</div>
-      <h3>${entry.title}</h3>
-      ${entry.body.split('\n\n').map(p => `<p>${p}</p>`).join('')}
-      <hr class="divider" />
-      <button class="btn btn-danger btn-sm" onclick="deleteWikiEntry(${index})">Delete Entry</button>
-    </div>
+    <div style="font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--amethyst);margin-bottom:0.5rem">${e.category}</div>
+    <h3 style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:1.3rem;margin-bottom:0.75rem">${e.title}</h3>
+    ${e.body.split('\n\n').map(p=>`<p style="margin-bottom:0.75rem;line-height:1.7">${p}</p>`).join('')}
+    ${isGM ? `
+    <hr />
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+      <span class="visibility-badge ${e.is_visible_to_players?'vis-shown':'vis-hidden'}" onclick="toggleWikiVisibility('${e.id}',${e.is_visible_to_players})">${e.is_visible_to_players?'Visible to Players':'GM Only'}</span>
+      <button class="btn btn-danger btn-sm" onclick="deleteWikiEntry('${e.id}')">Delete</button>
+    </div>` : ''}
   `;
   renderWikiNav();
 }
 
-function openWikiForm() {
-  document.getElementById('wiki-title-input').value = '';
-  document.getElementById('wiki-body-input').value = '';
-  document.getElementById('wiki-modal').classList.add('open');
-}
-function closeWikiForm() {
-  document.getElementById('wiki-modal').classList.remove('open');
-}
-
-function saveWikiEntry() {
-  const title = document.getElementById('wiki-title-input').value.trim();
-  const body = document.getElementById('wiki-body-input').value.trim();
-  if (!title || !body) { alert('Please fill in both title and content.'); return; }
-  wikiEntries.push({
-    title,
-    category: document.getElementById('wiki-category-input').value,
-    body
-  });
-  localStorage.setItem(WIKI_KEY, JSON.stringify(wikiEntries));
-  closeWikiForm();
-  renderWikiNav();
-  showWikiEntry(wikiEntries.length - 1);
+async function saveWikiEntry() {
+  const payload = {
+    campaign_id: currentCampaign.id, created_by: currentUser.id,
+    title: document.getElementById('wiki-title-in').value.trim(),
+    category: document.getElementById('wiki-cat-in').value,
+    body: document.getElementById('wiki-body-in').value,
+    is_visible_to_players: document.getElementById('wiki-vis-in').value === 'true'
+  };
+  if (!payload.title || !payload.body) { toast('Fill in title and content', 'error'); return; }
+  const { error } = await sb.from('wiki_entries').insert(payload);
+  if (error) { toast(error.message,'error'); return; }
+  closeModal('modal-new-wiki');
+  toast('Entry saved!', 'success');
+  loadWikiTab();
 }
 
-function deleteWikiEntry(index) {
-  if (!confirm(`Delete "${wikiEntries[index].title}"?`)) return;
-  wikiEntries.splice(index, 1);
-  localStorage.setItem(WIKI_KEY, JSON.stringify(wikiEntries));
-  activeWikiIndex = -1;
-  renderWikiNav();
-  const display = document.getElementById('wiki-display');
-  if (wikiEntries.length > 0) showWikiEntry(0);
-  else display.innerHTML = '<p style="color:var(--muted);font-style:italic">No entries. Create one above.</p>';
+async function deleteWikiEntry(id) {
+  if (!confirm('Delete this entry?')) return;
+  await sb.from('wiki_entries').delete().eq('id', id);
+  toast('Deleted','success'); loadWikiTab();
 }
 
-/* ══ HANDOUTS ════════════════════════════════════════════ */
-const HANDOUT_KEY = 'dh_handouts';
-let handouts = [];
-
-function loadHandouts() {
-  const raw = localStorage.getItem(HANDOUT_KEY);
-  if (raw) {
-    handouts = JSON.parse(raw);
-    renderHandouts();
-  }
+async function toggleWikiVisibility(id, current) {
+  await sb.from('wiki_entries').update({is_visible_to_players:!current}).eq('id',id);
+  const entry = currentWikiEntries.find(e=>e.id===id);
+  if (entry) entry.is_visible_to_players = !current;
+  showWikiEntry(activeWikiIdx);
 }
 
-function addHandout(event) {
+/* ═══════════════════════════════════════════════════════
+   HANDOUTS TAB
+════════════════════════════════════════════════════════ */
+async function loadHandoutsTab() {
+  const el = document.getElementById('tab-handouts');
+  const isGM = currentCampaignRole === 'gm';
+  const { data: handouts } = await sb.from('handouts').select('*').eq('campaign_id', currentCampaign.id).order('created_at');
+  const visible = (handouts||[]).filter(h => isGM || h.is_visible_to_players);
+  el.innerHTML = `
+    <div class="section-header"><h2>Handouts & Maps</h2></div>
+    ${isGM ? `
+    <div class="upload-zone" onclick="document.getElementById('handout-upload-input').click()">
+      <div style="font-size:2rem;margin-bottom:0.4rem">📜</div>
+      <div style="font-family:'Cinzel',serif;font-size:0.82rem;color:var(--gold);letter-spacing:0.08em">Upload Image or Map</div>
+      <div style="font-size:0.85rem;margin-top:0.2rem">PNG, JPG, GIF, WebP · Stored in browser session</div>
+    </div>` : ''}
+    <div class="handout-grid" id="handout-grid-inner">
+      ${visible.length===0 ? '<div class="empty-state" style="grid-column:1/-1">No handouts revealed yet.</div>' :
+        visible.map(h=>`
+          <div class="handout-card" onclick="previewHandout('${h.url}','${h.name}')">
+            <img src="${h.url}" class="handout-thumb" alt="${h.name}" onerror="this.style.display='none'" />
+            <div class="handout-info">
+              <h4>${h.name}</h4>
+              <p>${h.type}</p>
+              ${isGM ? `<span class="visibility-badge ${h.is_visible_to_players?'vis-shown':'vis-hidden'}" onclick="event.stopPropagation();toggleHandoutVis('${h.id}',${h.is_visible_to_players})">${h.is_visible_to_players?'Shown':'Hidden'}</span>` : ''}
+            </div>
+          </div>
+        `).join('')
+      }
+    </div>
+  `;
+}
+
+async function uploadHandout(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = (e) => {
-    handouts.push({ name: file.name.replace(/\.[^.]+$/, ''), src: e.target.result });
-    // Don't store large images in localStorage, show in session only
-    renderHandouts();
+  reader.onload = async (e) => {
+    const dataUrl = e.target.result;
+    const { error } = await sb.from('handouts').insert({
+      campaign_id: currentCampaign.id, uploaded_by: currentUser.id,
+      name: file.name.replace(/\.[^.]+$/,''), url: dataUrl, type: 'image', is_visible_to_players: false
+    });
+    if (error) { toast('Upload failed — image may be too large', 'error'); return; }
+    toast('Handout uploaded!', 'success');
+    loadHandoutsTab();
   };
   reader.readAsDataURL(file);
   event.target.value = '';
 }
 
-function renderHandouts() {
-  const grid = document.getElementById('handout-grid');
-  grid.innerHTML = handouts.map((h, i) => `
-    <div class="handout-card" onclick="viewHandoutByIndex(${i})">
-      <img src="${h.src}" class="handout-thumb" style="display:block;width:100%;height:150px;object-fit:cover" alt="${h.name}" />
-      <div class="handout-info">
-        <h4>${h.name}</h4>
-        <p>Click to view full size</p>
+async function toggleHandoutVis(id, current) {
+  await sb.from('handouts').update({is_visible_to_players:!current}).eq('id',id);
+  loadHandoutsTab();
+}
+
+function previewHandout(url, name) {
+  document.getElementById('handout-preview-img').src = url;
+  document.getElementById('handout-preview-title').textContent = name;
+  openModal('modal-handout');
+}
+
+/* ═══════════════════════════════════════════════════════
+   DICE TAB
+════════════════════════════════════════════════════════ */
+function loadDiceTab() {
+  const el = document.getElementById('tab-dice');
+  el.innerHTML = `
+    <div class="section-header"><h2>Dice Vault</h2></div>
+    <div class="card">
+      <h3>Daggerheart Dual Roll</h3>
+      <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">Roll Hope d12 & Fear d12 — higher die determines the outcome.</p>
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem">
+        <label style="margin:0">Modifier</label>
+        <input type="number" id="dh-mod" value="0" style="width:80px" />
+        <button class="btn btn-gold" onclick="rollDaggerheart()">⚄ Roll Hope & Fear</button>
+      </div>
+      <div id="dh-result" style="display:none">
+        <div class="roll-result-box">
+          <div class="roll-total" id="dh-total">—</div>
+          <div class="roll-breakdown" id="dh-breakdown"></div>
+          <div style="font-family:'Cinzel',serif;font-size:0.85rem;letter-spacing:0.1em;margin-top:0.4rem" id="dh-label"></div>
+        </div>
       </div>
     </div>
-  `).join('') + `
-    <div class="handout-card" onclick="document.getElementById('handout-file').click()" style="display:flex;align-items:center;justify-content:center;min-height:180px;cursor:pointer;border-style:dashed">
-      <div style="text-align:center;color:var(--muted)">
-        <div style="font-size:2rem">+</div>
-        <div style="font-family:'Cinzel',serif;font-size:0.75rem;letter-spacing:0.1em">Add Image</div>
+    <div class="card">
+      <h3>Standard Dice</h3>
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
+        <label style="margin:0">Modifier</label><input type="number" id="std-mod" value="0" style="width:70px" />
+        <label style="margin:0">Count</label><input type="number" id="std-count" value="1" min="1" max="20" style="width:70px" />
+      </div>
+      <div class="dice-grid">
+        ${[4,6,8,10,12,20,100].map(d=>`<button class="die-btn" onclick="rollDie(${d})">d${d}</button>`).join('')}
+      </div>
+      <div id="std-result" style="display:none">
+        <div class="roll-result-box">
+          <div class="roll-total standard-result" id="std-total">—</div>
+          <div class="roll-breakdown" id="std-breakdown"></div>
+        </div>
       </div>
     </div>
+    <div class="card"><h3>Roll History</h3><div id="roll-hist" style="font-size:0.88rem;color:var(--muted)">No rolls yet.</div></div>
   `;
 }
 
-function viewHandout(card) {
-  document.getElementById('handout-modal').classList.add('open');
-  document.getElementById('handout-preview').src = '';
-  document.getElementById('handout-preview-title').textContent = card.querySelector('h4')?.textContent || '';
+function d(s) { return Math.floor(Math.random()*s)+1; }
+
+function rollDaggerheart() {
+  const mod = parseInt(document.getElementById('dh-mod').value)||0;
+  const hope = d(12), fear = d(12);
+  const total = hope+fear+mod;
+  const hopeWins = hope >= fear;
+  document.getElementById('dh-result').style.display='block';
+  document.getElementById('dh-total').textContent = total;
+  document.getElementById('dh-total').className = 'roll-total '+(hopeWins?'hope-col':'fear-col');
+  document.getElementById('dh-breakdown').textContent = `Hope d12: ${hope}  ·  Fear d12: ${fear}${mod?'  ·  Mod: '+(mod>=0?'+':'')+mod:''}`;
+  const label = document.getElementById('dh-label');
+  label.textContent = hopeWins ? '✦ With Hope' : '⚠ With Fear';
+  label.className = hopeWins?'hope-col':'fear-col';
+  addRollHistory(`Dual Roll → ${total} (${hopeWins?'Hope':'Fear'}: ${hope} vs ${fear}${mod?` +${mod}`:''})`);
 }
 
-function viewHandoutByIndex(i) {
-  const h = handouts[i];
-  document.getElementById('handout-preview').src = h.src;
-  document.getElementById('handout-preview-title').textContent = h.name;
-  document.getElementById('handout-modal').classList.add('open');
+function rollDie(sides) {
+  const count = parseInt(document.getElementById('std-count').value)||1;
+  const mod = parseInt(document.getElementById('std-mod').value)||0;
+  const rolls = Array.from({length:count},()=>d(sides));
+  const sum = rolls.reduce((a,b)=>a+b,0)+mod;
+  document.getElementById('std-result').style.display='block';
+  document.getElementById('std-total').textContent = sum;
+  document.getElementById('std-breakdown').textContent = `${count}d${sides}${mod?(mod>=0?'+':'')+mod:''} [${rolls.join(', ')}]`;
+  addRollHistory(`${count}d${sides}${mod?(mod>=0?'+':'')+mod:''} → ${sum}`);
 }
 
-/* ══ INIT ════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', () => {
-  loadSheet();
-  loadWiki();
-  loadHandouts();
-  // Auto-save sheet on change
-  document.querySelectorAll('#tab-sheet input, #tab-sheet textarea, #tab-sheet select')
-    .forEach(el => el.addEventListener('change', () => saveSheet(true)));
+function addRollHistory(entry) {
+  rollHistory.unshift(entry);
+  if (rollHistory.length>12) rollHistory.pop();
+  const el = document.getElementById('roll-hist');
+  if (el) el.innerHTML = rollHistory.map((r,i)=>`<div style="padding:0.2rem 0;border-bottom:1px solid rgba(61,47,92,0.3);${i===0?'color:var(--text)':''}">${r}</div>`).join('');
+}
+
+/* ═══════════════════════════════════════════════════════
+   UTILITIES
+════════════════════════════════════════════════════════ */
+function v(id) { return document.getElementById(id)?.value?.trim() || ''; }
+function n(id) { return parseInt(document.getElementById(id)?.value)||0; }
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.classList.remove('show'), 2800);
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); });
 });
 </script>
 </body>

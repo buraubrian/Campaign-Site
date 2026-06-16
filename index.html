@@ -757,6 +757,7 @@ function renderSheetHTML(c) {
     <h2>${c.name || 'Unnamed Hero'}</h2>
     <div class="section-actions">
       <button class="btn btn-gold btn-sm" onclick="saveSheetInline('${c.id}')">Save Sheet</button>
+      <button class="btn btn-danger btn-sm" onclick="unassignCharacter('${c.id}')">Remove from Campaign</button>
     </div>
   </div>
   <div class="card">
@@ -1059,6 +1060,14 @@ async function assignChar(charId) {
   if (error) { toast(error.message, 'error'); return; }
   closeModal('modal-assign-char');
   toast('Character assigned!', 'success');
+  loadSheetTab();
+}
+
+async function unassignCharacter(charId) {
+  if (!confirm('Remove this character from the campaign? Your character data is kept — it just won\'t be linked to this campaign anymore.')) return;
+  const { error } = await sb.from('characters').update({ campaign_id: null }).eq('id', charId);
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Character removed from campaign', 'success');
   loadSheetTab();
 }
 

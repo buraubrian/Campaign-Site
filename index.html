@@ -200,11 +200,35 @@ select option { background: var(--panel); }
 .dice-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(75px,1fr)); gap: 0.65rem; margin-bottom: 1.25rem; }
 .die-btn { aspect-ratio: 1; background: var(--panel); border: 2px solid var(--border); border-radius: var(--radius-lg); color: var(--text); font-family: 'Cinzel', serif; font-size: 1rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
 .die-btn:hover { border-color: var(--gold); color: var(--gold-light); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(201,149,58,0.2); }
-.roll-result-box { background: rgba(14,11,20,0.7); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; text-align: center; min-height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.roll-total { font-family: 'Cinzel Decorative', serif; font-size: 3rem; line-height: 1; }
-.roll-breakdown { font-size: 0.88rem; color: var(--muted); margin-top: 0.4rem; }
+.roll-result-box { background: rgba(14,11,20,0.7); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; text-align: center; min-height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.dice-anim-hope { animation: diceFlyHope 1.1s cubic-bezier(.25,.46,.45,.94) forwards; }
+.dice-anim-fear { animation: diceFlyFear 1.25s cubic-bezier(.25,.46,.45,.94) forwards; }
+.dice-anim-single { animation: diceFlySingle 1s cubic-bezier(.25,.46,.45,.94) forwards; }
+@keyframes diceFlyHope {
+  0%   { left: -80px; opacity: 0; transform: translateY(-50%) rotate(0deg) scale(0.6); }
+  12%  { opacity: 1; }
+  55%  { left: 38%; transform: translateY(-70%) rotate(400deg) scale(1.2); }
+  75%  { left: 34%; transform: translateY(-50%) rotate(440deg) scale(1.05); }
+  100% { left: 110%; opacity: 0; transform: translateY(-50%) rotate(520deg) scale(0.6); }
+}
+@keyframes diceFlyFear {
+  0%   { left: 110%; opacity: 0; transform: translateY(-50%) rotate(0deg) scale(0.6); }
+  12%  { opacity: 1; }
+  58%  { left: 54%; transform: translateY(-30%) rotate(-410deg) scale(1.2); }
+  78%  { left: 58%; transform: translateY(-50%) rotate(-450deg) scale(1.05); }
+  100% { left: -80px; opacity: 0; transform: translateY(-50%) rotate(-530deg) scale(0.6); }
+}
+@keyframes diceFlySingle {
+  0%   { left: -80px; opacity: 0; transform: translateY(-50%) rotate(0deg) scale(0.6); }
+  12%  { opacity: 1; }
+  60%  { left: 45%; transform: translateY(-50%) rotate(480deg) scale(1.25); }
+  80%  { left: 42%; transform: translateY(-50%) rotate(520deg) scale(1.05); }
+  100% { left: 110%; opacity: 0; transform: translateY(-50%) rotate(600deg) scale(0.6); }
+}
 .hope-col { color: var(--gold-light); }
 .fear-col { color: var(--ruby); }
+.roll-total { font-family: 'Cinzel Decorative', serif; font-size: 3rem; line-height: 1; }
+.roll-breakdown { font-size: 0.88rem; color: var(--muted); margin-top: 0.4rem; }
 
 /* ── Wiki ── */
 .wiki-layout { display: grid; grid-template-columns: 200px 1fr; gap: 1.25rem; align-items: start; }
@@ -1499,37 +1523,128 @@ function previewHandout(url, name) {
 /* ═══════════════════════════════════════════════════════
    DICE TAB
 ════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   DICE VAULT — Animated SVG dice with color schemes & logos
+════════════════════════════════════════════════════════ */
+const DICE_SCHEMES = [
+  { id:'crimson',  face:'#7a1a2a', pip:'#e8c87a', label:'Crimson & Gold' },
+  { id:'midnight', face:'#1a1a3e', pip:'#8fbfff', label:'Midnight Blue' },
+  { id:'obsidian', face:'#1a1a1a', pip:'#e8c87a', label:'Obsidian & Gold' },
+  { id:'forest',   face:'#1a3a1a', pip:'#a0e8a0', label:'Forest Green' },
+  { id:'amethyst', face:'#3a1a5c', pip:'#e8c87a', label:'Amethyst & Gold' },
+  { id:'iron',     face:'#3a3a3a', pip:'#e8e8e8', label:'Iron & Silver' },
+  { id:'blood',    face:'#5c1a1a', pip:'#f0f0f0', label:'Blood Red' },
+  { id:'sapphire', face:'#1a3a5c', pip:'#ffd700', label:'Sapphire & Gold' },
+];
+const DICE_LOGOS = [
+  { id:'star',    label:'Star',   render:(col,sz)=>{ const c=sz/2,r=sz*0.4,ri=sz*0.17; let pts=[]; for(let i=0;i<10;i++){const a=(i*36-90)*Math.PI/180;const rr=i%2===0?r:ri;pts.push(`${c+rr*Math.cos(a)},${c+rr*Math.sin(a)}`);} return `<polygon points="${pts.join(' ')}" fill="${col}" opacity="0.95"/>`; }},
+  { id:'skull',   label:'Skull',  render:(col,sz)=>{ const c=sz/2,r=sz*0.28; return `<ellipse cx="${c}" cy="${sz*0.42}" rx="${r}" ry="${r*0.85}" fill="${col}"/><rect x="${c-r*0.55}" y="${sz*0.62}" width="${r*1.1}" height="${sz*0.16}" rx="2" fill="${col}"/>`; }},
+  { id:'crown',   label:'Crown',  render:(col,sz)=>{ const c=sz/2,b=sz*0.68,t=sz*0.28,w=sz*0.38; return `<polygon points="${c-w},${b} ${c-w},${t+sz*0.12} ${c-w*0.5},${t+sz*0.22} ${c},${t} ${c+w*0.5},${t+sz*0.22} ${c+w},${t+sz*0.12} ${c+w},${b}" fill="${col}"/><circle cx="${c}" cy="${t}" r="${sz*0.05}" fill="${col}"/>`; }},
+  { id:'swords',  label:'Swords', render:(col,sz)=>{ const c=sz/2; return `<line x1="${c-sz*0.3}" y1="${sz*0.15}" x2="${c+sz*0.3}" y2="${sz*0.85}" stroke="${col}" stroke-width="2.5" stroke-linecap="round"/><line x1="${c+sz*0.3}" y1="${sz*0.15}" x2="${c-sz*0.3}" y2="${sz*0.85}" stroke="${col}" stroke-width="2.5" stroke-linecap="round"/>`; }},
+  { id:'moon',    label:'Moon',   render:(col,sz)=>{ const c=sz/2,r=sz*0.34; return `<path d="M${c+r*0.1},${c-r} A${r},${r} 0 1,0 ${c+r*0.1},${c+r} A${r*0.6},${r*0.8} 0 1,1 ${c+r*0.1},${c-r} Z" fill="${col}"/>`; }},
+  { id:'dragon',  label:'Dragon', render:(col,sz)=>{ const sc=sz/48; return `<g transform="scale(${sc})">
+      <path d="M24,7 C19,7 15,9 13,12 C10,9 7,10 6,13 C5,16 7,18 9,19 C7,20 5,23 7,25 C9,27 12,26 14,25 C14,28 16,31 18,33 C16,35 15,38 17,40 C19,42 21,41 22,39 C23,41 24,42 24,42 C24,42 25,41 26,39 C27,41 29,42 31,40 C33,38 32,35 30,33 C32,31 34,28 34,25 C36,26 39,27 41,25 C43,23 41,20 39,19 C41,18 43,16 42,13 C41,10 38,9 35,12 C33,9 29,7 24,7 Z" fill="${col}" opacity="0.95"/>
+      <ellipse cx="20" cy="20" rx="2.5" ry="3" fill="${col}" opacity="0.35"/><ellipse cx="28" cy="20" rx="2.5" ry="3" fill="${col}" opacity="0.35"/>
+      <path d="M20,27 Q24,30 28,27" fill="none" stroke="${col}" stroke-width="1.5" opacity="0.5" stroke-linecap="round"/>
+      <path d="M13,12 L10,6 M13,12 L8,9" stroke="${col}" stroke-width="1.8" stroke-linecap="round" opacity="0.7"/>
+      <path d="M35,12 L38,6 M35,12 L40,9" stroke="${col}" stroke-width="1.8" stroke-linecap="round" opacity="0.7"/></g>`; }},
+];
+const DICE_SIDES = [4,6,8,10,12,20,100];
+let diceScheme = DICE_SCHEMES[0];
+let diceLogo = DICE_LOGOS[0];
+
+function loadDicePrefs() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('dice_prefs') || '{}');
+    if (saved.scheme) diceScheme = DICE_SCHEMES.find(s=>s.id===saved.scheme) || DICE_SCHEMES[0];
+    if (saved.logo) diceLogo = DICE_LOGOS.find(l=>l.id===saved.logo) || DICE_LOGOS[0];
+  } catch(e) {}
+}
+function saveDicePrefs() {
+  localStorage.setItem('dice_prefs', JSON.stringify({ scheme: diceScheme.id, logo: diceLogo.id }));
+}
+
+function buildDieShapeSVG(sides, sz, faceCol, pipCol) {
+  const c=sz/2, r=sz*0.44;
+  if (sides===4) return `<polygon points="${c},${sz*0.06} ${sz*0.96},${sz*0.92} ${sz*0.04},${sz*0.92}" fill="${faceCol}" stroke="${pipCol}" stroke-width="1.5"/>`;
+  if (sides===6) return `<rect x="${sz*0.07}" y="${sz*0.07}" width="${sz*0.86}" height="${sz*0.86}" rx="${sz*0.14}" fill="${faceCol}" stroke="${pipCol}" stroke-width="1.5"/>`;
+  if (sides===8) return `<polygon points="${c},${sz*0.05} ${sz*0.95},${c} ${c},${sz*0.95} ${sz*0.05},${c}" fill="${faceCol}" stroke="${pipCol}" stroke-width="1.5"/>`;
+  if (sides===10) { let pts=[]; for(let i=0;i<10;i++){const a=(i*36-90)*Math.PI/180;const rr=i%2===0?r:r*0.6;pts.push(`${c+rr*Math.cos(a)},${c+rr*Math.sin(a)}`);} return `<polygon points="${pts.join(' ')}" fill="${faceCol}" stroke="${pipCol}" stroke-width="1.5"/>`; }
+  if (sides===12||sides===20) { const n=sides===12?6:5; let pts=[]; for(let i=0;i<n*2;i++){const a=(i*360/n/2-90)*Math.PI/180;const rr=i%2===0?r:r*0.72;pts.push(`${c+rr*Math.cos(a)},${c+rr*Math.sin(a)}`);} return `<polygon points="${pts.join(' ')}" fill="${faceCol}" stroke="${pipCol}" stroke-width="1.5"/>`; }
+  return `<circle cx="${c}" cy="${c}" r="${r}" fill="${faceCol}" stroke="${pipCol}" stroke-width="1.5"/>`;
+}
+
+function drawDiceSVG(svgEl, sides, value, sch, lg, sz=48) {
+  const f=sch.face, p=sch.pip, c=sz/2;
+  const isMax = value!==null && value===sides;
+  const shape = buildDieShapeSVG(sides, sz, f, p);
+  let content='';
+  if (value!==null) {
+    if (isMax && lg) {
+      const logoSz = sz*0.55, off=(sz-logoSz)/2;
+      content = `<g transform="translate(${off},${off})">${lg.render(p, logoSz)}</g>`;
+    } else {
+      content = `<text x="${c}" y="${c+sz*0.13}" text-anchor="middle" font-size="${sz*0.3}" font-weight="500" fill="${p}" font-family="system-ui,sans-serif">${value}</text>`;
+    }
+  } else {
+    content = `<text x="${c}" y="${c+sz*0.13}" text-anchor="middle" font-size="${sz*0.26}" fill="${p}" opacity="0.75" font-family="system-ui,sans-serif">d${sides}</text>`;
+  }
+  svgEl.setAttribute('viewBox',`0 0 ${sz} ${sz}`);
+  svgEl.innerHTML = shape + content;
+}
+function makeFearDiceScheme() { return { face:'#4a1010', pip:'#f0a0a0' }; }
+
 function loadDiceTab() {
+  loadDicePrefs();
   const el = document.getElementById('tab-dice');
   el.innerHTML = `
     <div class="section-header"><h2>Dice Vault</h2></div>
+
+    <div class="card">
+      <h3>Dice Appearance</h3>
+      <div class="field-row cols-2">
+        <div>
+          <label>Color Scheme</label>
+          <div id="dice-swatches" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:0.4rem"></div>
+        </div>
+        <div>
+          <label>Logo on Max Roll</label>
+          <div id="dice-logos" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:0.4rem"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <h3>Daggerheart Dual Roll</h3>
       <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">Roll Hope d12 & Fear d12 — higher die determines the outcome.</p>
-      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
         <label style="margin:0">Modifier</label>
         <input type="number" id="dh-mod" value="0" style="width:80px" />
-        <button class="btn btn-gold" onclick="rollDaggerheart()">⚄ Roll Hope & Fear</button>
+        <button class="die-trigger" onclick="rollDaggerheartAnim()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:0">
+          <svg id="dh-hope-preview" width="48" height="48" viewBox="0 0 48 48"></svg>
+          <span style="font-size:18px;color:var(--muted)">+</span>
+          <svg id="dh-fear-preview" width="48" height="48" viewBox="0 0 48 48"></svg>
+          <span class="btn btn-gold btn-sm" style="margin-left:0.5rem">Roll</span>
+        </button>
       </div>
       <div id="dh-result" style="display:none">
-        <div class="roll-result-box">
+        <div class="roll-result-box" id="dh-result-box">
           <div class="roll-total" id="dh-total">—</div>
           <div class="roll-breakdown" id="dh-breakdown"></div>
           <div style="font-family:'Cinzel',serif;font-size:0.85rem;letter-spacing:0.1em;margin-top:0.4rem" id="dh-label"></div>
         </div>
       </div>
     </div>
+
     <div class="card">
       <h3>Standard Dice</h3>
       <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
         <label style="margin:0">Modifier</label><input type="number" id="std-mod" value="0" style="width:70px" />
         <label style="margin:0">Count</label><input type="number" id="std-count" value="1" min="1" max="20" style="width:70px" />
       </div>
-      <div class="dice-grid">
-        ${[4,6,8,10,12,20,100].map(d=>`<button class="die-btn" onclick="rollDie(${d})">d${d}</button>`).join('')}
-      </div>
+      <div class="dice-grid" id="dice-tray-inner"></div>
       <div id="std-result" style="display:none">
-        <div class="roll-result-box">
+        <div class="roll-result-box" id="std-result-box">
           <div class="roll-total standard-result" id="std-total">—</div>
           <div class="roll-breakdown" id="std-breakdown"></div>
         </div>
@@ -1537,34 +1652,108 @@ function loadDiceTab() {
     </div>
     <div class="card"><h3>Roll History</h3><div id="roll-hist" style="font-size:0.88rem;color:var(--muted)">No rolls yet.</div></div>
   `;
+  buildDiceSwatches();
+  buildDiceLogos();
+  buildDiceTray();
+  updateDicePreviews();
 }
+
+function buildDiceSwatches() {
+  const el = document.getElementById('dice-swatches');
+  if (!el) return;
+  el.innerHTML = DICE_SCHEMES.map(sc => `
+    <div onclick="setDiceScheme('${sc.id}')" title="${sc.label}"
+      style="width:32px;height:32px;border-radius:6px;cursor:pointer;border:2px solid ${sc.id===diceScheme.id?'var(--gold-light)':'transparent'};transform:${sc.id===diceScheme.id?'scale(1.1)':'none'};transition:all 0.15s">
+      <div style="width:100%;height:100%;border-radius:4px;background:${sc.face};display:flex;align-items:center;justify-content:center;color:${sc.pip};font-size:13px">●</div>
+    </div>
+  `).join('');
+}
+function buildDiceLogos() {
+  const el = document.getElementById('dice-logos');
+  if (!el) return;
+  el.innerHTML = DICE_LOGOS.map(lg => `
+    <button class="btn btn-sm ${lg.id===diceLogo.id?'btn-gold':'btn-ghost'}" onclick="setDiceLogo('${lg.id}')">${lg.label}</button>
+  `).join('');
+}
+function buildDiceTray() {
+  const tray = document.getElementById('dice-tray-inner');
+  if (!tray) return;
+  tray.innerHTML = DICE_SIDES.map(s => `
+    <div>
+      <button class="die-trigger" onclick="rollDieAnim(${s})" style="background:none;border:none;cursor:pointer;width:100%">
+        <svg id="die-svg-${s}" width="56" height="56" viewBox="0 0 56 56"></svg>
+      </button>
+      <div style="font-family:'Cinzel',serif;font-size:0.7rem;color:var(--muted);text-align:center;margin-top:0.2rem">d${s}</div>
+    </div>
+  `).join('');
+  DICE_SIDES.forEach(s => drawDiceSVG(document.getElementById(`die-svg-${s}`), s, null, diceScheme, diceLogo, 56));
+}
+function updateDicePreviews() {
+  const hopeEl = document.getElementById('dh-hope-preview');
+  const fearEl = document.getElementById('dh-fear-preview');
+  if (hopeEl) drawDiceSVG(hopeEl, 12, null, diceScheme, diceLogo, 48);
+  if (fearEl) drawDiceSVG(fearEl, 12, null, makeFearDiceScheme(), diceLogo, 48);
+}
+function setDiceScheme(id) { diceScheme = DICE_SCHEMES.find(s=>s.id===id); saveDicePrefs(); buildDiceSwatches(); buildDiceTray(); updateDicePreviews(); }
+function setDiceLogo(id) { diceLogo = DICE_LOGOS.find(l=>l.id===id); saveDicePrefs(); buildDiceLogos(); buildDiceTray(); updateDicePreviews(); }
 
 function d(s) { return Math.floor(Math.random()*s)+1; }
 
-function rollDaggerheart() {
-  const mod = parseInt(document.getElementById('dh-mod').value)||0;
-  const hope = d(12), fear = d(12);
-  const total = hope+fear+mod;
-  const hopeWins = hope >= fear;
-  document.getElementById('dh-result').style.display='block';
-  document.getElementById('dh-total').textContent = total;
-  document.getElementById('dh-total').className = 'roll-total '+(hopeWins?'hope-col':'fear-col');
-  document.getElementById('dh-breakdown').textContent = `Hope d12: ${hope}  ·  Fear d12: ${fear}${mod?'  ·  Mod: '+(mod>=0?'+':'')+mod:''}`;
-  const label = document.getElementById('dh-label');
-  label.textContent = hopeWins ? '✦ With Hope' : '⚠ With Fear';
-  label.className = hopeWins?'hope-col':'fear-col';
-  addRollHistory(`Dual Roll → ${total} (${hopeWins?'Hope':'Fear'}: ${hope} vs ${fear}${mod?` +${mod}`:''})`);
+function spawnFlyingDie(area, sides, value, sch, animClass, sz=52) {
+  const wrapper = document.createElement('div');
+  wrapper.style.position = 'absolute';
+  wrapper.style.pointerEvents = 'none';
+  wrapper.style.top = '50%';
+  wrapper.style.transform = 'translateY(-50%)';
+  wrapper.className = animClass;
+  const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svgEl.setAttribute('width', sz); svgEl.setAttribute('height', sz);
+  drawDiceSVG(svgEl, sides, value, sch, diceLogo, sz);
+  wrapper.appendChild(svgEl);
+  area.appendChild(wrapper);
+  wrapper.addEventListener('animationend', () => wrapper.remove());
 }
 
-function rollDie(sides) {
+function rollDaggerheartAnim() {
+  const mod = parseInt(document.getElementById('dh-mod').value)||0;
+  const hopeVal = d(12), fearVal = d(12);
+  const total = hopeVal+fearVal+mod;
+  const hopeWins = hopeVal >= fearVal;
+  const box = document.getElementById('dh-result-box');
+  document.getElementById('dh-result').style.display = 'block';
+  box.innerHTML = `<div style="font-size:14px;color:var(--muted)">Rolling…</div>`;
+  spawnFlyingDie(box, 12, hopeVal, diceScheme, 'dice-anim-hope', 52);
+  spawnFlyingDie(box, 12, fearVal, makeFearDiceScheme(), 'dice-anim-fear', 52);
+  setTimeout(() => {
+    const cls = hopeWins ? 'hope-col' : 'fear-col';
+    box.innerHTML = `
+      <div class="roll-total ${cls}">${total}</div>
+      <div class="roll-breakdown">Hope d12: ${hopeVal} · Fear d12: ${fearVal}${mod?` · Mod: ${mod>=0?'+':''}${mod}`:''}</div>
+      <div style="font-family:'Cinzel',serif;font-size:0.85rem;letter-spacing:0.1em;margin-top:0.4rem" class="${cls}">${hopeWins?'✦ With Hope':'⚠ With Fear'}</div>
+    `;
+    addRollHistory(`Dual Roll → ${total} (${hopeWins?'Hope':'Fear'}: ${hopeVal} vs ${fearVal}${mod?` +${mod}`:''})`);
+  }, 1200);
+}
+
+function rollDieAnim(sides) {
   const count = parseInt(document.getElementById('std-count').value)||1;
   const mod = parseInt(document.getElementById('std-mod').value)||0;
+  const box = document.getElementById('std-result-box');
+  document.getElementById('std-result').style.display = 'block';
+  box.innerHTML = `<div style="font-size:14px;color:var(--muted)">Rolling…</div>`;
   const rolls = Array.from({length:count},()=>d(sides));
-  const sum = rolls.reduce((a,b)=>a+b,0)+mod;
-  document.getElementById('std-result').style.display='block';
-  document.getElementById('std-total').textContent = sum;
-  document.getElementById('std-breakdown').textContent = `${count}d${sides}${mod?(mod>=0?'+':'')+mod:''} [${rolls.join(', ')}]`;
-  addRollHistory(`${count}d${sides}${mod?(mod>=0?'+':'')+mod:''} → ${sum}`);
+  spawnFlyingDie(box, sides, rolls[0], diceScheme, 'dice-anim-single', 54);
+  setTimeout(() => {
+    const total = rolls.reduce((a,b)=>a+b,0)+mod;
+    const isMax = count===1 && rolls[0]===sides;
+    const sv = document.getElementById(`die-svg-${sides}`);
+    if (sv) { drawDiceSVG(sv, sides, rolls[0], diceScheme, diceLogo, 56); setTimeout(()=>drawDiceSVG(sv,sides,null,diceScheme,diceLogo,56), 2000); }
+    box.innerHTML = `
+      <div class="roll-total standard-result">${total}</div>
+      <div class="roll-breakdown">${count}d${sides}${mod?(mod>=0?'+':'')+mod:''} [${rolls.join(', ')}]${isMax?' ✦ Max roll!':''}</div>
+    `;
+    addRollHistory(`${count}d${sides}${mod?(mod>=0?'+':'')+mod:''} → ${total}`);
+  }, 1050);
 }
 
 function addRollHistory(entry) {

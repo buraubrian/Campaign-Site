@@ -174,7 +174,103 @@ select option { background: var(--panel); }
 .pip-hp { border-color: var(--emerald); } .pip-hp.on { background: var(--emerald); }
 .pip-stress { border-color: var(--ruby); } .pip-stress.on { background: var(--ruby); }
 .pip-armor { border-color: var(--sapphire); } .pip-armor.on { background: var(--sapphire); }
-.pip-hope { border-color: var(--hope,#e8bc6a); border-radius: 50%; } .pip-hope.on { background: var(--hope,#e8bc6a); }
+.pip-hope { border-color: var(--gold-light); border-radius: 4px; transform: rotate(45deg); }
+.pip-hope.on { background: var(--gold-light); }
+
+/* ── Character Sheet v2 ── */
+.sheet-banner {
+  display: flex; align-items: center; gap: 1.25rem;
+  background: linear-gradient(135deg, rgba(123,79,166,0.12), rgba(46,109,164,0.08));
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 1.5rem; margin-bottom: 1.25rem; position: relative; overflow: hidden;
+}
+.sheet-banner::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--amethyst), var(--sapphire));
+}
+.sheet-portrait {
+  width: 76px; height: 76px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--amethyst), var(--sapphire));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; border: 2px solid var(--gold); box-shadow: 0 0 24px rgba(201,149,58,0.25);
+}
+.sheet-banner-text { flex: 1; min-width: 0; }
+.sheet-banner-text .name-input {
+  font-family: 'Cinzel Decorative', serif; font-size: 1.5rem; color: var(--gold-light);
+  background: transparent; border: none; padding: 0; width: 100%; margin-bottom: 0.2rem;
+}
+.sheet-banner-text .name-input:focus { outline: none; border-bottom: 1px solid var(--border); }
+.sheet-subline { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+.sheet-subline input {
+  background: transparent; border: none; color: var(--amethyst); font-family: 'Cinzel', serif;
+  font-size: 0.78rem; letter-spacing: 0.06em; padding: 0; width: auto; min-width: 60px;
+}
+.sheet-subline input:focus { outline: none; border-bottom: 1px solid var(--border); }
+.sheet-subline .sep { color: var(--muted); font-size: 0.78rem; }
+.level-badge {
+  flex-shrink: 0; width: 58px; height: 58px; border-radius: var(--radius);
+  background: rgba(14,11,20,0.6); border: 1.5px solid var(--gold);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.level-badge input {
+  background: transparent; border: none; text-align: center; font-family: 'Cinzel Decorative', serif;
+  font-size: 1.3rem; color: var(--gold-light); padding: 0; width: 100%;
+}
+.level-badge .lvl-lbl { font-family: 'Cinzel', serif; font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+.shield-row { display: flex; gap: 0.85rem; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: stretch; }
+.shield-badge {
+  width: 78px; min-height: 84px; background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 28px 28px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.shield-badge input {
+  background: transparent; border: none; text-align: center; font-family: 'Cinzel', serif;
+  font-size: 1.5rem; font-weight: 600; color: var(--gold-light); width: 100%; padding: 0;
+}
+.shield-badge .shield-lbl { font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+.armor-slots-card { flex: 1; min-width: 200px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 0.85rem 1rem; display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
+
+.attrs-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.6rem; margin-bottom: 1.25rem; }
+.attr-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius) var(--radius) 20px 20px;
+  padding: 0.7rem 0.4rem; text-align: center;
+}
+.attr-card .attr-name { font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
+.attr-card input {
+  background: transparent; border: none; text-align: center; font-family: 'Cinzel', serif;
+  font-size: 1.3rem; font-weight: 600; color: var(--gold-light); width: 100%; padding: 0; margin-bottom: 0.4rem;
+}
+.attr-card .attr-skills { font-size: 0.68rem; color: var(--muted); line-height: 1.55; border-top: 1px solid var(--border); padding-top: 0.4rem; }
+
+.threshold-bar { display: flex; }
+.threshold-seg { flex: 1; text-align: center; padding: 0.6rem 0.4rem; position: relative; }
+.threshold-seg:not(:last-child)::after { content: ''; position: absolute; right: 0; top: 12%; bottom: 12%; width: 1px; background: var(--border); }
+.threshold-seg .th-lbl { font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.threshold-seg input { background: transparent; border: none; text-align: center; font-family: 'Cinzel', serif; font-size: 1.3rem; font-weight: 600; color: var(--text); width: 100%; padding: 0; margin: 0.15rem 0; }
+.threshold-seg .th-mark { font-size: 0.62rem; color: var(--muted); }
+
+.weapon-card-display { background: rgba(14,11,20,0.4); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.7rem 0.85rem; margin-bottom: 0.6rem; position: relative; }
+.weapon-card-display .w-dice { position: absolute; top: 0.65rem; right: 0.85rem; font-family: 'Cinzel', serif; color: var(--gold-light); font-size: 0.95rem; }
+.weapon-card-display input.w-name { background: transparent; border: none; font-family: 'Cinzel', serif; font-size: 0.92rem; color: var(--text); padding: 0; width: 70%; margin-bottom: 0.15rem; }
+.weapon-card-display .w-meta { font-size: 0.7rem; color: var(--muted); }
+
+.duality-quick-panel {
+  background: linear-gradient(135deg, rgba(123,79,166,0.08), rgba(46,109,164,0.08));
+  border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem;
+}
+.duality-quick-dice { display: flex; align-items: center; gap: 0.6rem; margin: 0.6rem 0; flex-wrap: wrap; }
+.duality-quick-dice .dq-svg-wrap { display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--muted); }
+.duality-quick-total { margin-left: auto; font-family: 'Cinzel Decorative', serif; font-size: 1.4rem; }
+.sheet-tab-strip { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.sheet-tab-chip {
+  font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.4rem 0.85rem; border-radius: var(--radius); background: rgba(14,11,20,0.4);
+  border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: all 0.2s;
+}
+.sheet-tab-chip.active { color: var(--gold-light); border-color: var(--gold); background: rgba(201,149,58,0.1); }
+.sheet-sub-panel { display: none; }
+.sheet-sub-panel.active { display: block; }
 
 /* ── NPC / Encounter Cards ── */
 .npc-card { background: var(--panel2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem; margin-bottom: 0.75rem; display: flex; gap: 1rem; align-items: flex-start; }
@@ -592,6 +688,19 @@ function authTab(tab) {
   document.getElementById('auth-msg').textContent = '';
 }
 
+/* ═══════════════════════════════════════════════════════
+   DAGGERHEART REFERENCE DATA
+════════════════════════════════════════════════════════ */
+const ATTRIBUTE_SKILLS = {
+  agility:   ['Sprint', 'Dodge', 'Leap'],
+  strength:  ['Lift', 'Smash', 'Grapple'],
+  finesse:   ['Control', 'Hide', 'Tinker'],
+  instinct:  ['Perceive', 'Sense', 'Navigate'],
+  presence:  ['Charm', 'Perform', 'Deceive'],
+  knowledge: ['Recall', 'Analyze', 'Comprehend'],
+};
+function fmtMod(n) { n = parseInt(n)||0; return (n>=0?'+':'') + n; }
+
 function togglePassword(inputId, iconId) {
   const input = document.getElementById(inputId);
   const icon = document.getElementById(iconId);
@@ -773,97 +882,180 @@ async function loadSheetTab() {
   const c = chars[0];
   el.innerHTML = renderSheetHTML(c);
   renderAllPips(c);
+  initSheetDicePreviews();
+}
+
+function initSheetDicePreviews() {
+  loadDicePrefs();
+  const hopeSvg = document.getElementById('sheet-dh-hope');
+  const fearSvg = document.getElementById('sheet-dh-fear');
+  if (hopeSvg) drawDiceSVG(hopeSvg, 12, null, diceScheme, diceLogo, 40);
+  if (fearSvg) drawDiceSVG(fearSvg, 12, null, makeFearDiceScheme(), diceLogo, 40);
 }
 
 function renderSheetHTML(c) {
+  const initial = (c.name||'?').trim().charAt(0).toUpperCase() || '?';
   return `
   <div class="section-header">
-    <h2>${c.name || 'Unnamed Hero'}</h2>
+    <h2>Character Sheet</h2>
     <div class="section-actions">
       <button class="btn btn-gold btn-sm" onclick="saveSheetInline('${c.id}')">Save Sheet</button>
       <button class="btn btn-danger btn-sm" onclick="unassignCharacter('${c.id}')">Remove from Campaign</button>
     </div>
   </div>
-  <div class="card">
-    <div class="field-row cols-3">
-      <div><label>Character Name</label><input type="text" id="s-name" value="${c.name||''}" /></div>
-      <div><label>Class</label><input type="text" id="s-class" value="${c.class||''}" /></div>
-      <div><label>Subclass</label><input type="text" id="s-subclass" value="${c.subclass||''}" /></div>
-    </div>
-    <div class="field-row cols-3">
-      <div><label>Ancestry</label><input type="text" id="s-ancestry" value="${c.ancestry||''}" /></div>
-      <div><label>Community</label><input type="text" id="s-community" value="${c.community||''}" /></div>
-      <div><label>Level</label><input type="number" id="s-level" value="${c.level||1}" min="1" max="10" /></div>
-    </div>
-  </div>
-  <div class="card">
-    <h3>Attributes</h3>
-    <div class="field-row cols-3" style="margin-bottom:0.75rem">
-      <div class="stat-box"><span class="stat-label">Agility</span><input type="number" id="s-agility" value="${c.agility||0}" /></div>
-      <div class="stat-box"><span class="stat-label">Strength</span><input type="number" id="s-strength" value="${c.strength||0}" /></div>
-      <div class="stat-box"><span class="stat-label">Finesse</span><input type="number" id="s-finesse" value="${c.finesse||0}" /></div>
-    </div>
-    <div class="field-row cols-3" style="margin-bottom:0">
-      <div class="stat-box"><span class="stat-label">Instinct</span><input type="number" id="s-instinct" value="${c.instinct||0}" /></div>
-      <div class="stat-box"><span class="stat-label">Presence</span><input type="number" id="s-presence" value="${c.presence||0}" /></div>
-      <div class="stat-box"><span class="stat-label">Knowledge</span><input type="number" id="s-knowledge" value="${c.knowledge||0}" /></div>
-    </div>
-  </div>
-  <div class="card">
-    <h3>Defenses & Thresholds</h3>
-    <div class="field-row cols-4" style="margin-bottom:0">
-      <div class="stat-box"><span class="stat-label">Evasion</span><input type="number" id="s-evasion" value="${c.evasion||10}" /></div>
-      <div class="stat-box"><span class="stat-label">Minor</span><input type="number" id="s-minor" value="${c.minor_threshold||5}" /></div>
-      <div class="stat-box"><span class="stat-label">Major</span><input type="number" id="s-major" value="${c.major_threshold||10}" /></div>
-      <div class="stat-box"><span class="stat-label">Severe</span><input type="number" id="s-severe" value="${c.severe_threshold||15}" /></div>
-    </div>
-  </div>
-  <div class="card">
-    <h3>Hit Points, Stress & Resources</h3>
-    <div class="field-row cols-2">
-      <div>
-        <label>Max HP <input type="number" id="s-max-hp" value="${c.max_hp||6}" min="1" max="30" style="width:60px;display:inline;margin-left:0.5rem" onchange="rebuildPips('hp',this.value,${c.current_hp||c.max_hp||6})" /></label>
-        <div class="pip-row" id="pip-hp"></div>
-      </div>
-      <div>
-        <label>Max Stress <input type="number" id="s-max-stress" value="${c.max_stress||6}" min="1" max="12" style="width:60px;display:inline;margin-left:0.5rem" onchange="rebuildPips('stress',this.value,${c.current_stress||0})" /></label>
-        <div class="pip-row" id="pip-stress"></div>
+
+  <!-- Banner header -->
+  <div class="sheet-banner">
+    <div class="sheet-portrait">${initial}</div>
+    <div class="sheet-banner-text">
+      <input type="text" class="name-input" id="s-name" value="${c.name||''}" placeholder="Character Name" />
+      <div class="sheet-subline">
+        <input type="text" id="s-ancestry" value="${c.ancestry||''}" placeholder="Ancestry" style="width:90px" />
+        <span class="sep">·</span>
+        <input type="text" id="s-class" value="${c.class||''}" placeholder="Class" style="width:90px" />
+        <input type="text" id="s-subclass" value="${c.subclass||''}" placeholder="(Subclass)" style="width:100px" />
+        <span class="sep">·</span>
+        <input type="text" id="s-community" value="${c.community||''}" placeholder="Community" style="width:100px" />
       </div>
     </div>
-    <div class="field-row cols-2" style="margin-bottom:0">
-      <div>
-        <label>Armor Slots <input type="number" id="s-max-armor" value="${c.max_armor||3}" min="0" max="6" style="width:60px;display:inline;margin-left:0.5rem" onchange="rebuildPips('armor',this.value,${c.current_armor||0})" /></label>
-        <div class="pip-row" id="pip-armor"></div>
-      </div>
-      <div>
-        <label>Hope <input type="number" id="s-max-hope" value="${c.max_hope||6}" min="1" max="10" style="width:60px;display:inline;margin-left:0.5rem" onchange="rebuildPips('hope',this.value,${c.current_hope||c.max_hope||6})" /></label>
-        <div class="pip-row" id="pip-hope"></div>
-      </div>
+    <div class="level-badge">
+      <input type="number" id="s-level" value="${c.level||1}" min="1" max="10" />
+      <div class="lvl-lbl">Level</div>
     </div>
   </div>
-  <div class="card">
-    <h3>Experiences</h3>
-    <textarea id="s-experiences">${c.experiences||''}</textarea>
-  </div>
-  <div class="card">
-    <h3>Weapons & Inventory</h3>
-    <div class="field-row cols-2">
-      <div><label>Primary Weapon</label><input type="text" id="s-wpn1" value="${c.weapon_primary||''}" /></div>
-      <div><label>Secondary Weapon</label><input type="text" id="s-wpn2" value="${c.weapon_secondary||''}" /></div>
+
+  <!-- Evasion / Armor / Armor Slots -->
+  <div class="shield-row">
+    <div class="shield-badge"><input type="number" id="s-evasion" value="${c.evasion||10}" /><div class="shield-lbl">Evasion</div></div>
+    <div class="shield-badge"><input type="number" id="s-max-armor-display" value="${c.max_armor||3}" onchange="rebuildPips('armor',this.value,${c.current_armor||0})" /><div class="shield-lbl">Armor</div></div>
+    <div class="armor-slots-card">
+      <span style="font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">Armor Slots Marked</span>
+      <div class="pip-row" id="pip-armor" style="margin-top:0"></div>
     </div>
-    <label>Inventory</label>
-    <textarea id="s-inventory">${c.inventory||''}</textarea>
+  </div>
+
+  <!-- Attributes -->
+  <div class="attrs-grid">
+    ${Object.entries(ATTRIBUTE_SKILLS).map(([key,skills]) => `
+      <div class="attr-card">
+        <div class="attr-name">${key}</div>
+        <input type="number" id="s-${key}" value="${c[key]||0}" />
+        <div class="attr-skills">${skills.join('<br>')}</div>
+      </div>
+    `).join('')}
+  </div>
+
+  <!-- Damage Thresholds -->
+  <div class="card">
+    <h3>Damage Thresholds</h3>
+    <div class="threshold-bar">
+      <div class="threshold-seg"><div class="th-lbl">Minor</div><input type="number" id="s-minor" value="${c.minor_threshold||5}" /><div class="th-mark">Mark 1 HP</div></div>
+      <div class="threshold-seg"><div class="th-lbl">Major</div><input type="number" id="s-major" value="${c.major_threshold||10}" /><div class="th-mark">Mark 2 HP</div></div>
+      <div class="threshold-seg"><div class="th-lbl">Severe</div><input type="number" id="s-severe" value="${c.severe_threshold||15}" /><div class="th-mark">Mark 3 HP</div></div>
+    </div>
+  </div>
+
+  <!-- HP / Stress -->
+  <div class="field-row cols-2">
+    <div class="card" style="margin-bottom:0">
+      <h3>Hit Points <input type="number" id="s-max-hp" value="${c.max_hp||6}" min="1" max="30" style="width:50px;display:inline;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-family:'Crimson Pro',serif;font-size:0.9rem;margin-left:0.4rem" onchange="rebuildPips('hp',this.value,${c.current_hp||c.max_hp||6})" /></h3>
+      <div class="pip-row" id="pip-hp"></div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <h3>Stress <input type="number" id="s-max-stress" value="${c.max_stress||6}" min="1" max="12" style="width:50px;display:inline;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-family:'Crimson Pro',serif;font-size:0.9rem;margin-left:0.4rem" onchange="rebuildPips('stress',this.value,${c.current_stress||0})" /></h3>
+      <div class="pip-row" id="pip-stress"></div>
+    </div>
+  </div>
+  <div style="height:1.25rem"></div>
+
+  <!-- Hope -->
+  <div class="card">
+    <h3>Hope <input type="number" id="s-max-hope" value="${c.max_hope||6}" min="1" max="10" style="width:50px;display:inline;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-family:'Crimson Pro',serif;font-size:0.9rem;margin-left:0.4rem" onchange="rebuildPips('hope',this.value,${c.current_hope||c.max_hope||6})" /></h3>
+    <div class="pip-row" id="pip-hope" style="gap:10px"></div>
+  </div>
+
+  <!-- Weapons + Quick Duality Roll -->
+  <div class="field-row cols-2" style="align-items:start">
+    <div class="card" style="margin-bottom:0">
+      <h3>Active Weapons</h3>
+      <div class="weapon-card-display">
+        <input type="text" class="w-name" id="s-wpn1" value="${c.weapon_primary||''}" placeholder="Primary Weapon" />
+        <div class="w-meta">Primary · Melee or Ranged</div>
+      </div>
+      <div class="weapon-card-display">
+        <input type="text" class="w-name" id="s-wpn2" value="${c.weapon_secondary||''}" placeholder="Secondary Weapon" />
+        <div class="w-meta">Secondary</div>
+      </div>
+    </div>
+    <div class="duality-quick-panel">
+      <h3 style="margin-bottom:0.5rem">Quick Duality Roll</h3>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:0.5rem">Roll Hope &amp; Fear right from your sheet.</p>
+      <div class="duality-quick-dice" id="sheet-dq-dice">
+        <div class="dq-svg-wrap"><svg id="sheet-dh-hope" width="40" height="40" viewBox="0 0 40 40"></svg>Hope</div>
+        <div class="dq-svg-wrap"><svg id="sheet-dh-fear" width="40" height="40" viewBox="0 0 40 40"></svg>Fear</div>
+        <span class="duality-quick-total" id="sheet-dq-total"></span>
+      </div>
+      <button class="btn btn-gold btn-sm btn-full" onclick="rollSheetDuality()">Roll Duality</button>
+      <div style="font-size:0.72rem;color:var(--muted);text-align:center;margin-top:0.5rem">Full Dice Vault — colors, logos &amp; standard dice — in its own tab above</div>
+    </div>
+  </div>
+  <div style="height:1.25rem"></div>
+
+  <!-- Tabbed lower section -->
+  <div class="sheet-tab-strip">
+    <button class="sheet-tab-chip active" onclick="showSheetSubPanel('features')">Effects & Features</button>
+    <button class="sheet-tab-chip" onclick="showSheetSubPanel('inventory')">Equipment</button>
+    <button class="sheet-tab-chip" onclick="showSheetSubPanel('experiences')">Experiences</button>
+    <button class="sheet-tab-chip" onclick="showSheetSubPanel('notes')">Notes & Backstory</button>
   </div>
   <div class="card">
-    <h3>Notes & Backstory</h3>
-    <textarea id="s-notes" style="min-height:130px">${c.notes||''}</textarea>
+    <div class="sheet-sub-panel active" id="sheet-sub-features">
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.75rem">Class features, domain cards, and abilities — jot them here for now.</p>
+      <textarea id="s-features" style="min-height:160px">${c.features||''}</textarea>
+    </div>
+    <div class="sheet-sub-panel" id="sheet-sub-inventory">
+      <label>Inventory & Gear</label>
+      <textarea id="s-inventory" style="min-height:160px">${c.inventory||''}</textarea>
+    </div>
+    <div class="sheet-sub-panel" id="sheet-sub-experiences">
+      <label>Experiences</label>
+      <textarea id="s-experiences" style="min-height:160px">${c.experiences||''}</textarea>
+    </div>
+    <div class="sheet-sub-panel" id="sheet-sub-notes">
+      <label>Notes & Backstory</label>
+      <textarea id="s-notes" style="min-height:160px">${c.notes||''}</textarea>
+    </div>
   </div>
+
   <input type="hidden" id="s-char-id" value="${c.id}" />
   <input type="hidden" id="s-cur-hp" value="${c.current_hp||c.max_hp||6}" />
   <input type="hidden" id="s-cur-stress" value="${c.current_stress||0}" />
   <input type="hidden" id="s-cur-armor" value="${c.current_armor||0}" />
   <input type="hidden" id="s-cur-hope" value="${c.current_hope||c.max_hope||6}" />
   `;
+}
+
+function showSheetSubPanel(id) {
+  document.querySelectorAll('.sheet-sub-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sheet-tab-chip').forEach(b => b.classList.remove('active'));
+  document.getElementById('sheet-sub-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function rollSheetDuality() {
+  loadDicePrefs();
+  const hopeVal = d(12), fearVal = d(12);
+  const hopeWins = hopeVal >= fearVal;
+  const hopeSvg = document.getElementById('sheet-dh-hope');
+  const fearSvg = document.getElementById('sheet-dh-fear');
+  if (hopeSvg) drawDiceSVG(hopeSvg, 12, hopeVal, diceScheme, diceLogo, 40);
+  if (fearSvg) drawDiceSVG(fearSvg, 12, fearVal, makeFearDiceScheme(), diceLogo, 40);
+  const totalEl = document.getElementById('sheet-dq-total');
+  if (totalEl) {
+    totalEl.textContent = hopeVal + fearVal;
+    totalEl.className = 'duality-quick-total ' + (hopeWins ? 'hope-col' : 'fear-col');
+  }
+  addRollHistory(`Sheet Duality Roll → ${hopeVal+fearVal} (${hopeWins?'Hope':'Fear'}: ${hopeVal} vs ${fearVal})`);
 }
 
 function renderAllPips(c) {
@@ -910,10 +1102,10 @@ async function saveSheetInline(charId) {
     evasion: n('s-evasion'), minor_threshold: n('s-minor'), major_threshold: n('s-major'), severe_threshold: n('s-severe'),
     max_hp: n('s-max-hp'), current_hp: n('s-cur-hp'),
     max_stress: n('s-max-stress'), current_stress: n('s-cur-stress'),
-    max_armor: n('s-max-armor'), current_armor: n('s-cur-armor'),
+    max_armor: n('s-max-armor-display'), current_armor: n('s-cur-armor'),
     max_hope: n('s-max-hope'), current_hope: n('s-cur-hope'),
     experiences: v('s-experiences'), inventory: v('s-inventory'), notes: v('s-notes'),
-    weapon_primary: v('s-wpn1'), weapon_secondary: v('s-wpn2'),
+    weapon_primary: v('s-wpn1'), weapon_secondary: v('s-wpn2'), features: v('s-features'),
     updated_at: new Date().toISOString()
   };
   const { error } = await sb.from('characters').update(updates).eq('id', id);
@@ -946,84 +1138,117 @@ async function openCharEditor(charId) {
 }
 
 function charEditorHTML(c) {
+  const initial = (c.name||'?').trim().charAt(0).toUpperCase();
   return `
-  <div class="card">
-    <div class="field-row cols-2">
-      <div><label>Character Name</label><input type="text" id="s-name" value="${c.name||''}" placeholder="Your hero's name" /></div>
-      <div><label>Player Name</label><input type="text" id="s-player" value="${c.player_name||''}" placeholder="Your name" /></div>
-    </div>
-    <div class="field-row cols-3">
-      <div><label>Class</label><input type="text" id="s-class" value="${c.class||''}" /></div>
-      <div><label>Subclass</label><input type="text" id="s-subclass" value="${c.subclass||''}" /></div>
-      <div><label>Level</label><input type="number" id="s-level" value="${c.level||1}" min="1" max="10" /></div>
-    </div>
-    <div class="field-row cols-2">
-      <div><label>Ancestry</label><input type="text" id="s-ancestry" value="${c.ancestry||''}" /></div>
-      <div><label>Community</label><input type="text" id="s-community" value="${c.community||''}" /></div>
-    </div>
-  </div>
-  <div class="card">
-    <h3>Attributes</h3>
-    <div class="field-row cols-3" style="margin-bottom:0.75rem">
-      <div class="stat-box"><span class="stat-label">Agility</span><input type="number" id="s-agility" value="${c.agility||0}" /></div>
-      <div class="stat-box"><span class="stat-label">Strength</span><input type="number" id="s-strength" value="${c.strength||0}" /></div>
-      <div class="stat-box"><span class="stat-label">Finesse</span><input type="number" id="s-finesse" value="${c.finesse||0}" /></div>
-    </div>
-    <div class="field-row cols-3" style="margin-bottom:0">
-      <div class="stat-box"><span class="stat-label">Instinct</span><input type="number" id="s-instinct" value="${c.instinct||0}" /></div>
-      <div class="stat-box"><span class="stat-label">Presence</span><input type="number" id="s-presence" value="${c.presence||0}" /></div>
-      <div class="stat-box"><span class="stat-label">Knowledge</span><input type="number" id="s-knowledge" value="${c.knowledge||0}" /></div>
-    </div>
-  </div>
-  <div class="card">
-    <h3>Defenses</h3>
-    <div class="field-row cols-4" style="margin-bottom:0">
-      <div class="stat-box"><span class="stat-label">Evasion</span><input type="number" id="s-evasion" value="${c.evasion||10}" /></div>
-      <div class="stat-box"><span class="stat-label">Minor</span><input type="number" id="s-minor" value="${c.minor_threshold||5}" /></div>
-      <div class="stat-box"><span class="stat-label">Major</span><input type="number" id="s-major" value="${c.major_threshold||10}" /></div>
-      <div class="stat-box"><span class="stat-label">Severe</span><input type="number" id="s-severe" value="${c.severe_threshold||15}" /></div>
-    </div>
-  </div>
-  <div class="card">
-    <h3>Resources</h3>
-    <div class="field-row cols-2">
-      <div>
-        <label>Max HP <input type="number" id="s-max-hp" value="${c.max_hp||6}" min="1" max="30" style="width:55px;display:inline;margin-left:0.5rem" onchange="rebuildPips('hp',this.value,this.value)" /></label>
-        <div class="pip-row" id="pip-hp"></div>
-      </div>
-      <div>
-        <label>Max Stress <input type="number" id="s-max-stress" value="${c.max_stress||6}" min="1" max="12" style="width:55px;display:inline;margin-left:0.5rem" /></label>
-        <div class="pip-row" id="pip-stress"></div>
+  <!-- Banner header -->
+  <div class="sheet-banner">
+    <div class="sheet-portrait">${initial}</div>
+    <div class="sheet-banner-text">
+      <input type="text" class="name-input" id="s-name" value="${c.name||''}" placeholder="Character Name" />
+      <div class="sheet-subline">
+        <input type="text" id="s-ancestry" value="${c.ancestry||''}" placeholder="Ancestry" style="width:90px" />
+        <span class="sep">·</span>
+        <input type="text" id="s-class" value="${c.class||''}" placeholder="Class" style="width:90px" />
+        <input type="text" id="s-subclass" value="${c.subclass||''}" placeholder="(Subclass)" style="width:100px" />
+        <span class="sep">·</span>
+        <input type="text" id="s-community" value="${c.community||''}" placeholder="Community" style="width:100px" />
       </div>
     </div>
-    <div class="field-row cols-2" style="margin-bottom:0">
-      <div>
-        <label>Armor Slots <input type="number" id="s-max-armor" value="${c.max_armor||3}" min="0" max="6" style="width:55px;display:inline;margin-left:0.5rem" /></label>
-        <div class="pip-row" id="pip-armor"></div>
-      </div>
-      <div>
-        <label>Hope <input type="number" id="s-max-hope" value="${c.max_hope||6}" min="1" max="10" style="width:55px;display:inline;margin-left:0.5rem" /></label>
-        <div class="pip-row" id="pip-hope"></div>
-      </div>
+    <div class="level-badge">
+      <input type="number" id="s-level" value="${c.level||1}" min="1" max="10" />
+      <div class="lvl-lbl">Level</div>
     </div>
   </div>
-  <div class="card">
-    <h3>Weapons & Inventory</h3>
-    <div class="field-row cols-2">
-      <div><label>Primary Weapon</label><input type="text" id="s-wpn1" value="${c.weapon_primary||''}" /></div>
-      <div><label>Secondary Weapon</label><input type="text" id="s-wpn2" value="${c.weapon_secondary||''}" /></div>
+
+  <!-- Evasion / Armor / Armor Slots -->
+  <div class="shield-row">
+    <div class="shield-badge"><input type="number" id="s-evasion" value="${c.evasion||10}" /><div class="shield-lbl">Evasion</div></div>
+    <div class="shield-badge"><input type="number" id="s-max-armor-display" value="${c.max_armor||3}" onchange="rebuildPips('armor',this.value,0)" /><div class="shield-lbl">Armor</div></div>
+    <div class="armor-slots-card">
+      <span style="font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">Armor Slots Marked</span>
+      <div class="pip-row" id="pip-armor" style="margin-top:0"></div>
     </div>
-    <label>Inventory</label>
-    <textarea id="s-inventory">${c.inventory||''}</textarea>
+  </div>
+
+  <!-- Attributes with skills -->
+  <div class="attrs-grid">
+    ${Object.entries(ATTRIBUTE_SKILLS).map(([key,skills]) => `
+      <div class="attr-card">
+        <div class="attr-name">${key}</div>
+        <input type="number" id="s-${key}" value="${c[key]||0}" />
+        <div class="attr-skills">${skills.join('<br>')}</div>
+      </div>
+    `).join('')}
+  </div>
+
+  <!-- Damage Thresholds -->
+  <div class="card">
+    <h3>Damage Thresholds</h3>
+    <div class="threshold-bar">
+      <div class="threshold-seg"><div class="th-lbl">Minor</div><input type="number" id="s-minor" value="${c.minor_threshold||5}" /><div class="th-mark">Mark 1 HP</div></div>
+      <div class="threshold-seg"><div class="th-lbl">Major</div><input type="number" id="s-major" value="${c.major_threshold||10}" /><div class="th-mark">Mark 2 HP</div></div>
+      <div class="threshold-seg"><div class="th-lbl">Severe</div><input type="number" id="s-severe" value="${c.severe_threshold||15}" /><div class="th-mark">Mark 3 HP</div></div>
+    </div>
+  </div>
+
+  <!-- HP / Stress -->
+  <div class="field-row cols-2">
+    <div class="card" style="margin-bottom:0">
+      <h3>Hit Points <input type="number" id="s-max-hp" value="${c.max_hp||6}" min="1" max="30" style="width:50px;display:inline;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-family:'Crimson Pro',serif;font-size:0.9rem;margin-left:0.4rem" onchange="rebuildPips('hp',this.value,this.value)" /></h3>
+      <div class="pip-row" id="pip-hp"></div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <h3>Stress <input type="number" id="s-max-stress" value="${c.max_stress||6}" min="1" max="12" style="width:50px;display:inline;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-family:'Crimson Pro',serif;font-size:0.9rem;margin-left:0.4rem" onchange="rebuildPips('stress',this.value,0)" /></h3>
+      <div class="pip-row" id="pip-stress"></div>
+    </div>
+  </div>
+  <div style="height:1.25rem"></div>
+
+  <!-- Hope -->
+  <div class="card">
+    <h3>Hope <input type="number" id="s-max-hope" value="${c.max_hope||6}" min="1" max="10" style="width:50px;display:inline;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-family:'Crimson Pro',serif;font-size:0.9rem;margin-left:0.4rem" onchange="rebuildPips('hope',this.value,this.value)" /></h3>
+    <div class="pip-row" id="pip-hope" style="gap:10px"></div>
+  </div>
+
+  <!-- Weapons -->
+  <div class="card">
+    <h3>Active Weapons</h3>
+    <div class="weapon-card-display">
+      <input type="text" class="w-name" id="s-wpn1" value="${c.weapon_primary||''}" placeholder="Primary Weapon — name, damage die, traits" />
+      <div class="w-meta">Primary</div>
+    </div>
+    <div class="weapon-card-display">
+      <input type="text" class="w-name" id="s-wpn2" value="${c.weapon_secondary||''}" placeholder="Secondary Weapon" />
+      <div class="w-meta">Secondary</div>
+    </div>
+  </div>
+
+  <!-- Tabbed lower section -->
+  <div class="sheet-tab-strip">
+    <button class="sheet-tab-chip active" onclick="showSheetSubPanel('features')">Effects & Features</button>
+    <button class="sheet-tab-chip" onclick="showSheetSubPanel('inventory')">Equipment</button>
+    <button class="sheet-tab-chip" onclick="showSheetSubPanel('experiences')">Experiences</button>
+    <button class="sheet-tab-chip" onclick="showSheetSubPanel('notes')">Notes & Backstory</button>
   </div>
   <div class="card">
-    <h3>Experiences</h3>
-    <textarea id="s-experiences">${c.experiences||''}</textarea>
+    <div class="sheet-sub-panel active" id="sheet-sub-features">
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.75rem">Class features, domain cards, and abilities.</p>
+      <textarea id="s-features" style="min-height:140px">${c.features||''}</textarea>
+    </div>
+    <div class="sheet-sub-panel" id="sheet-sub-inventory">
+      <label>Inventory & Gear</label>
+      <textarea id="s-inventory" style="min-height:140px">${c.inventory||''}</textarea>
+    </div>
+    <div class="sheet-sub-panel" id="sheet-sub-experiences">
+      <label>Experiences</label>
+      <textarea id="s-experiences" style="min-height:140px">${c.experiences||''}</textarea>
+    </div>
+    <div class="sheet-sub-panel" id="sheet-sub-notes">
+      <label>Notes & Backstory</label>
+      <textarea id="s-notes" style="min-height:140px">${c.notes||''}</textarea>
+    </div>
   </div>
-  <div class="card">
-    <h3>Notes & Backstory</h3>
-    <textarea id="s-notes" style="min-height:130px">${c.notes||''}</textarea>
-  </div>
+
   <input type="hidden" id="s-char-id" value="${c.id||''}" />
   <input type="hidden" id="s-cur-hp" value="${c.current_hp||c.max_hp||6}" />
   <input type="hidden" id="s-cur-stress" value="${c.current_stress||0}" />
@@ -1037,7 +1262,6 @@ async function saveCharacter() {
   const payload = {
     owner_id: currentUser.id,
     name: v('s-name') || 'Unnamed Hero',
-    player_name: v('s-player'),
     class: v('s-class'), subclass: v('s-subclass'), level: n('s-level'),
     ancestry: v('s-ancestry'), community: v('s-community'),
     agility: n('s-agility'), strength: n('s-strength'), finesse: n('s-finesse'),
@@ -1045,10 +1269,10 @@ async function saveCharacter() {
     evasion: n('s-evasion'), minor_threshold: n('s-minor'), major_threshold: n('s-major'), severe_threshold: n('s-severe'),
     max_hp: n('s-max-hp'), current_hp: n('s-cur-hp'),
     max_stress: n('s-max-stress'), current_stress: n('s-cur-stress'),
-    max_armor: n('s-max-armor'), current_armor: n('s-cur-armor'),
+    max_armor: n('s-max-armor-display'), current_armor: n('s-cur-armor'),
     max_hope: n('s-max-hope'), current_hope: n('s-cur-hope'),
     experiences: v('s-experiences'), inventory: v('s-inventory'), notes: v('s-notes'),
-    weapon_primary: v('s-wpn1'), weapon_secondary: v('s-wpn2'),
+    weapon_primary: v('s-wpn1'), weapon_secondary: v('s-wpn2'), features: v('s-features'),
     updated_at: new Date().toISOString()
   };
   let error;

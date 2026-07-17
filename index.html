@@ -536,8 +536,24 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal('modal-add-player')">✕</button>
     <h3>Add Player to Campaign</h3>
-    <div class="field"><label>Player Username</label><input type="text" id="ap-username" placeholder="Exact username" /></div>
-    <button class="btn btn-gold" onclick="addPlayerToCampaign()">Add Player</button>
+    <div class="field">
+      <label>Search by username or display name</label>
+      <input type="text" id="ap-search" placeholder="Start typing a name…" oninput="searchPlayers(this.value)" autocomplete="off" />
+    </div>
+    <div id="ap-results" style="margin-top:0.5rem;max-height:280px;overflow-y:auto"></div>
+    <div id="ap-selected" style="display:none;margin-top:1rem;background:rgba(201,149,58,0.08);border:1px solid var(--gold);border-radius:var(--radius);padding:0.75rem">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div id="ap-selected-name" style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:0.95rem"></div>
+          <div id="ap-selected-user" style="font-size:0.82rem;color:var(--muted);margin-top:0.1rem"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="clearPlayerSelection()">✕ Clear</button>
+      </div>
+    </div>
+    <div style="margin-top:1rem;display:flex;gap:0.5rem">
+      <button class="btn btn-gold" id="ap-add-btn" onclick="addPlayerToCampaign()" disabled style="opacity:0.5">Add to Campaign</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-player')">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -1328,7 +1344,7 @@ async function loadPlayersTab() {
   const { data: chars } = await sb.from('characters').select('*').eq('campaign_id', currentCampaign.id);
   el.innerHTML = `
     <div class="section-header"><h2>Players</h2>
-      <div class="section-actions"><button class="btn btn-gold btn-sm" onclick="openModal('modal-add-player')">+ Add Player</button></div>
+      <div class="section-actions"><button class="btn btn-gold btn-sm" onclick="openAddPlayerModal()">+ Add Player</button></div>
     </div>
     ${(!members || members.length===0) ? '<div class="empty-state">No players added yet.</div>' :
       members.map(m => {
@@ -1349,12 +1365,86 @@ async function loadPlayersTab() {
   `;
 }
 
+let selectedPlayerId = null;
+let playerSearchTimeout = null;
+
+function openAddPlayerModal() {
+  // reset state every time the modal opens
+  selectedPlayerId = null;
+  document.getElementById('ap-search').value = '';
+  document.getElementById('ap-results').innerHTML = '';
+  document.getElementById('ap-selected').style.display = 'none';
+  const btn = document.getElementById('ap-add-btn');
+  btn.disabled = true; btn.style.opacity = '0.5';
+  openModal('modal-add-player');
+}
+
+async function searchPlayers(query) {
+  clearTimeout(playerSearchTimeout);
+  const results = document.getElementById('ap-results');
+  if (!query || query.trim().length < 2) {
+    results.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:0.5rem">Type at least 2 characters to search…</div>';
+    return;
+  }
+  results.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:0.5rem">Searching…</div>';
+  playerSearchTimeout = setTimeout(async () => {
+    const q = query.trim().toLowerCase();
+    const { data: profiles, error } = await sb.from('profiles').select('*')
+      .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
+      .neq('id', currentUser.id)
+      .limit(10);
+    if (error || !profiles || profiles.length === 0) {
+      results.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:0.5rem">No users found matching that name.</div>';
+      return;
+    }
+    // filter out people already in the campaign
+    const { data: existing } = await sb.from('campaign_members').select('player_id').eq('campaign_id', currentCampaign.id);
+    const existingIds = new Set((existing||[]).map(m => m.player_id));
+    const available = profiles.filter(p => !existingIds.has(p.id));
+    if (available.length === 0) {
+      results.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:0.5rem">All matching users are already in this campaign.</div>';
+      return;
+    }
+    results.innerHTML = available.map(p => `
+      <div onclick="selectPlayer('${p.id}','${(p.display_name||p.username||'').replace(/'/g,"\\'")}','${(p.username||'').replace(/'/g,"\\'")}' )"
+        style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.75rem;border-radius:var(--radius);cursor:pointer;border:1px solid transparent;transition:all 0.15s;margin-bottom:0.3rem;background:rgba(14,11,20,0.4)"
+        onmouseover="this.style.borderColor='var(--amethyst)';this.style.background='rgba(123,79,166,0.1)'"
+        onmouseout="this.style.borderColor='transparent';this.style.background='rgba(14,11,20,0.4)'">
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--amethyst),var(--sapphire));display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">
+          ${(p.display_name||p.username||'?').charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <div style="font-family:'Cinzel',serif;color:var(--text);font-size:0.9rem">${p.display_name||p.username}</div>
+          <div style="font-size:0.78rem;color:var(--muted)">@${p.username}</div>
+        </div>
+      </div>
+    `).join('');
+  }, 300);
+}
+
+function selectPlayer(id, displayName, username) {
+  selectedPlayerId = id;
+  document.getElementById('ap-selected-name').textContent = displayName;
+  document.getElementById('ap-selected-user').textContent = '@' + username;
+  document.getElementById('ap-selected').style.display = 'block';
+  document.getElementById('ap-results').innerHTML = '';
+  document.getElementById('ap-search').value = '';
+  const btn = document.getElementById('ap-add-btn');
+  btn.disabled = false; btn.style.opacity = '1';
+}
+
+function clearPlayerSelection() {
+  selectedPlayerId = null;
+  document.getElementById('ap-selected').style.display = 'none';
+  document.getElementById('ap-search').value = '';
+  document.getElementById('ap-results').innerHTML = '';
+  const btn = document.getElementById('ap-add-btn');
+  btn.disabled = true; btn.style.opacity = '0.5';
+}
+
 async function addPlayerToCampaign() {
-  const username = document.getElementById('ap-username').value.trim().toLowerCase();
-  if (!username) return;
-  const { data: profile } = await sb.from('profiles').select('*').eq('username', username).single();
-  if (!profile) { toast('User not found', 'error'); return; }
-  const { error } = await sb.from('campaign_members').insert({ campaign_id: currentCampaign.id, player_id: profile.id, role: 'player' });
+  if (!selectedPlayerId) { toast('Please select a player first', 'error'); return; }
+  const { error } = await sb.from('campaign_members').insert({ campaign_id: currentCampaign.id, player_id: selectedPlayerId, role: 'player' });
   if (error) { toast(error.message, 'error'); return; }
   closeModal('modal-add-player');
   toast(`${profile.display_name || username} added!`, 'success');

@@ -272,7 +272,33 @@ select option { background: var(--panel); }
 .sheet-sub-panel { display: none; }
 .sheet-sub-panel.active { display: block; }
 
-/* ── NPC / Encounter Cards ── */
+/* ── Live Search Dropdowns ── */
+.ls-wrap { position: relative; display: inline-block; }
+.ls-wrap input { width: 100%; }
+.ls-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; min-width: 260px;
+  background: var(--panel); border: 1px solid var(--amethyst);
+  border-radius: var(--radius-lg); z-index: 100; max-height: 240px;
+  overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.ls-item {
+  padding: 0.6rem 0.85rem; cursor: pointer; transition: background 0.12s;
+  border-bottom: 1px solid rgba(61,47,92,0.4);
+}
+.ls-item:last-child { border-bottom: none; }
+.ls-item:hover { background: rgba(123,79,166,0.15); }
+.ls-item-name { font-family: 'Cinzel', serif; font-size: 0.85rem; color: var(--gold-light); }
+.ls-item-desc { font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+.ls-item-meta { font-size: 0.7rem; color: var(--amethyst); margin-top: 0.1rem; font-family: 'Cinzel', serif; letter-spacing: 0.06em; }
+.ls-empty { padding: 0.65rem 0.85rem; color: var(--muted); font-size: 0.82rem; font-style: italic; }
+.ls-info-panel {
+  background: rgba(123,79,166,0.06); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0.65rem 0.85rem; margin-top: 0.4rem;
+  font-size: 0.82rem; color: var(--muted); line-height: 1.5;
+}
+.ls-info-panel strong { color: var(--gold); font-family: 'Cinzel', serif; font-size: 0.78rem; }
+
+/* ── Live Search Dropdowns ── */
 .npc-card { background: var(--panel2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem; margin-bottom: 0.75rem; display: flex; gap: 1rem; align-items: flex-start; }
 .npc-badge { font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.2rem 0.55rem; border-radius: 999px; border: 1px solid; white-space: nowrap; }
 .type-enemy { border-color: var(--ruby); color: var(--ruby); }
@@ -925,13 +951,40 @@ function renderSheetHTML(c) {
     <div class="sheet-portrait">${initial}</div>
     <div class="sheet-banner-text">
       <input type="text" class="name-input" id="s-name" value="${c.name||''}" placeholder="Character Name" />
-      <div class="sheet-subline">
-        <input type="text" id="s-ancestry" value="${c.ancestry||''}" placeholder="Ancestry" style="width:90px" />
+      <div class="sheet-subline" style="flex-wrap:wrap;gap:0.5rem;align-items:flex-start">
+        <div class="ls-wrap">
+          <input type="text" id="s-ancestry" value="${c.ancestry||''}" placeholder="Ancestry" style="width:100px"
+            oninput="liveSearch('ancestries','s-ancestry',this.value,'ancestry-drop')"
+            onfocus="liveSearch('ancestries','s-ancestry',this.value,'ancestry-drop')"
+            onblur="setTimeout(()=>closeDrop('ancestry-drop'),200)" />
+          <div class="ls-dropdown" id="ancestry-drop" style="display:none"></div>
+          <div class="ls-info-panel" id="ancestry-info" style="display:none"></div>
+        </div>
         <span class="sep">·</span>
-        <input type="text" id="s-class" value="${c.class||''}" placeholder="Class" style="width:90px" />
-        <input type="text" id="s-subclass" value="${c.subclass||''}" placeholder="(Subclass)" style="width:100px" />
+        <div class="ls-wrap">
+          <input type="text" id="s-class" value="${c.class||''}" placeholder="Class" style="width:100px"
+            oninput="liveSearch('classes','s-class',this.value,'class-drop')"
+            onfocus="liveSearch('classes','s-class',this.value,'class-drop')"
+            onblur="setTimeout(()=>closeDrop('class-drop'),200)" />
+          <div class="ls-dropdown" id="class-drop" style="display:none"></div>
+          <div class="ls-info-panel" id="class-info" style="display:none"></div>
+        </div>
+        <div class="ls-wrap">
+          <input type="text" id="s-subclass" value="${c.subclass||''}" placeholder="(Subclass)" style="width:110px"
+            oninput="liveSearch('subclasses','s-subclass',this.value,'subclass-drop')"
+            onfocus="liveSearch('subclasses','s-subclass',this.value,'subclass-drop')"
+            onblur="setTimeout(()=>closeDrop('subclass-drop'),200)" />
+          <div class="ls-dropdown" id="subclass-drop" style="display:none"></div>
+        </div>
         <span class="sep">·</span>
-        <input type="text" id="s-community" value="${c.community||''}" placeholder="Community" style="width:100px" />
+        <div class="ls-wrap">
+          <input type="text" id="s-community" value="${c.community||''}" placeholder="Community" style="width:110px"
+            oninput="liveSearch('communities','s-community',this.value,'community-drop')"
+            onfocus="liveSearch('communities','s-community',this.value,'community-drop')"
+            onblur="setTimeout(()=>closeDrop('community-drop'),200)" />
+          <div class="ls-dropdown" id="community-drop" style="display:none"></div>
+          <div class="ls-info-panel" id="community-info" style="display:none"></div>
+        </div>
       </div>
     </div>
     <div class="level-badge">
@@ -1161,13 +1214,40 @@ function charEditorHTML(c) {
     <div class="sheet-portrait">${initial}</div>
     <div class="sheet-banner-text">
       <input type="text" class="name-input" id="s-name" value="${c.name||''}" placeholder="Character Name" />
-      <div class="sheet-subline">
-        <input type="text" id="s-ancestry" value="${c.ancestry||''}" placeholder="Ancestry" style="width:90px" />
+      <div class="sheet-subline" style="flex-wrap:wrap;gap:0.5rem;align-items:flex-start">
+        <div class="ls-wrap">
+          <input type="text" id="s-ancestry" value="${c.ancestry||''}" placeholder="Ancestry" style="width:100px"
+            oninput="liveSearch('ancestries','s-ancestry',this.value,'ancestry-drop')"
+            onfocus="liveSearch('ancestries','s-ancestry',this.value,'ancestry-drop')"
+            onblur="setTimeout(()=>closeDrop('ancestry-drop'),200)" />
+          <div class="ls-dropdown" id="ancestry-drop" style="display:none"></div>
+          <div class="ls-info-panel" id="ancestry-info" style="display:none"></div>
+        </div>
         <span class="sep">·</span>
-        <input type="text" id="s-class" value="${c.class||''}" placeholder="Class" style="width:90px" />
-        <input type="text" id="s-subclass" value="${c.subclass||''}" placeholder="(Subclass)" style="width:100px" />
+        <div class="ls-wrap">
+          <input type="text" id="s-class" value="${c.class||''}" placeholder="Class" style="width:100px"
+            oninput="liveSearch('classes','s-class',this.value,'class-drop')"
+            onfocus="liveSearch('classes','s-class',this.value,'class-drop')"
+            onblur="setTimeout(()=>closeDrop('class-drop'),200)" />
+          <div class="ls-dropdown" id="class-drop" style="display:none"></div>
+          <div class="ls-info-panel" id="class-info" style="display:none"></div>
+        </div>
+        <div class="ls-wrap">
+          <input type="text" id="s-subclass" value="${c.subclass||''}" placeholder="(Subclass)" style="width:110px"
+            oninput="liveSearch('subclasses','s-subclass',this.value,'subclass-drop')"
+            onfocus="liveSearch('subclasses','s-subclass',this.value,'subclass-drop')"
+            onblur="setTimeout(()=>closeDrop('subclass-drop'),200)" />
+          <div class="ls-dropdown" id="subclass-drop" style="display:none"></div>
+        </div>
         <span class="sep">·</span>
-        <input type="text" id="s-community" value="${c.community||''}" placeholder="Community" style="width:100px" />
+        <div class="ls-wrap">
+          <input type="text" id="s-community" value="${c.community||''}" placeholder="Community" style="width:110px"
+            oninput="liveSearch('communities','s-community',this.value,'community-drop')"
+            onfocus="liveSearch('communities','s-community',this.value,'community-drop')"
+            onblur="setTimeout(()=>closeDrop('community-drop'),200)" />
+          <div class="ls-dropdown" id="community-drop" style="display:none"></div>
+          <div class="ls-info-panel" id="community-info" style="display:none"></div>
+        </div>
       </div>
     </div>
     <div class="level-badge">
@@ -2075,6 +2155,137 @@ function addRollHistory(entry) {
   if (rollHistory.length>12) rollHistory.pop();
   const el = document.getElementById('roll-hist');
   if (el) el.innerHTML = rollHistory.map((r,i)=>`<div style="padding:0.2rem 0;border-bottom:1px solid rgba(61,47,92,0.3);${i===0?'color:var(--text)':''}">${r}</div>`).join('');
+}
+
+/* ═══════════════════════════════════════════════════════
+   UNIVERSAL LIVE SEARCH ENGINE
+════════════════════════════════════════════════════════ */
+let lsTimers = {};
+let currentClassId = null; // tracks selected class for subclass filtering
+
+// Config per table: which columns to search and display
+const LS_CONFIG = {
+  classes: {
+    search: ['name'],
+    nameCol: 'name',
+    descCol: 'description',
+    metaFn: r => [r.starting_evasion ? `Evasion ${r.starting_evasion}` : null, r.starting_hit_points ? `HP ${r.starting_hit_points}` : null].filter(Boolean).join(' · '),
+    onSelect: selectClass,
+  },
+  subclasses: {
+    search: ['name'],
+    nameCol: 'name',
+    descCol: 'description',
+    metaFn: r => r.spellcast_trait ? `Spellcast: ${r.spellcast_trait}` : '',
+    onSelect: selectSubclass,
+  },
+  ancestries: {
+    search: ['name'],
+    nameCol: 'name',
+    descCol: 'description',
+    metaFn: () => '',
+    onSelect: selectAncestry,
+  },
+  communities: {
+    search: ['name'],
+    nameCol: 'name',
+    descCol: 'description',
+    metaFn: () => '',
+    onSelect: selectCommunity,
+  },
+};
+
+async function liveSearch(table, inputId, query, dropId) {
+  const drop = document.getElementById(dropId);
+  if (!drop) return;
+  clearTimeout(lsTimers[dropId]);
+  if (!query || query.trim().length < 2) { drop.style.display = 'none'; return; }
+  lsTimers[dropId] = setTimeout(async () => {
+    const cfg = LS_CONFIG[table];
+    if (!cfg) return;
+    let qb = sb.from(table).select('*').ilike('name', `%${query.trim()}%`).limit(8);
+    // if searching subclasses and a class is already selected, filter to that class only
+    if (table === 'subclasses' && currentClassId) {
+      qb = qb.eq('class_id', currentClassId);
+    }
+    const { data, error } = await qb;
+    if (error || !data || data.length === 0) {
+      drop.innerHTML = `<div class="ls-empty">No results for "${query}"</div>`;
+      drop.style.display = 'block'; return;
+    }
+    drop.innerHTML = data.map(r => {
+      const name = r[cfg.nameCol] || '';
+      const desc = (r[cfg.descCol] || '').slice(0, 60) + ((r[cfg.descCol]||'').length > 60 ? '…' : '');
+      const meta = cfg.metaFn(r);
+      return `<div class="ls-item" onmousedown="event.preventDefault()" onclick="${cfg.onSelect.name}(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+        <div class="ls-item-name">${name}</div>
+        ${desc ? `<div class="ls-item-desc">${desc}</div>` : ''}
+        ${meta ? `<div class="ls-item-meta">${meta}</div>` : ''}
+      </div>`;
+    }).join('');
+    drop.style.display = 'block';
+  }, 250);
+}
+
+function closeDrop(dropId) {
+  const el = document.getElementById(dropId);
+  if (el) el.style.display = 'none';
+}
+
+function selectClass(row) {
+  currentClassId = row.id;
+  const input = document.getElementById('s-class');
+  if (input) input.value = row.name;
+  closeDrop('class-drop');
+  // clear subclass since class changed
+  const subInput = document.getElementById('s-subclass');
+  if (subInput) subInput.value = '';
+  // auto-fill stats from class data
+  if (row.starting_evasion) { const el = document.getElementById('s-evasion'); if(el) el.value = row.starting_evasion; }
+  if (row.starting_hit_points) {
+    const el = document.getElementById('s-max-hp'); if(el) { el.value = row.starting_hit_points; rebuildPips('hp', row.starting_hit_points, row.starting_hit_points); }
+    const cur = document.getElementById('s-cur-hp'); if(cur) cur.value = row.starting_hit_points;
+  }
+  // show info panel
+  const info = document.getElementById('class-info');
+  if (info) {
+    info.style.display = 'block';
+    info.innerHTML = `<strong>${row.name}</strong>${row.description ? ' — ' + row.description.slice(0,120) + (row.description.length>120?'…':'') : ''}
+      ${row.starting_hit_points ? `<br><span style="color:var(--emerald)">Starting HP: ${row.starting_hit_points}</span>` : ''}
+      ${row.starting_evasion ? ` · <span style="color:var(--sapphire)">Evasion: ${row.starting_evasion}</span>` : ''}
+      ${row.class_items ? `<br>Class Items: ${row.class_items}` : ''}`;
+  }
+}
+
+function selectSubclass(row) {
+  const input = document.getElementById('s-subclass');
+  if (input) input.value = row.name;
+  closeDrop('subclass-drop');
+}
+
+function selectAncestry(row) {
+  const input = document.getElementById('s-ancestry');
+  if (input) input.value = row.name;
+  closeDrop('ancestry-drop');
+  const info = document.getElementById('ancestry-info');
+  if (info) {
+    const f1 = row.feature_1_name ? `<br><strong>${row.feature_1_name}:</strong> ${(row.feature_1_text||'').slice(0,100)}${(row.feature_1_text||'').length>100?'…':''}` : '';
+    const f2 = row.feature_2_name ? `<br><strong>${row.feature_2_name}:</strong> ${(row.feature_2_text||'').slice(0,100)}${(row.feature_2_text||'').length>100?'…':''}` : '';
+    info.style.display = 'block';
+    info.innerHTML = `<strong>${row.name}</strong>${row.description?' — '+row.description.slice(0,80)+'…':''}${f1}${f2}`;
+  }
+}
+
+function selectCommunity(row) {
+  const input = document.getElementById('s-community');
+  if (input) input.value = row.name;
+  closeDrop('community-drop');
+  const info = document.getElementById('community-info');
+  if (info) {
+    info.style.display = 'block';
+    info.innerHTML = `<strong>${row.name}</strong>${row.description?' — '+row.description.slice(0,100)+'…':''}
+      ${row.feature_name ? `<br><strong>${row.feature_name}:</strong> ${(row.feature_text||'').slice(0,120)}${(row.feature_text||'').length>120?'…':''}` : ''}`;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════

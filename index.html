@@ -156,11 +156,85 @@ select option { background: var(--panel); }
 .campaign-role { font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 999px; border: 1px solid; display: inline-block; }
 .role-gm { border-color: var(--gold); color: var(--gold); }
 .role-player { border-color: var(--sapphire); color: #7bb8e8; }
-.char-mini-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 0.75rem; }
-.char-mini-card { background: var(--panel2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem; cursor: pointer; transition: all 0.2s; }
-.char-mini-card:hover { border-color: var(--gold); }
-.char-mini-card h4 { font-family: 'Cinzel', serif; font-size: 0.95rem; color: var(--gold-light); margin-bottom: 0.2rem; }
-.char-mini-card p { font-size: 0.85rem; color: var(--muted); }
+.char-mini-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(260px,1fr)); gap: 0.85rem; }
+.char-mini-card {
+  background: var(--panel2); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 1.1rem 1.25rem; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+}
+.char-mini-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),var(--amethyst)); }
+.char-mini-card:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
+.char-mini-card h4 { font-family:'Cinzel',serif; font-size:1rem; color:var(--gold-light); margin-bottom:0.3rem; }
+.char-mini-card p { font-size:0.85rem; color:var(--muted); line-height:1.6; }
+.char-mini-card .char-card-footer { display:flex; gap:0.5rem; margin-top:0.85rem; }
+
+/* ── Character Page (Sheet + Builder) ── */
+.char-page-header {
+  display:flex; align-items:center; gap:1rem; padding:0.85rem 1.5rem;
+  background:rgba(14,11,20,0.95); border-bottom:1px solid var(--border);
+  position:sticky; top:0; z-index:50;
+}
+.char-page-header .char-page-name { font-family:'Cinzel',serif; font-size:1rem; color:var(--gold-light); }
+.char-page-tabs { display:flex; gap:0.25rem; }
+.char-page-tab {
+  font-family:'Cinzel',serif; font-size:0.75rem; letter-spacing:0.1em; text-transform:uppercase;
+  padding:0.4rem 1rem; border:1px solid transparent; border-radius:var(--radius);
+  background:transparent; color:var(--muted); cursor:pointer; transition:all 0.2s;
+}
+.char-page-tab:hover { color:var(--gold-light); border-color:var(--border); }
+.char-page-tab.active { color:var(--gold-light); border-color:var(--gold); background:rgba(201,149,58,0.1); }
+.char-page-panel { display:none; }
+.char-page-panel.active { display:block; }
+
+/* ── Wizard ── */
+.wizard-wrap { max-width:760px; margin:0 auto; padding:2rem 1.25rem 4rem; }
+.wizard-steps { display:flex; gap:0; margin-bottom:2rem; }
+.wizard-step-dot {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:0.4rem;
+  position:relative; cursor:default;
+}
+.wizard-step-dot:not(:last-child)::after {
+  content:''; position:absolute; top:14px; left:50%; width:100%; height:2px;
+  background:var(--border); z-index:0;
+}
+.wizard-step-dot.done::after { background:var(--gold); }
+.wizard-dot {
+  width:28px; height:28px; border-radius:50%; border:2px solid var(--border);
+  background:var(--panel); display:flex; align-items:center; justify-content:center;
+  font-family:'Cinzel',serif; font-size:0.7rem; color:var(--muted); z-index:1; position:relative;
+  transition:all 0.2s;
+}
+.wizard-step-dot.active .wizard-dot { border-color:var(--gold); background:rgba(201,149,58,0.15); color:var(--gold-light); }
+.wizard-step-dot.done .wizard-dot { border-color:var(--gold); background:var(--gold); color:var(--ink); }
+.wizard-step-label { font-family:'Cinzel',serif; font-size:0.6rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); text-align:center; }
+.wizard-step-dot.active .wizard-step-label { color:var(--gold-light); }
+.wizard-step-dot.done .wizard-step-label { color:var(--gold); }
+.wizard-nav { display:flex; justify-content:space-between; align-items:center; margin-top:2rem; padding-top:1.25rem; border-top:1px solid var(--border); }
+
+/* ── Trait Shields ── */
+.trait-shields { display:flex; gap:0.75rem; flex-wrap:wrap; justify-content:center; margin:1rem 0; }
+.trait-shield {
+  display:flex; flex-direction:column; align-items:center; width:80px;
+  background:var(--panel); border:1.5px solid var(--gold); border-radius:8px 8px 20px 20px;
+  padding:0.5rem 0.4rem; position:relative;
+}
+.trait-shield .trait-name { font-family:'Cinzel',serif; font-size:0.55rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold); margin-bottom:0.25rem; text-align:center; }
+.trait-shield .trait-val { font-family:'Cinzel Decorative',serif; font-size:1.4rem; color:var(--gold-light); line-height:1; }
+.trait-assign-row { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.6rem; }
+.trait-assign-row .trait-bonus { font-family:'Cinzel',serif; font-size:1rem; color:var(--gold-light); width:36px; text-align:right; flex-shrink:0; }
+.toggle-switch { position:relative; display:inline-block; width:42px; height:24px; }
+.toggle-switch input { opacity:0; width:0; height:0; }
+.toggle-slider { position:absolute; inset:0; background:var(--border); border-radius:999px; cursor:pointer; transition:0.3s; }
+.toggle-slider::before { content:''; position:absolute; width:18px; height:18px; left:3px; bottom:3px; background:var(--muted); border-radius:50%; transition:0.3s; }
+.toggle-switch input:checked + .toggle-slider { background:var(--gold); }
+.toggle-switch input:checked + .toggle-slider::before { transform:translateX(18px); background:var(--ink); }
+
+/* ── Review Card ── */
+.review-section { margin-bottom:1.25rem; }
+.review-section h3 { font-family:'Cinzel',serif; font-size:0.82rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--amethyst); margin-bottom:0.65rem; }
+.review-row { display:flex; gap:0.5rem; margin-bottom:0.35rem; font-size:0.9rem; }
+.review-label { font-family:'Cinzel',serif; font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); min-width:110px; }
+.review-value { color:var(--text); }
+
 
 /* ── Stat Box ── */
 .stat-box { background: rgba(14,11,20,0.5); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.65rem 0.5rem; text-align: center; }
@@ -525,17 +599,43 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
     </div>
   </div>
 
-  <!-- CHARACTER CREATOR / EDITOR (full page) -->
-  <div id="view-char-editor" class="view" style="display:none">
-    <div class="main-content">
-      <div class="section-header">
-        <h2 id="char-editor-title">New Character</h2>
-        <div class="section-actions">
-          <button class="btn btn-ghost btn-sm" onclick="goHome()">← Back</button>
-          <button class="btn btn-gold btn-sm" onclick="saveCharacter()">Save Character</button>
-        </div>
+  <!-- CHARACTER PAGE (Sheet + Builder tabs) -->
+  <div id="view-char-page" class="view" style="display:none">
+    <div class="char-page-header">
+      <button class="btn btn-ghost btn-sm" onclick="goHome()">← Back</button>
+      <span class="char-page-name" id="char-page-name"></span>
+      <div class="char-page-tabs">
+        <button class="char-page-tab active" id="char-tab-sheet" onclick="switchCharPageTab('sheet')">Character Sheet</button>
+        <button class="char-page-tab" id="char-tab-builder" onclick="switchCharPageTab('builder')">Character Builder</button>
       </div>
-      <div id="char-editor-content"></div>
+      <button class="btn btn-gold btn-sm" id="char-page-save" onclick="saveSheetInline()" style="margin-left:auto">Save Changes</button>
+    </div>
+    <div id="char-page-panel-sheet" class="char-page-panel active">
+      <div class="main-content" id="char-sheet-content"></div>
+    </div>
+    <div id="char-page-panel-builder" class="char-page-panel">
+      <div class="wizard-wrap" id="char-builder-content"></div>
+    </div>
+  </div>
+
+  <!-- CHARACTER WIZARD (new character) -->
+  <div id="view-char-wizard" class="view" style="display:none">
+    <div class="char-page-header">
+      <button class="btn btn-ghost btn-sm" onclick="confirmExitWizard()">← Back</button>
+      <span class="char-page-name">New Character</span>
+      <button class="btn btn-ghost btn-sm" onclick="saveWizardProgress()" style="margin-left:auto">Save Progress</button>
+    </div>
+    <div class="wizard-wrap">
+      <!-- Step progress -->
+      <div class="wizard-steps" id="wizard-steps"></div>
+      <!-- Step content -->
+      <div id="wizard-step-content"></div>
+      <!-- Nav -->
+      <div class="wizard-nav">
+        <button class="btn btn-ghost" id="wizard-prev" onclick="wizardPrev()">← Previous</button>
+        <span id="wizard-step-label" style="font-family:'Cinzel',serif;font-size:0.75rem;color:var(--muted)"></span>
+        <button class="btn btn-gold" id="wizard-next" onclick="wizardNext()">Next →</button>
+      </div>
     </div>
   </div>
 
@@ -810,13 +910,21 @@ async function loadMyCharacters() {
   if (!chars || chars.length === 0) {
     el.innerHTML = '<div class="empty-state">No characters yet. Create your first hero!</div>'; return;
   }
-  el.innerHTML = chars.map(c => `
-    <div class="char-mini-card" onclick="openCharEditor('${c.id}')">
-      <h4>${c.name}</h4>
-      <p>${[c.class, c.subclass].filter(Boolean).join(' · ') || 'No class set'}</p>
-      <p style="margin-top:0.25rem">Level ${c.level || 1} · ${c.ancestry || 'Unknown ancestry'}</p>
-    </div>
-  `).join('');
+  el.innerHTML = chars.map(c => {
+    const classLine = [c.class, c.subclass].filter(Boolean).join(' · ') || 'No class set';
+    const heritageLine = `Level ${c.level||1} · ${c.ancestry||'Unknown ancestry'}`;
+    const isComplete = c.class && c.ancestry;
+    return `
+    <div class="char-mini-card">
+      <h4>${c.name||'Unnamed Hero'}</h4>
+      <p>${classLine}</p>
+      <p>${heritageLine}</p>
+      <div class="char-card-footer">
+        <button class="btn btn-gold btn-sm" onclick="openCharPage('${c.id}','sheet')">View Sheet</button>
+        <button class="btn btn-ghost btn-sm" onclick="openCharPage('${c.id}','builder')">${isComplete?'Edit':'Continue Building'}</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function loadMyCampaigns() {
@@ -1161,7 +1269,7 @@ function togglePip(kind, idx, max) {
 }
 
 async function saveSheetInline(charId) {
-  const id = charId || document.getElementById('s-char-id')?.value;
+  const id = charId || document.getElementById('s-char-id')?.value || charPageId;
   if (!id) return;
   const updates = {
     name: v('s-name'), class: v('s-class'), subclass: v('s-subclass'),
@@ -1185,26 +1293,288 @@ async function saveSheetInline(charId) {
 /* ═══════════════════════════════════════════════════════
    CHARACTER CREATOR (full page)
 ════════════════════════════════════════════════════════ */
-function openCharCreator(campaignId) {
-  editingCharId = null;
-  document.getElementById('char-editor-title').textContent = 'New Character';
-  document.getElementById('char-editor-content').innerHTML = charEditorHTML({});
-  showView('view-char-editor');
-  buildPips('hp',6,6); buildPips('stress',6,0); buildPips('armor',3,0); buildPips('hope',6,6);
-}
+/* ═══════════════════════════════════════════════════════
+   CHARACTER PAGE (Sheet + Builder tabs)
+════════════════════════════════════════════════════════ */
+let charPageId = null;
+let charPageData = null;
 
-function openCharCreatorForCampaign() {
-  openCharCreator(currentCampaign?.id);
-}
-
-async function openCharEditor(charId) {
+async function openCharPage(charId, tab='sheet') {
   const { data: c } = await sb.from('characters').select('*').eq('id', charId).single();
+  if (!c) { toast('Character not found', 'error'); return; }
+  charPageId = charId;
+  charPageData = c;
   editingCharId = charId;
-  document.getElementById('char-editor-title').textContent = c.name || 'Edit Character';
-  document.getElementById('char-editor-content').innerHTML = charEditorHTML(c);
-  showView('view-char-editor');
-  renderAllPips(c);
+  document.getElementById('char-page-name').textContent = c.name || 'Unnamed Hero';
+  showView('view-char-page');
+  switchCharPageTab(tab);
 }
+
+function switchCharPageTab(tab) {
+  document.querySelectorAll('.char-page-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.char-page-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`char-tab-${tab}`).classList.add('active');
+  document.getElementById(`char-page-panel-${tab}`).classList.add('active');
+  if (tab === 'sheet') renderCharSheet();
+  if (tab === 'builder') renderCharBuilder();
+}
+
+function renderCharSheet() {
+  const c = charPageData;
+  const el = document.getElementById('char-sheet-content');
+  el.innerHTML = renderSheetHTML(c);
+  renderAllPips(c);
+  initSheetDicePreviews();
+}
+
+function renderCharBuilder() {
+  const c = charPageData;
+  document.getElementById('char-builder-content').innerHTML = builderHTML(c);
+}
+
+// Builder in edit mode — same wizard layout but all steps visible as sections
+function builderHTML(c) {
+  return `
+  <div class="section-header"><h2>Character Builder</h2></div>
+
+  <!-- Step 1 -->
+  <div class="card">
+    <h3>Step 1 — Getting Started</h3>
+    <div class="field-row cols-2">
+      <div><label>Character Name</label><input type="text" id="b-name" value="${c.name||''}" /></div>
+      <div><label>Pronouns</label><input type="text" id="b-pronouns" value="${c.pronouns||''}" placeholder="e.g. he/him, she/her, they/them" /></div>
+    </div>
+    <div class="field-row cols-2">
+      <div><label>Level</label><input type="number" id="b-level" value="${c.level||1}" min="1" max="10" /></div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card">
+    <h3>Step 2 — Class & Gear</h3>
+    <div class="field-row cols-2">
+      <div>
+        <label>Class</label>
+        <div class="ls-wrap" style="width:100%">
+          <input type="text" id="b-class" value="${c.class||''}" placeholder="Search classes…" style="width:100%"
+            oninput="liveSearch('classes','b-class',this.value,'b-class-drop')"
+            onfocus="liveSearch('classes','b-class',this.value,'b-class-drop')"
+            onblur="setTimeout(()=>closeDrop('b-class-drop'),200)" />
+          <div class="ls-dropdown" id="b-class-drop" style="display:none"></div>
+          <div class="ls-info-panel" id="b-class-info" style="display:none"></div>
+        </div>
+      </div>
+      <div>
+        <label>Subclass</label>
+        <div class="ls-wrap" style="width:100%">
+          <input type="text" id="b-subclass" value="${c.subclass||''}" placeholder="Search subclasses…" style="width:100%"
+            oninput="liveSearch('subclasses','b-subclass',this.value,'b-subclass-drop')"
+            onfocus="liveSearch('subclasses','b-subclass',this.value,'b-subclass-drop')"
+            onblur="setTimeout(()=>closeDrop('b-subclass-drop'),200)" />
+          <div class="ls-dropdown" id="b-subclass-drop" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+    <hr />
+    <label style="margin-bottom:0.75rem;display:block">Traits</label>
+    ${builderTraitsHTML(c)}
+    <hr />
+    <div class="field-row cols-2">
+      <div>
+        <label>Primary Weapon</label>
+        <div class="ls-wrap" style="width:100%">
+          <input type="text" id="b-wpn1" value="${c.weapon_primary||''}" placeholder="Search weapons…" style="width:100%"
+            oninput="liveSearch('weapons','b-wpn1',this.value,'b-wpn1-drop')"
+            onfocus="liveSearch('weapons','b-wpn1',this.value,'b-wpn1-drop')"
+            onblur="setTimeout(()=>closeDrop('b-wpn1-drop'),200)" />
+          <div class="ls-dropdown" id="b-wpn1-drop" style="display:none"></div>
+        </div>
+      </div>
+      <div>
+        <label>Secondary Weapon</label>
+        <div class="ls-wrap" style="width:100%">
+          <input type="text" id="b-wpn2" value="${c.weapon_secondary||''}" placeholder="Search weapons…" style="width:100%"
+            oninput="liveSearch('weapons','b-wpn2',this.value,'b-wpn2-drop')"
+            onfocus="liveSearch('weapons','b-wpn2',this.value,'b-wpn2-drop')"
+            onblur="setTimeout(()=>closeDrop('b-wpn2-drop'),200)" />
+          <div class="ls-dropdown" id="b-wpn2-drop" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+    <div class="field-row cols-2">
+      <div>
+        <label>Armor</label>
+        <div class="ls-wrap" style="width:100%">
+          <input type="text" id="b-armor" value="${c.armor_name||''}" placeholder="Search armor…" style="width:100%"
+            oninput="liveSearch('armor','b-armor',this.value,'b-armor-drop')"
+            onfocus="liveSearch('armor','b-armor',this.value,'b-armor-drop')"
+            onblur="setTimeout(()=>closeDrop('b-armor-drop'),200)" />
+          <div class="ls-dropdown" id="b-armor-drop" style="display:none"></div>
+        </div>
+      </div>
+      <div>
+        <label>Starting Inventory</label>
+        <input type="text" id="b-inventory" value="${c.inventory||''}" placeholder="Class items, gold, etc." />
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="card">
+    <h3>Step 3 — Heritage</h3>
+    <div class="field-row cols-2">
+      <div>
+        <label>Ancestry</label>
+        <div class="ls-wrap" style="width:100%">
+          <input type="text" id="b-ancestry" value="${c.ancestry||''}" placeholder="Search ancestries…" style="width:100%"
+            oninput="liveSearch('ancestries','b-ancestry',this.value,'b-ancestry-drop')"
+            onfocus="liveSearch('ancestries','b-ancestry',this.value,'b-ancestry-drop')"
+            onblur="setTimeout(()=>closeDrop('b-ancestry-drop'),200)" />
+          <div class="ls-dropdown" id="b-ancestry-drop" style="display:none"></div>
+          <div class="ls-info-panel" id="b-ancestry-info" style="display:none"></div>
+        </div>
+      </div>
+      <div>
+        <label>Community</label>
+        <div class="ls-wrap" style="width:100%">
+          <input type="text" id="b-community" value="${c.community||''}" placeholder="Search communities…" style="width:100%"
+            oninput="liveSearch('communities','b-community',this.value,'b-community-drop')"
+            onfocus="liveSearch('communities','b-community',this.value,'b-community-drop')"
+            onblur="setTimeout(()=>closeDrop('b-community-drop'),200)" />
+          <div class="ls-dropdown" id="b-community-drop" style="display:none"></div>
+          <div class="ls-info-panel" id="b-community-info" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="card">
+    <h3>Step 4 — Experiences</h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1rem">Experiences reflect your character's history and give you a bonus die when they're relevant. Start with 2.</p>
+    <div class="field-row cols-2" style="margin-bottom:0.75rem">
+      <div><label>Experience 1</label><input type="text" id="b-exp1-name" value="${c.experience_1_name||''}" placeholder="e.g. Former Knight of the Obsidian Throne" /></div>
+      <div><label>Bonus</label>
+        <select id="b-exp1-bonus">
+          ${['+1','+2','+3'].map(b=>`<option value="${b}" ${(c.experience_1_bonus||'+2')===b?'selected':''}>${b}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="field-row cols-2">
+      <div><label>Experience 2</label><input type="text" id="b-exp2-name" value="${c.experience_2_name||''}" placeholder="e.g. Speaks Sylvan fluently" /></div>
+      <div><label>Bonus</label>
+        <select id="b-exp2-bonus">
+          ${['+1','+2','+3'].map(b=>`<option value="${b}" ${(c.experience_2_bonus||'+2')===b?'selected':''}>${b}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:flex-end;margin-top:0.5rem">
+    <button class="btn btn-gold" onclick="saveBuilderChanges()">Save All Changes</button>
+  </div>
+  `;
+}
+
+function builderTraitsHTML(c) {
+  const attrs = ['agility','strength','finesse','instinct','presence','knowledge'];
+  const shieldsHTML = attrs.map(a => `
+    <div class="trait-shield">
+      <div class="trait-name">${a}</div>
+      <div class="trait-val">${fmtMod(c[a]||0)}</div>
+    </div>
+  `).join('');
+  const assignRows = [
+    { bonus:'+2', id:'b-trait-2' },
+    { bonus:'+1', id:'b-trait-1a' },
+    { bonus:'+1', id:'b-trait-1b' },
+    { bonus:'-1', id:'b-trait-neg1' },
+  ];
+  const assignHTML = assignRows.map(row => `
+    <div class="trait-assign-row">
+      <span class="trait-bonus">${row.bonus}</span>
+      <select id="${row.id}" style="flex:1">
+        <option value="">— assign to —</option>
+        ${attrs.map(a=>`<option value="${a}">${a.charAt(0).toUpperCase()+a.slice(1)}</option>`).join('')}
+      </select>
+    </div>
+  `).join('');
+  return `
+    <div style="margin-bottom:1rem">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
+        <span style="font-family:'Cinzel',serif;font-size:0.75rem;letter-spacing:0.08em;color:var(--muted)">Current traits</span>
+      </div>
+      <div class="trait-shields">${shieldsHTML}</div>
+    </div>
+    <div class="card" style="background:rgba(14,11,20,0.4);margin-bottom:0">
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:0.85rem">Assign trait modifiers — each value can only be used once.</p>
+      ${assignHTML}
+      <button class="btn btn-ghost btn-sm" style="margin-top:0.75rem" onclick="applyTraitAssignments()">Apply Assignments</button>
+    </div>
+  `;
+}
+
+function applyTraitAssignments() {
+  const map = {
+    'b-trait-2': 2, 'b-trait-1a': 1, 'b-trait-1b': 1, 'b-trait-neg1': -1
+  };
+  const assigned = {};
+  let conflict = false;
+  Object.entries(map).forEach(([id, val]) => {
+    const sel = document.getElementById(id);
+    if (!sel || !sel.value) return;
+    if (assigned[sel.value] !== undefined) { conflict = true; return; }
+    assigned[sel.value] = val;
+  });
+  if (conflict) { toast('Each trait can only be assigned one value', 'error'); return; }
+  // update hidden inputs in the sheet if visible, or store in charPageData
+  Object.entries(assigned).forEach(([attr, val]) => {
+    charPageData[attr] = val;
+    const el = document.getElementById(`s-${attr}`);
+    if (el) el.value = val;
+  });
+  // re-render the shields to reflect new values
+  const shields = document.querySelector('.trait-shields');
+  if (shields) {
+    const attrs = ['agility','strength','finesse','instinct','presence','knowledge'];
+    shields.innerHTML = attrs.map(a => `
+      <div class="trait-shield">
+        <div class="trait-name">${a}</div>
+        <div class="trait-val">${fmtMod(charPageData[a]||0)}</div>
+      </div>
+    `).join('');
+  }
+  toast('Traits assigned!', 'success');
+}
+
+async function saveBuilderChanges() {
+  if (!charPageId) { toast('No character loaded', 'error'); return; }
+  const payload = {
+    name: v('b-name') || charPageData.name,
+    pronouns: v('b-pronouns'),
+    level: n('b-level') || charPageData.level,
+    class: v('b-class'), subclass: v('b-subclass'),
+    ancestry: v('b-ancestry'), community: v('b-community'),
+    weapon_primary: v('b-wpn1'), weapon_secondary: v('b-wpn2'),
+    armor_name: v('b-armor'), inventory: v('b-inventory'),
+    experience_1_name: v('b-exp1-name'), experience_1_bonus: v('b-exp1-bonus')||'+2',
+    experience_2_name: v('b-exp2-name'), experience_2_bonus: v('b-exp2-bonus')||'+2',
+    agility: charPageData.agility||0, strength: charPageData.strength||0,
+    finesse: charPageData.finesse||0, instinct: charPageData.instinct||0,
+    presence: charPageData.presence||0, knowledge: charPageData.knowledge||0,
+    updated_at: new Date().toISOString()
+  };
+  const { error } = await sb.from('characters').update(payload).eq('id', charPageId);
+  if (error) { toast(error.message, 'error'); return; }
+  // refresh local data
+  charPageData = { ...charPageData, ...payload };
+  document.getElementById('char-page-name').textContent = payload.name || charPageData.name;
+  toast('Character updated!', 'success');
+}
+
+function openCharCreatorForCampaign() { openCharWizard(); }
+
+async function openCharEditor(charId) { openCharPage(charId, 'builder'); }
 
 function charEditorHTML(c) {
   const initial = (c.name||'?').trim().charAt(0).toUpperCase();
@@ -1353,34 +1723,408 @@ function charEditorHTML(c) {
   `;
 }
 
-async function saveCharacter() {
-  const isNew = !editingCharId;
+/* ═══════════════════════════════════════════════════════
+   CHARACTER CREATION WIZARD
+════════════════════════════════════════════════════════ */
+const WIZARD_STEPS = [
+  { id:'getting-started', label:'Getting Started' },
+  { id:'class-gear',      label:'Class & Gear' },
+  { id:'heritage',        label:'Heritage' },
+  { id:'experiences',     label:'Experiences' },
+  { id:'review',          label:'Review' },
+];
+let wizardStep = 0;
+let wizardCharId = null;
+let wizardData = {
+  name:'', pronouns:'', level:1,
+  class:'', subclass:'',
+  agility:0, strength:0, finesse:0, instinct:0, presence:0, knowledge:0,
+  evasion:10, max_hp:6, current_hp:6, max_stress:6, current_stress:0,
+  max_armor:3, current_armor:0, max_hope:6, current_hope:6,
+  minor_threshold:5, major_threshold:10, severe_threshold:15,
+  weapon_primary:'', weapon_secondary:'', armor_name:'', inventory:'',
+  ancestry:'', community:'',
+  experience_1_name:'', experience_1_bonus:'+2',
+  experience_2_name:'', experience_2_bonus:'+2',
+};
+
+function openCharCreator() {
+  wizardStep = 0;
+  wizardCharId = null;
+  wizardData = { name:'', pronouns:'', level:1, class:'', subclass:'', agility:0, strength:0, finesse:0, instinct:0, presence:0, knowledge:0, evasion:10, max_hp:6, current_hp:6, max_stress:6, current_stress:0, max_armor:3, current_armor:0, max_hope:6, current_hope:6, minor_threshold:5, major_threshold:10, severe_threshold:15, weapon_primary:'', weapon_secondary:'', armor_name:'', inventory:'', ancestry:'', community:'', experience_1_name:'', experience_1_bonus:'+2', experience_2_name:'', experience_2_bonus:'+2' };
+  showView('view-char-wizard');
+  renderWizardStep();
+}
+
+async function openCharWizard(charId) {
+  if (charId) {
+    const { data: c } = await sb.from('characters').select('*').eq('id', charId).single();
+    wizardData = { ...wizardData, ...c };
+    wizardCharId = charId;
+  } else {
+    wizardCharId = null;
+  }
+  wizardStep = 0;
+  showView('view-char-wizard');
+  renderWizardStep();
+}
+
+function renderWizardStepNav() {
+  document.getElementById('wizard-steps').innerHTML = WIZARD_STEPS.map((s,i) => `
+    <div class="wizard-step-dot ${i < wizardStep ? 'done' : ''} ${i === wizardStep ? 'active' : ''}">
+      <div class="wizard-dot">${i < wizardStep ? '✓' : i+1}</div>
+      <div class="wizard-step-label">${s.label}</div>
+    </div>
+  `).join('');
+  document.getElementById('wizard-step-label').textContent = `Step ${wizardStep+1} of ${WIZARD_STEPS.length}`;
+  document.getElementById('wizard-prev').style.visibility = wizardStep === 0 ? 'hidden' : 'visible';
+  document.getElementById('wizard-next').textContent = wizardStep === WIZARD_STEPS.length-1 ? 'Create Character ✦' : 'Next →';
+}
+
+function renderWizardStep() {
+  renderWizardStepNav();
+  const step = WIZARD_STEPS[wizardStep].id;
+  const content = document.getElementById('wizard-step-content');
+  if (step === 'getting-started') content.innerHTML = wizardStep1HTML();
+  if (step === 'class-gear')      content.innerHTML = wizardStep2HTML();
+  if (step === 'heritage')        content.innerHTML = wizardStep3HTML();
+  if (step === 'experiences')     content.innerHTML = wizardStep4HTML();
+  if (step === 'review')          content.innerHTML = wizardReviewHTML();
+}
+
+function wizardStep1HTML() {
+  return `
+  <div class="card">
+    <h3>Getting Started</h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1.25rem">Let's start with the basics. What is your hero called?</p>
+    <div class="field-row cols-2">
+      <div><label>Character Name</label><input type="text" id="w-name" value="${wizardData.name||''}" placeholder="Your hero's name" /></div>
+      <div><label>Pronouns</label><input type="text" id="w-pronouns" value="${wizardData.pronouns||''}" placeholder="e.g. he/him, they/them" /></div>
+    </div>
+    <div class="field-row cols-2">
+      <div><label>Level</label><input type="number" id="w-level" value="${wizardData.level||1}" min="1" max="10" /></div>
+    </div>
+  </div>`;
+}
+
+function wizardStep2HTML() {
+  const attrs = ['agility','strength','finesse','instinct','presence','knowledge'];
+  const shieldsHTML = attrs.map(a => `
+    <div class="trait-shield">
+      <div class="trait-name">${a}</div>
+      <div class="trait-val" id="shield-${a}">${fmtMod(wizardData[a]||0)}</div>
+    </div>
+  `).join('');
+  const assignRows = [
+    { bonus:'+2', id:'w-trait-2' },
+    { bonus:'+1', id:'w-trait-1a' },
+    { bonus:'+1', id:'w-trait-1b' },
+    { bonus:'-1', id:'w-trait-neg1' },
+  ];
+  return `
+  <div class="card">
+    <h3>Class & Subclass</h3>
+    <div class="field-row cols-2">
+      <div>
+        <label>Class</label>
+        <div class="ls-wrap" style="width:100%">
+          <input type="text" id="w-class" value="${wizardData.class||''}" placeholder="Search classes…" style="width:100%"
+            oninput="liveSearch('classes','w-class',this.value,'w-class-drop')"
+            onfocus="liveSearch('classes','w-class',this.value,'w-class-drop')"
+            onblur="setTimeout(()=>closeDrop('w-class-drop'),200)" />
+          <div class="ls-dropdown" id="w-class-drop" style="display:none"></div>
+          <div class="ls-info-panel" id="w-class-info" style="display:none"></div>
+        </div>
+      </div>
+      <div>
+        <label>Subclass</label>
+        <div class="ls-wrap" style="width:100%">
+          <input type="text" id="w-subclass" value="${wizardData.subclass||''}" placeholder="Search subclasses…" style="width:100%"
+            oninput="liveSearch('subclasses','w-subclass',this.value,'w-subclass-drop')"
+            onfocus="liveSearch('subclasses','w-subclass',this.value,'w-subclass-drop')"
+            onblur="setTimeout(()=>closeDrop('w-subclass-drop'),200)" />
+          <div class="ls-dropdown" id="w-subclass-drop" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Set Your Traits</h3>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">These values reflect your natural or trained ability in each of the six core stats. Assign each modifier to a different trait.</p>
+    <div class="trait-shields">${shieldsHTML}</div>
+    <hr />
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:0.85rem">Assign the following modifiers — each trait can only have one value:</p>
+    ${assignRows.map(row => `
+      <div class="trait-assign-row">
+        <span class="trait-bonus">${row.bonus}</span>
+        <select id="${row.id}" style="flex:1" onchange="previewTraitAssignment()">
+          <option value="">— choose a trait —</option>
+          ${attrs.map(a=>`<option value="${a}" ${wizardData['_trait_'+row.id]===a?'selected':''}>${a.charAt(0).toUpperCase()+a.slice(1)}</option>`).join('')}
+        </select>
+      </div>
+    `).join('')}
+    <button class="btn btn-ghost btn-sm" style="margin-top:0.75rem" onclick="applyWizardTraits()">Apply to Character</button>
+  </div>
+
+  <div class="card">
+    <h3>Starting Weapons & Armor</h3>
+    <div class="field-row cols-2">
+      <div>
+        <label>Primary Weapon</label>
+        <div class="ls-wrap" style="width:100%">
+          <input type="text" id="w-wpn1" value="${wizardData.weapon_primary||''}" placeholder="Search weapons…" style="width:100%"
+            oninput="liveSearch('weapons','w-wpn1',this.value,'w-wpn1-drop')"
+            onfocus="liveSearch('weapons','w-wpn1',this.value,'w-wpn1-drop')"
+            onblur="setTimeout(()=>closeDrop('w-wpn1-drop'),200)" />
+          <div class="ls-dropdown" id="w-wpn1-drop" style="display:none"></div>
+        </div>
+      </div>
+      <div>
+        <label>Secondary Weapon</label>
+        <div class="ls-wrap" style="width:100%">
+          <input type="text" id="w-wpn2" value="${wizardData.weapon_secondary||''}" placeholder="Search weapons…" style="width:100%"
+            oninput="liveSearch('weapons','w-wpn2',this.value,'w-wpn2-drop')"
+            onfocus="liveSearch('weapons','w-wpn2',this.value,'w-wpn2-drop')"
+            onblur="setTimeout(()=>closeDrop('w-wpn2-drop'),200)" />
+          <div class="ls-dropdown" id="w-wpn2-drop" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+    <div class="field-row cols-2">
+      <div>
+        <label>Armor</label>
+        <div class="ls-wrap" style="width:100%">
+          <input type="text" id="w-armor" value="${wizardData.armor_name||''}" placeholder="Search armor…" style="width:100%"
+            oninput="liveSearch('armor','w-armor',this.value,'w-armor-drop')"
+            onfocus="liveSearch('armor','w-armor',this.value,'w-armor-drop')"
+            onblur="setTimeout(()=>closeDrop('w-armor-drop'),200)" />
+          <div class="ls-dropdown" id="w-armor-drop" style="display:none"></div>
+        </div>
+      </div>
+      <div>
+        <label>Starting Inventory</label>
+        <input type="text" id="w-inventory" value="${wizardData.inventory||''}" placeholder="Class items, gold, supplies…" />
+      </div>
+    </div>
+  </div>`;
+}
+
+function wizardStep3HTML() {
+  return `
+  <div class="card">
+    <h3>Heritage — Ancestry</h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1rem">Your ancestry determines two heritage features that shape who your character is.</p>
+    <div class="ls-wrap" style="width:100%">
+      <input type="text" id="w-ancestry" value="${wizardData.ancestry||''}" placeholder="Search ancestries…" style="width:100%"
+        oninput="liveSearch('ancestries','w-ancestry',this.value,'w-ancestry-drop')"
+        onfocus="liveSearch('ancestries','w-ancestry',this.value,'w-ancestry-drop')"
+        onblur="setTimeout(()=>closeDrop('w-ancestry-drop'),200)" />
+      <div class="ls-dropdown" id="w-ancestry-drop" style="display:none"></div>
+      <div class="ls-info-panel" id="w-ancestry-info" style="display:none"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Heritage — Community</h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1rem">Your community gives your character a unique cultural feature.</p>
+    <div class="ls-wrap" style="width:100%">
+      <input type="text" id="w-community" value="${wizardData.community||''}" placeholder="Search communities…" style="width:100%"
+        oninput="liveSearch('communities','w-community',this.value,'w-community-drop')"
+        onfocus="liveSearch('communities','w-community',this.value,'w-community-drop')"
+        onblur="setTimeout(()=>closeDrop('w-community-drop'),200)" />
+      <div class="ls-dropdown" id="w-community-drop" style="display:none"></div>
+      <div class="ls-info-panel" id="w-community-info" style="display:none"></div>
+    </div>
+  </div>`;
+}
+
+function wizardStep4HTML() {
+  return `
+  <div class="card">
+    <h3>Experiences</h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1.25rem">Experiences are short phrases that describe your character's history and expertise. When an experience is relevant to a roll, you gain a bonus. Start with 2 experiences.</p>
+    <div style="background:rgba(14,11,20,0.4);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
+      <label style="margin-bottom:0.5rem;display:block">Experience 1</label>
+      <div class="field-row cols-2" style="margin-bottom:0">
+        <div><input type="text" id="w-exp1-name" value="${wizardData.experience_1_name||''}" placeholder="e.g. Former Knight of the Obsidian Throne" /></div>
+        <div>
+          <label>Bonus</label>
+          <select id="w-exp1-bonus">
+            ${['+1','+2','+3'].map(b=>`<option value="${b}" ${(wizardData.experience_1_bonus||'+2')===b?'selected':''}>${b}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+    <div style="background:rgba(14,11,20,0.4);border:1px solid var(--border);border-radius:var(--radius);padding:1rem">
+      <label style="margin-bottom:0.5rem;display:block">Experience 2</label>
+      <div class="field-row cols-2" style="margin-bottom:0">
+        <div><input type="text" id="w-exp2-name" value="${wizardData.experience_2_name||''}" placeholder="e.g. Speaks Sylvan fluently" /></div>
+        <div>
+          <label>Bonus</label>
+          <select id="w-exp2-bonus">
+            ${['+1','+2','+3'].map(b=>`<option value="${b}" ${(wizardData.experience_2_bonus||'+2')===b?'selected':''}>${b}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function wizardReviewHTML() {
+  const expLine = [
+    wizardData.experience_1_name ? `${wizardData.experience_1_name} (${wizardData.experience_1_bonus})` : null,
+    wizardData.experience_2_name ? `${wizardData.experience_2_name} (${wizardData.experience_2_bonus})` : null,
+  ].filter(Boolean).join(', ');
+  const traitLine = ['agility','strength','finesse','instinct','presence','knowledge']
+    .map(a=>`${a.slice(0,3).toUpperCase()} ${fmtMod(wizardData[a]||0)}`).join(' · ');
+  return `
+  <div class="card">
+    <h3 style="color:var(--gold-light);margin-bottom:1.25rem">Review Your Character</h3>
+    <div class="review-section">
+      <h3>Getting Started</h3>
+      <div class="review-row"><span class="review-label">Name</span><span class="review-value">${wizardData.name||'—'}</span></div>
+      <div class="review-row"><span class="review-label">Pronouns</span><span class="review-value">${wizardData.pronouns||'—'}</span></div>
+      <div class="review-row"><span class="review-label">Level</span><span class="review-value">${wizardData.level||1}</span></div>
+    </div>
+    <hr />
+    <div class="review-section">
+      <h3>Class & Gear</h3>
+      <div class="review-row"><span class="review-label">Class</span><span class="review-value">${wizardData.class||'—'}</span></div>
+      <div class="review-row"><span class="review-label">Subclass</span><span class="review-value">${wizardData.subclass||'—'}</span></div>
+      <div class="review-row"><span class="review-label">Traits</span><span class="review-value" style="font-size:0.82rem">${traitLine}</span></div>
+      <div class="review-row"><span class="review-label">Primary Weapon</span><span class="review-value">${wizardData.weapon_primary||'—'}</span></div>
+      <div class="review-row"><span class="review-label">Secondary Weapon</span><span class="review-value">${wizardData.weapon_secondary||'—'}</span></div>
+      <div class="review-row"><span class="review-label">Armor</span><span class="review-value">${wizardData.armor_name||'—'}</span></div>
+      <div class="review-row"><span class="review-label">Inventory</span><span class="review-value">${wizardData.inventory||'—'}</span></div>
+    </div>
+    <hr />
+    <div class="review-section">
+      <h3>Heritage</h3>
+      <div class="review-row"><span class="review-label">Ancestry</span><span class="review-value">${wizardData.ancestry||'—'}</span></div>
+      <div class="review-row"><span class="review-label">Community</span><span class="review-value">${wizardData.community||'—'}</span></div>
+    </div>
+    <hr />
+    <div class="review-section">
+      <h3>Experiences</h3>
+      <div class="review-row"><span class="review-label">Experiences</span><span class="review-value">${expLine||'—'}</span></div>
+    </div>
+    <div style="margin-top:1rem;padding:0.85rem;background:rgba(201,149,58,0.06);border:1px solid var(--gold);border-radius:var(--radius);font-size:0.85rem;color:var(--muted)">
+      ✦ You can always edit any of these details later from the Character Builder tab.
+    </div>
+  </div>`;
+}
+
+function collectWizardStep() {
+  const step = WIZARD_STEPS[wizardStep].id;
+  if (step === 'getting-started') {
+    wizardData.name = v('w-name'); wizardData.pronouns = v('w-pronouns'); wizardData.level = n('w-level')||1;
+  }
+  if (step === 'class-gear') {
+    wizardData.class = v('w-class'); wizardData.subclass = v('w-subclass');
+    wizardData.weapon_primary = v('w-wpn1'); wizardData.weapon_secondary = v('w-wpn2');
+    wizardData.armor_name = v('w-armor'); wizardData.inventory = v('w-inventory');
+  }
+  if (step === 'heritage') {
+    wizardData.ancestry = v('w-ancestry'); wizardData.community = v('w-community');
+  }
+  if (step === 'experiences') {
+    wizardData.experience_1_name = v('w-exp1-name'); wizardData.experience_1_bonus = v('w-exp1-bonus')||'+2';
+    wizardData.experience_2_name = v('w-exp2-name'); wizardData.experience_2_bonus = v('w-exp2-bonus')||'+2';
+  }
+}
+
+function previewTraitAssignment() {
+  const map = { 'w-trait-2':2, 'w-trait-1a':1, 'w-trait-1b':1, 'w-trait-neg1':-1 };
+  const preview = {};
+  Object.entries(map).forEach(([id,val]) => {
+    const el = document.getElementById(id);
+    if (el && el.value) preview[el.value] = val;
+  });
+  Object.entries(preview).forEach(([attr, val]) => {
+    const shield = document.getElementById(`shield-${attr}`);
+    if (shield) shield.textContent = fmtMod(val);
+  });
+}
+
+function applyWizardTraits() {
+  const map = { 'w-trait-2':2, 'w-trait-1a':1, 'w-trait-1b':1, 'w-trait-neg1':-1 };
+  const assigned = {};
+  let conflict = false;
+  Object.entries(map).forEach(([id,val]) => {
+    const el = document.getElementById(id);
+    if (!el || !el.value) return;
+    if (assigned[el.value] !== undefined) { conflict = true; return; }
+    assigned[el.value] = val;
+  });
+  if (conflict) { toast('Each trait can only be assigned one value', 'error'); return; }
+  Object.entries(assigned).forEach(([attr,val]) => { wizardData[attr] = val; });
+  toast('Traits applied!', 'success');
+}
+
+async function wizardNext() {
+  collectWizardStep();
+  await saveWizardProgress();
+  if (wizardStep < WIZARD_STEPS.length - 1) {
+    wizardStep++;
+    renderWizardStep();
+    window.scrollTo(0,0);
+  } else {
+    await finalizeCharacter();
+  }
+}
+
+function wizardPrev() {
+  collectWizardStep();
+  if (wizardStep > 0) { wizardStep--; renderWizardStep(); window.scrollTo(0,0); }
+}
+
+async function saveWizardProgress() {
   const payload = {
     owner_id: currentUser.id,
-    name: v('s-name') || 'Unnamed Hero',
-    class: v('s-class'), subclass: v('s-subclass'), level: n('s-level'),
-    ancestry: v('s-ancestry'), community: v('s-community'),
-    agility: n('s-agility'), strength: n('s-strength'), finesse: n('s-finesse'),
-    instinct: n('s-instinct'), presence: n('s-presence'), knowledge: n('s-knowledge'),
-    evasion: n('s-evasion'), minor_threshold: n('s-minor'), major_threshold: n('s-major'), severe_threshold: n('s-severe'),
-    max_hp: n('s-max-hp'), current_hp: n('s-cur-hp'),
-    max_stress: n('s-max-stress'), current_stress: n('s-cur-stress'),
-    max_armor: n('s-max-armor-display'), current_armor: n('s-cur-armor'),
-    max_hope: n('s-max-hope'), current_hope: n('s-cur-hope'),
-    experiences: v('s-experiences'), inventory: v('s-inventory'), notes: v('s-notes'),
-    weapon_primary: v('s-wpn1'), weapon_secondary: v('s-wpn2'), features: v('s-features'),
+    name: wizardData.name || 'Unnamed Hero',
+    pronouns: wizardData.pronouns,
+    level: wizardData.level||1,
+    class: wizardData.class, subclass: wizardData.subclass,
+    agility: wizardData.agility||0, strength: wizardData.strength||0,
+    finesse: wizardData.finesse||0, instinct: wizardData.instinct||0,
+    presence: wizardData.presence||0, knowledge: wizardData.knowledge||0,
+    evasion: wizardData.evasion||10, max_hp: wizardData.max_hp||6,
+    current_hp: wizardData.current_hp||6, max_stress: wizardData.max_stress||6,
+    current_stress: 0, max_armor: wizardData.max_armor||3,
+    current_armor: 0, max_hope: wizardData.max_hope||6, current_hope: wizardData.max_hope||6,
+    minor_threshold: wizardData.minor_threshold||5,
+    major_threshold: wizardData.major_threshold||10,
+    severe_threshold: wizardData.severe_threshold||15,
+    weapon_primary: wizardData.weapon_primary, weapon_secondary: wizardData.weapon_secondary,
+    armor_name: wizardData.armor_name, inventory: wizardData.inventory,
+    ancestry: wizardData.ancestry, community: wizardData.community,
+    experience_1_name: wizardData.experience_1_name, experience_1_bonus: wizardData.experience_1_bonus,
+    experience_2_name: wizardData.experience_2_name, experience_2_bonus: wizardData.experience_2_bonus,
     updated_at: new Date().toISOString()
   };
-  let error;
-  if (isNew) {
-    ({ error } = await sb.from('characters').insert(payload));
+  if (wizardCharId) {
+    const { error } = await sb.from('characters').update(payload).eq('id', wizardCharId);
+    if (error) { toast('Auto-save failed: ' + error.message, 'error'); }
+    else toast('Progress saved', 'success');
   } else {
-    ({ error } = await sb.from('characters').update(payload).eq('id', editingCharId));
+    const { data, error } = await sb.from('characters').insert(payload).select().single();
+    if (error) { toast('Save failed: ' + error.message, 'error'); }
+    else { wizardCharId = data.id; wizardData.id = data.id; toast('Progress saved', 'success'); }
   }
-  if (error) { toast(error.message, 'error'); return; }
-  toast('Character saved!', 'success');
-  goHome();
 }
+
+async function finalizeCharacter() {
+  await saveWizardProgress();
+  toast('Character created! Opening your sheet…', 'success');
+  setTimeout(() => openCharPage(wizardCharId, 'sheet'), 800);
+}
+
+function confirmExitWizard() {
+  if (wizardCharId) { goHome(); return; }
+  if (confirm('Leave character creation? Your progress will be lost if you haven\'t saved.')) goHome();
+}
+
+async function saveCharacter() { await saveWizardProgress(); }
 
 /* ═══════════════════════════════════════════════════════
    ASSIGN CHARACTER TO CAMPAIGN
@@ -2193,6 +2937,20 @@ const LS_CONFIG = {
     metaFn: () => '',
     onSelect: selectCommunity,
   },
+  weapons: {
+    search: ['name'],
+    nameCol: 'name',
+    descCol: 'feature',
+    metaFn: r => [r.damage, r.range, r.trait].filter(Boolean).join(' · '),
+    onSelect: selectWeapon,
+  },
+  armor: {
+    search: ['name'],
+    nameCol: 'name',
+    descCol: 'feature',
+    metaFn: r => r.base_score != null ? `Base Score: ${r.base_score}` : '',
+    onSelect: selectArmor,
+  },
 };
 
 async function liveSearch(table, inputId, query, dropId) {
@@ -2233,21 +2991,30 @@ function closeDrop(dropId) {
 }
 
 function selectClass(row) {
+  // figure out which prefix we're in (s- for sheet, b- for builder, w- for wizard)
+  const prefix = document.getElementById('w-class') ? 'w' : document.getElementById('b-class') ? 'b' : 's';
   currentClassId = row.id;
-  const input = document.getElementById('s-class');
+  const input = document.getElementById(`${prefix}-class`);
   if (input) input.value = row.name;
-  closeDrop('class-drop');
-  // clear subclass since class changed
-  const subInput = document.getElementById('s-subclass');
+  closeDrop(`${prefix}-class-drop`);
+  // clear subclass
+  const subInput = document.getElementById(`${prefix}-subclass`);
   if (subInput) subInput.value = '';
-  // auto-fill stats from class data
-  if (row.starting_evasion) { const el = document.getElementById('s-evasion'); if(el) el.value = row.starting_evasion; }
+  // auto-fill stats
+  if (row.starting_evasion) {
+    const el = document.getElementById('s-evasion'); if(el) el.value = row.starting_evasion;
+    if (wizardData) wizardData.evasion = row.starting_evasion;
+    if (charPageData) charPageData.evasion = row.starting_evasion;
+  }
   if (row.starting_hit_points) {
-    const el = document.getElementById('s-max-hp'); if(el) { el.value = row.starting_hit_points; rebuildPips('hp', row.starting_hit_points, row.starting_hit_points); }
+    const el = document.getElementById('s-max-hp');
+    if(el) { el.value = row.starting_hit_points; rebuildPips('hp', row.starting_hit_points, row.starting_hit_points); }
     const cur = document.getElementById('s-cur-hp'); if(cur) cur.value = row.starting_hit_points;
+    if (wizardData) { wizardData.max_hp = row.starting_hit_points; wizardData.current_hp = row.starting_hit_points; }
+    if (charPageData) { charPageData.max_hp = row.starting_hit_points; charPageData.current_hp = row.starting_hit_points; }
   }
   // show info panel
-  const info = document.getElementById('class-info');
+  const info = document.getElementById(`${prefix}-class-info`);
   if (info) {
     info.style.display = 'block';
     info.innerHTML = `<strong>${row.name}</strong>${row.description ? ' — ' + row.description.slice(0,120) + (row.description.length>120?'…':'') : ''}
@@ -2255,37 +3022,80 @@ function selectClass(row) {
       ${row.starting_evasion ? ` · <span style="color:var(--sapphire)">Evasion: ${row.starting_evasion}</span>` : ''}
       ${row.class_items ? `<br>Class Items: ${row.class_items}` : ''}`;
   }
+  // store in wizard if active
+  if (wizardData) wizardData.class = row.name;
+  if (charPageData) charPageData.class = row.name;
 }
 
 function selectSubclass(row) {
-  const input = document.getElementById('s-subclass');
+  const prefix = document.getElementById('w-subclass') ? 'w' : document.getElementById('b-subclass') ? 'b' : 's';
+  const input = document.getElementById(`${prefix}-subclass`);
   if (input) input.value = row.name;
-  closeDrop('subclass-drop');
+  closeDrop(`${prefix}-subclass-drop`);
+  if (wizardData) wizardData.subclass = row.name;
+  if (charPageData) charPageData.subclass = row.name;
 }
 
 function selectAncestry(row) {
-  const input = document.getElementById('s-ancestry');
+  const prefix = document.getElementById('w-ancestry') ? 'w' : document.getElementById('b-ancestry') ? 'b' : 's';
+  const input = document.getElementById(`${prefix}-ancestry`);
   if (input) input.value = row.name;
-  closeDrop('ancestry-drop');
-  const info = document.getElementById('ancestry-info');
+  closeDrop(`${prefix}-ancestry-drop`);
+  const info = document.getElementById(`${prefix}-ancestry-info`);
   if (info) {
     const f1 = row.feature_1_name ? `<br><strong>${row.feature_1_name}:</strong> ${(row.feature_1_text||'').slice(0,100)}${(row.feature_1_text||'').length>100?'…':''}` : '';
     const f2 = row.feature_2_name ? `<br><strong>${row.feature_2_name}:</strong> ${(row.feature_2_text||'').slice(0,100)}${(row.feature_2_text||'').length>100?'…':''}` : '';
     info.style.display = 'block';
     info.innerHTML = `<strong>${row.name}</strong>${row.description?' — '+row.description.slice(0,80)+'…':''}${f1}${f2}`;
   }
+  if (wizardData) wizardData.ancestry = row.name;
+  if (charPageData) charPageData.ancestry = row.name;
 }
 
 function selectCommunity(row) {
-  const input = document.getElementById('s-community');
+  const prefix = document.getElementById('w-community') ? 'w' : document.getElementById('b-community') ? 'b' : 's';
+  const input = document.getElementById(`${prefix}-community`);
   if (input) input.value = row.name;
-  closeDrop('community-drop');
-  const info = document.getElementById('community-info');
+  closeDrop(`${prefix}-community-drop`);
+  const info = document.getElementById(`${prefix}-community-info`);
   if (info) {
     info.style.display = 'block';
     info.innerHTML = `<strong>${row.name}</strong>${row.description?' — '+row.description.slice(0,100)+'…':''}
       ${row.feature_name ? `<br><strong>${row.feature_name}:</strong> ${(row.feature_text||'').slice(0,120)}${(row.feature_text||'').length>120?'…':''}` : ''}`;
   }
+  if (wizardData) wizardData.community = row.name;
+  if (charPageData) charPageData.community = row.name;
+}
+
+function selectWeapon(row) {
+  // figure out which weapon slot triggered it
+  const isSecondary = !!document.activeElement && (document.activeElement.id.includes('wpn2') || document.activeElement.id.includes('wpn2'));
+  const prefix = document.getElementById('w-wpn1') ? 'w' : document.getElementById('b-wpn1') ? 'b' : 's';
+  // find which drop is open to determine slot
+  const slot = document.getElementById(`${prefix}-wpn2-drop`)?.style.display !== 'none' ? 'wpn2' : 'wpn1';
+  const input = document.getElementById(`${prefix}-${slot}`);
+  if (input) input.value = row.name;
+  closeDrop(`${prefix}-${slot}-drop`);
+  if (wizardData) { slot === 'wpn1' ? wizardData.weapon_primary = row.name : wizardData.weapon_secondary = row.name; }
+  if (charPageData) { slot === 'wpn1' ? charPageData.weapon_primary = row.name : charPageData.weapon_secondary = row.name; }
+}
+
+function selectArmor(row) {
+  const prefix = document.getElementById('w-armor') ? 'w' : document.getElementById('b-armor') ? 'b' : 's';
+  const input = document.getElementById(`${prefix}-armor`);
+  if (input) input.value = row.name;
+  closeDrop(`${prefix}-armor-drop`);
+  // auto-fill evasion threshold from armor if present
+  if (row.base_threshold_minor) {
+    const el = document.getElementById('s-minor'); if(el) el.value = row.base_threshold_minor;
+    if (wizardData) wizardData.minor_threshold = row.base_threshold_minor;
+  }
+  if (row.base_threshold_major) {
+    const el = document.getElementById('s-major'); if(el) el.value = row.base_threshold_major;
+    if (wizardData) wizardData.major_threshold = row.base_threshold_major;
+  }
+  if (wizardData) wizardData.armor_name = row.name;
+  if (charPageData) charPageData.armor_name = row.name;
 }
 
 /* ═══════════════════════════════════════════════════════

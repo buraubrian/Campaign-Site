@@ -1396,39 +1396,39 @@ function renderSheetHTML(c) {
     <div class="sheet-portrait">${initial}</div>
     <div class="sheet-banner-text">
       <input type="text" class="name-input" id="s-name" value="${c.name||''}" placeholder="Character Name" />
-      <div class="sheet-subline" style="flex-wrap:wrap;gap:0.5rem;align-items:flex-start">
-        <div class="ls-wrap">
-          <input type="text" id="s-ancestry" value="${c.ancestry||''}" placeholder="Ancestry" style="width:100px"
-            oninput="liveSearch('ancestries','s-ancestry',this.value,'ancestry-drop')"
-            onfocus="liveSearch('ancestries','s-ancestry',this.value,'ancestry-drop')"
-            onblur="setTimeout(()=>closeDrop('ancestry-drop'),200)" />
-          <div class="ls-dropdown" id="ancestry-drop" style="display:none"></div>
-          <div class="ls-info-panel" id="ancestry-info" style="display:none"></div>
+      <div class="sheet-subline" style="flex-wrap:wrap;gap:0.5rem;align-items:flex-start;margin-top:0.4rem">
+        <div style="display:flex;flex-direction:column;gap:0.2rem">
+          <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Ancestry</span>
+          <button class="picker-trigger${c.ancestry?' has-value':''}" style="min-width:100px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('ancestries','s-ancestry','Ancestry')">
+            <span>${c.ancestry||'Choose…'}</span><span class="pt-arrow">▼</span>
+          </button>
+          <input type="hidden" id="s-ancestry" value="${c.ancestry||''}" />
+          <div class="ls-info-panel" id="ancestry-info" style="display:none;max-width:200px"></div>
         </div>
-        <span class="sep">·</span>
-        <div class="ls-wrap">
-          <input type="text" id="s-class" value="${c.class||''}" placeholder="Class" style="width:100px"
-            oninput="liveSearch('classes','s-class',this.value,'class-drop')"
-            onfocus="liveSearch('classes','s-class',this.value,'class-drop')"
-            onblur="setTimeout(()=>closeDrop('class-drop'),200)" />
-          <div class="ls-dropdown" id="class-drop" style="display:none"></div>
-          <div class="ls-info-panel" id="class-info" style="display:none"></div>
+        <span class="sep" style="margin-top:1.4rem">·</span>
+        <div style="display:flex;flex-direction:column;gap:0.2rem">
+          <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Class</span>
+          <button class="picker-trigger${c.class?' has-value':''}" style="min-width:100px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('classes','s-class','Class')">
+            <span>${c.class||'Choose…'}</span><span class="pt-arrow">▼</span>
+          </button>
+          <input type="hidden" id="s-class" value="${c.class||''}" />
+          <div class="ls-info-panel" id="class-info" style="display:none;max-width:200px"></div>
         </div>
-        <div class="ls-wrap">
-          <input type="text" id="s-subclass" value="${c.subclass||''}" placeholder="(Subclass)" style="width:110px"
-            oninput="liveSearch('subclasses','s-subclass',this.value,'subclass-drop')"
-            onfocus="liveSearch('subclasses','s-subclass',this.value,'subclass-drop')"
-            onblur="setTimeout(()=>closeDrop('subclass-drop'),200)" />
-          <div class="ls-dropdown" id="subclass-drop" style="display:none"></div>
+        <div style="display:flex;flex-direction:column;gap:0.2rem">
+          <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Subclass</span>
+          <button class="picker-trigger${c.subclass?' has-value':''}" style="min-width:110px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('subclasses','s-subclass','Subclass')">
+            <span>${c.subclass||'Choose…'}</span><span class="pt-arrow">▼</span>
+          </button>
+          <input type="hidden" id="s-subclass" value="${c.subclass||''}" />
         </div>
-        <span class="sep">·</span>
-        <div class="ls-wrap">
-          <input type="text" id="s-community" value="${c.community||''}" placeholder="Community" style="width:110px"
-            oninput="liveSearch('communities','s-community',this.value,'community-drop')"
-            onfocus="liveSearch('communities','s-community',this.value,'community-drop')"
-            onblur="setTimeout(()=>closeDrop('community-drop'),200)" />
-          <div class="ls-dropdown" id="community-drop" style="display:none"></div>
-          <div class="ls-info-panel" id="community-info" style="display:none"></div>
+        <span class="sep" style="margin-top:1.4rem">·</span>
+        <div style="display:flex;flex-direction:column;gap:0.2rem">
+          <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Community</span>
+          <button class="picker-trigger${c.community?' has-value':''}" style="min-width:110px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('communities','s-community','Community')">
+            <span>${c.community||'Choose…'}</span><span class="pt-arrow">▼</span>
+          </button>
+          <input type="hidden" id="s-community" value="${c.community||''}" />
+          <div class="ls-info-panel" id="community-info" style="display:none;max-width:200px"></div>
         </div>
       </div>
     </div>
@@ -1493,12 +1493,18 @@ function renderSheetHTML(c) {
     <div class="card" style="margin-bottom:0">
       <h3>Active Weapons</h3>
       <div class="weapon-card-display">
-        <input type="text" class="w-name" id="s-wpn1" value="${c.weapon_primary||''}" placeholder="Primary Weapon" />
-        <div class="w-meta">Primary · Melee or Ranged</div>
+        <button class="picker-trigger${c.weapon_primary?' has-value':''}" style="width:100%;text-align:left;font-size:0.92rem;padding:0.4rem 0.6rem;font-family:'Cinzel',serif" onclick="openPicker('weapons','s-wpn1','Primary Weapon')">
+          <span>${c.weapon_primary||'Choose primary weapon…'}</span><span class="pt-arrow">▼</span>
+        </button>
+        <input type="hidden" id="s-wpn1" value="${c.weapon_primary||''}" />
+        <div class="w-meta" style="margin-top:0.35rem">Primary · Melee or Ranged</div>
       </div>
       <div class="weapon-card-display">
-        <input type="text" class="w-name" id="s-wpn2" value="${c.weapon_secondary||''}" placeholder="Secondary Weapon" />
-        <div class="w-meta">Secondary</div>
+        <button class="picker-trigger${c.weapon_secondary?' has-value':''}" style="width:100%;text-align:left;font-size:0.92rem;padding:0.4rem 0.6rem;font-family:'Cinzel',serif" onclick="openPicker('weapons','s-wpn2','Secondary Weapon')">
+          <span>${c.weapon_secondary||'Choose secondary weapon…'}</span><span class="pt-arrow">▼</span>
+        </button>
+        <input type="hidden" id="s-wpn2" value="${c.weapon_secondary||''}" />
+        <div class="w-meta" style="margin-top:0.35rem">Secondary</div>
       </div>
     </div>
     <div class="duality-quick-panel">
@@ -1692,24 +1698,18 @@ function builderHTML(c) {
     <div class="field-row cols-2">
       <div>
         <label>Class</label>
-        <div class="ls-wrap" style="width:100%">
-          <input type="text" id="b-class" value="${c.class||''}" placeholder="Search classes…" style="width:100%"
-            oninput="liveSearch('classes','b-class',this.value,'b-class-drop')"
-            onfocus="liveSearch('classes','b-class',this.value,'b-class-drop')"
-            onblur="setTimeout(()=>closeDrop('b-class-drop'),200)" />
-          <div class="ls-dropdown" id="b-class-drop" style="display:none"></div>
-          <div class="ls-info-panel" id="b-class-info" style="display:none"></div>
-        </div>
+        <button class="picker-trigger${c.class?' has-value':''}" onclick="openPicker('classes','b-class','Class')" style="width:100%">
+          <span>${c.class||'Browse classes…'}</span><span class="pt-arrow">▼</span>
+        </button>
+        <input type="hidden" id="b-class" value="${c.class||''}" />
+        <div class="ls-info-panel" id="b-class-info" style="display:none"></div>
       </div>
       <div>
         <label>Subclass</label>
-        <div class="ls-wrap" style="width:100%">
-          <input type="text" id="b-subclass" value="${c.subclass||''}" placeholder="Search subclasses…" style="width:100%"
-            oninput="liveSearch('subclasses','b-subclass',this.value,'b-subclass-drop')"
-            onfocus="liveSearch('subclasses','b-subclass',this.value,'b-subclass-drop')"
-            onblur="setTimeout(()=>closeDrop('b-subclass-drop'),200)" />
-          <div class="ls-dropdown" id="b-subclass-drop" style="display:none"></div>
-        </div>
+        <button class="picker-trigger${c.subclass?' has-value':''}" onclick="openPicker('subclasses','b-subclass','Subclass')" style="width:100%">
+          <span>${c.subclass||'Browse subclasses…'}</span><span class="pt-arrow">▼</span>
+        </button>
+        <input type="hidden" id="b-subclass" value="${c.subclass||''}" />
       </div>
     </div>
     <hr />
@@ -1719,35 +1719,26 @@ function builderHTML(c) {
     <div class="field-row cols-2">
       <div>
         <label>Primary Weapon</label>
-        <div class="ls-wrap" style="width:100%">
-          <input type="text" id="b-wpn1" value="${c.weapon_primary||''}" placeholder="Search weapons…" style="width:100%"
-            oninput="liveSearch('weapons','b-wpn1',this.value,'b-wpn1-drop')"
-            onfocus="liveSearch('weapons','b-wpn1',this.value,'b-wpn1-drop')"
-            onblur="setTimeout(()=>closeDrop('b-wpn1-drop'),200)" />
-          <div class="ls-dropdown" id="b-wpn1-drop" style="display:none"></div>
-        </div>
+        <button class="picker-trigger${c.weapon_primary?' has-value':''}" onclick="openPicker('weapons','b-wpn1','Primary Weapon')" style="width:100%">
+          <span>${c.weapon_primary||'Browse weapons…'}</span><span class="pt-arrow">▼</span>
+        </button>
+        <input type="hidden" id="b-wpn1" value="${c.weapon_primary||''}" />
       </div>
       <div>
         <label>Secondary Weapon</label>
-        <div class="ls-wrap" style="width:100%">
-          <input type="text" id="b-wpn2" value="${c.weapon_secondary||''}" placeholder="Search weapons…" style="width:100%"
-            oninput="liveSearch('weapons','b-wpn2',this.value,'b-wpn2-drop')"
-            onfocus="liveSearch('weapons','b-wpn2',this.value,'b-wpn2-drop')"
-            onblur="setTimeout(()=>closeDrop('b-wpn2-drop'),200)" />
-          <div class="ls-dropdown" id="b-wpn2-drop" style="display:none"></div>
-        </div>
+        <button class="picker-trigger${c.weapon_secondary?' has-value':''}" onclick="openPicker('weapons','b-wpn2','Secondary Weapon')" style="width:100%">
+          <span>${c.weapon_secondary||'Browse weapons…'}</span><span class="pt-arrow">▼</span>
+        </button>
+        <input type="hidden" id="b-wpn2" value="${c.weapon_secondary||''}" />
       </div>
     </div>
     <div class="field-row cols-2">
       <div>
         <label>Armor</label>
-        <div class="ls-wrap" style="width:100%">
-          <input type="text" id="b-armor" value="${c.armor_name||''}" placeholder="Search armor…" style="width:100%"
-            oninput="liveSearch('armor','b-armor',this.value,'b-armor-drop')"
-            onfocus="liveSearch('armor','b-armor',this.value,'b-armor-drop')"
-            onblur="setTimeout(()=>closeDrop('b-armor-drop'),200)" />
-          <div class="ls-dropdown" id="b-armor-drop" style="display:none"></div>
-        </div>
+        <button class="picker-trigger${c.armor_name?' has-value':''}" onclick="openPicker('armor','b-armor','Armor')" style="width:100%">
+          <span>${c.armor_name||'Browse armor…'}</span><span class="pt-arrow">▼</span>
+        </button>
+        <input type="hidden" id="b-armor" value="${c.armor_name||''}" />
       </div>
       <div>
         <label>Starting Inventory</label>
@@ -1762,25 +1753,19 @@ function builderHTML(c) {
     <div class="field-row cols-2">
       <div>
         <label>Ancestry</label>
-        <div class="ls-wrap" style="width:100%">
-          <input type="text" id="b-ancestry" value="${c.ancestry||''}" placeholder="Search ancestries…" style="width:100%"
-            oninput="liveSearch('ancestries','b-ancestry',this.value,'b-ancestry-drop')"
-            onfocus="liveSearch('ancestries','b-ancestry',this.value,'b-ancestry-drop')"
-            onblur="setTimeout(()=>closeDrop('b-ancestry-drop'),200)" />
-          <div class="ls-dropdown" id="b-ancestry-drop" style="display:none"></div>
-          <div class="ls-info-panel" id="b-ancestry-info" style="display:none"></div>
-        </div>
+        <button class="picker-trigger${c.ancestry?' has-value':''}" onclick="openPicker('ancestries','b-ancestry','Ancestry')" style="width:100%">
+          <span>${c.ancestry||'Browse ancestries…'}</span><span class="pt-arrow">▼</span>
+        </button>
+        <input type="hidden" id="b-ancestry" value="${c.ancestry||''}" />
+        <div class="ls-info-panel" id="b-ancestry-info" style="display:none"></div>
       </div>
       <div>
         <label>Community</label>
-        <div class="ls-wrap" style="width:100%">
-          <input type="text" id="b-community" value="${c.community||''}" placeholder="Search communities…" style="width:100%"
-            oninput="liveSearch('communities','b-community',this.value,'b-community-drop')"
-            onfocus="liveSearch('communities','b-community',this.value,'b-community-drop')"
-            onblur="setTimeout(()=>closeDrop('b-community-drop'),200)" />
-          <div class="ls-dropdown" id="b-community-drop" style="display:none"></div>
-          <div class="ls-info-panel" id="b-community-info" style="display:none"></div>
-        </div>
+        <button class="picker-trigger${c.community?' has-value':''}" onclick="openPicker('communities','b-community','Community')" style="width:100%">
+          <span>${c.community||'Browse communities…'}</span><span class="pt-arrow">▼</span>
+        </button>
+        <input type="hidden" id="b-community" value="${c.community||''}" />
+        <div class="ls-info-panel" id="b-community-info" style="display:none"></div>
       </div>
     </div>
   </div>
@@ -1921,39 +1906,39 @@ function charEditorHTML(c) {
     <div class="sheet-portrait">${initial}</div>
     <div class="sheet-banner-text">
       <input type="text" class="name-input" id="s-name" value="${c.name||''}" placeholder="Character Name" />
-      <div class="sheet-subline" style="flex-wrap:wrap;gap:0.5rem;align-items:flex-start">
-        <div class="ls-wrap">
-          <input type="text" id="s-ancestry" value="${c.ancestry||''}" placeholder="Ancestry" style="width:100px"
-            oninput="liveSearch('ancestries','s-ancestry',this.value,'ancestry-drop')"
-            onfocus="liveSearch('ancestries','s-ancestry',this.value,'ancestry-drop')"
-            onblur="setTimeout(()=>closeDrop('ancestry-drop'),200)" />
-          <div class="ls-dropdown" id="ancestry-drop" style="display:none"></div>
-          <div class="ls-info-panel" id="ancestry-info" style="display:none"></div>
+      <div class="sheet-subline" style="flex-wrap:wrap;gap:0.5rem;align-items:flex-start;margin-top:0.4rem">
+        <div style="display:flex;flex-direction:column;gap:0.2rem">
+          <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Ancestry</span>
+          <button class="picker-trigger${c.ancestry?' has-value':''}" style="min-width:100px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('ancestries','s-ancestry','Ancestry')">
+            <span>${c.ancestry||'Choose…'}</span><span class="pt-arrow">▼</span>
+          </button>
+          <input type="hidden" id="s-ancestry" value="${c.ancestry||''}" />
+          <div class="ls-info-panel" id="ancestry-info" style="display:none;max-width:200px"></div>
         </div>
-        <span class="sep">·</span>
-        <div class="ls-wrap">
-          <input type="text" id="s-class" value="${c.class||''}" placeholder="Class" style="width:100px"
-            oninput="liveSearch('classes','s-class',this.value,'class-drop')"
-            onfocus="liveSearch('classes','s-class',this.value,'class-drop')"
-            onblur="setTimeout(()=>closeDrop('class-drop'),200)" />
-          <div class="ls-dropdown" id="class-drop" style="display:none"></div>
-          <div class="ls-info-panel" id="class-info" style="display:none"></div>
+        <span class="sep" style="margin-top:1.4rem">·</span>
+        <div style="display:flex;flex-direction:column;gap:0.2rem">
+          <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Class</span>
+          <button class="picker-trigger${c.class?' has-value':''}" style="min-width:100px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('classes','s-class','Class')">
+            <span>${c.class||'Choose…'}</span><span class="pt-arrow">▼</span>
+          </button>
+          <input type="hidden" id="s-class" value="${c.class||''}" />
+          <div class="ls-info-panel" id="class-info" style="display:none;max-width:200px"></div>
         </div>
-        <div class="ls-wrap">
-          <input type="text" id="s-subclass" value="${c.subclass||''}" placeholder="(Subclass)" style="width:110px"
-            oninput="liveSearch('subclasses','s-subclass',this.value,'subclass-drop')"
-            onfocus="liveSearch('subclasses','s-subclass',this.value,'subclass-drop')"
-            onblur="setTimeout(()=>closeDrop('subclass-drop'),200)" />
-          <div class="ls-dropdown" id="subclass-drop" style="display:none"></div>
+        <div style="display:flex;flex-direction:column;gap:0.2rem">
+          <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Subclass</span>
+          <button class="picker-trigger${c.subclass?' has-value':''}" style="min-width:110px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('subclasses','s-subclass','Subclass')">
+            <span>${c.subclass||'Choose…'}</span><span class="pt-arrow">▼</span>
+          </button>
+          <input type="hidden" id="s-subclass" value="${c.subclass||''}" />
         </div>
-        <span class="sep">·</span>
-        <div class="ls-wrap">
-          <input type="text" id="s-community" value="${c.community||''}" placeholder="Community" style="width:110px"
-            oninput="liveSearch('communities','s-community',this.value,'community-drop')"
-            onfocus="liveSearch('communities','s-community',this.value,'community-drop')"
-            onblur="setTimeout(()=>closeDrop('community-drop'),200)" />
-          <div class="ls-dropdown" id="community-drop" style="display:none"></div>
-          <div class="ls-info-panel" id="community-info" style="display:none"></div>
+        <span class="sep" style="margin-top:1.4rem">·</span>
+        <div style="display:flex;flex-direction:column;gap:0.2rem">
+          <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Community</span>
+          <button class="picker-trigger${c.community?' has-value':''}" style="min-width:110px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('communities','s-community','Community')">
+            <span>${c.community||'Choose…'}</span><span class="pt-arrow">▼</span>
+          </button>
+          <input type="hidden" id="s-community" value="${c.community||''}" />
+          <div class="ls-info-panel" id="community-info" style="display:none;max-width:200px"></div>
         </div>
       </div>
     </div>
@@ -2017,12 +2002,18 @@ function charEditorHTML(c) {
   <div class="card">
     <h3>Active Weapons</h3>
     <div class="weapon-card-display">
-      <input type="text" class="w-name" id="s-wpn1" value="${c.weapon_primary||''}" placeholder="Primary Weapon — name, damage die, traits" />
-      <div class="w-meta">Primary</div>
+      <button class="picker-trigger${c.weapon_primary?' has-value':''}" style="width:100%;text-align:left;font-size:0.92rem;padding:0.4rem 0.6rem;font-family:'Cinzel',serif" onclick="openPicker('weapons','s-wpn1','Primary Weapon')">
+        <span>${c.weapon_primary||'Choose primary weapon…'}</span><span class="pt-arrow">▼</span>
+      </button>
+      <input type="hidden" id="s-wpn1" value="${c.weapon_primary||''}" />
+      <div class="w-meta" style="margin-top:0.35rem">Primary</div>
     </div>
     <div class="weapon-card-display">
-      <input type="text" class="w-name" id="s-wpn2" value="${c.weapon_secondary||''}" placeholder="Secondary Weapon" />
-      <div class="w-meta">Secondary</div>
+      <button class="picker-trigger${c.weapon_secondary?' has-value':''}" style="width:100%;text-align:left;font-size:0.92rem;padding:0.4rem 0.6rem;font-family:'Cinzel',serif" onclick="openPicker('weapons','s-wpn2','Secondary Weapon')">
+        <span>${c.weapon_secondary||'Choose secondary weapon…'}</span><span class="pt-arrow">▼</span>
+      </button>
+      <input type="hidden" id="s-wpn2" value="${c.weapon_secondary||''}" />
+      <div class="w-meta" style="margin-top:0.35rem">Secondary</div>
     </div>
   </div>
 
@@ -3401,30 +3392,50 @@ function filterPickerItems(query) {
 
 function pickItem(index) {
   const items = document.querySelectorAll('.picker-item');
-  // figure out which item in pickerAllItems this corresponds to
-  // (may be filtered, so we look up by name from the rendered list)
   const nameEl = items[index]?.querySelector('.picker-item-name');
   const name = nameEl?.textContent?.replace('✓ Selected','').trim();
   if (!name) return;
   const row = pickerAllItems.find(r => r.name === name);
   if (!row) return;
 
-  // set the hidden input value
+  // set the hidden/text input value
   const input = document.getElementById(pickerTargetId);
   if (input) input.value = row.name;
 
-  // update the trigger button text
-  const btn = input?.previousElementSibling;
-  if (btn && btn.classList.contains('picker-trigger')) {
-    btn.querySelector('span:first-child').textContent = row.name;
-    btn.classList.add('has-value');
+  // update the trigger button — walk back through siblings/parent to find it
+  // the button is always the previousElementSibling of the hidden input
+  if (input) {
+    const btn = input.previousElementSibling;
+    if (btn && btn.classList.contains('picker-trigger')) {
+      const span = btn.querySelector('span:first-child');
+      if (span) span.textContent = row.name;
+      btn.classList.add('has-value');
+    }
   }
 
   // fire the appropriate select function via LS_CONFIG
   const cfg = LS_CONFIG[pickerTable];
   if (cfg) cfg.onSelect(row, pickerTargetId + '-drop');
 
-  // close picker
+  // update wizardData / charPageData directly
+  const fieldMap = {
+    'w-class': () => { if(typeof wizardData!=='undefined') wizardData.class = row.name; },
+    'w-subclass': () => { if(typeof wizardData!=='undefined') wizardData.subclass = row.name; },
+    'w-ancestry': () => { if(typeof wizardData!=='undefined') wizardData.ancestry = row.name; },
+    'w-community': () => { if(typeof wizardData!=='undefined') wizardData.community = row.name; },
+    'w-wpn1': () => { if(typeof wizardData!=='undefined') wizardData.weapon_primary = row.name; },
+    'w-wpn2': () => { if(typeof wizardData!=='undefined') wizardData.weapon_secondary = row.name; },
+    'w-armor': () => { if(typeof wizardData!=='undefined') wizardData.armor_name = row.name; },
+    'b-class': () => { if(typeof charPageData!=='undefined'&&charPageData) charPageData.class = row.name; },
+    'b-subclass': () => { if(typeof charPageData!=='undefined'&&charPageData) charPageData.subclass = row.name; },
+    'b-ancestry': () => { if(typeof charPageData!=='undefined'&&charPageData) charPageData.ancestry = row.name; },
+    'b-community': () => { if(typeof charPageData!=='undefined'&&charPageData) charPageData.community = row.name; },
+    'b-wpn1': () => { if(typeof charPageData!=='undefined'&&charPageData) charPageData.weapon_primary = row.name; },
+    'b-wpn2': () => { if(typeof charPageData!=='undefined'&&charPageData) charPageData.weapon_secondary = row.name; },
+    'b-armor': () => { if(typeof charPageData!=='undefined'&&charPageData) charPageData.armor_name = row.name; },
+  };
+  if (fieldMap[pickerTargetId]) fieldMap[pickerTargetId]();
+
   closePicker();
 }
 
@@ -3532,13 +3543,13 @@ function lsPickResult(dropId, index) {
   if (!results || !results[index]) return;
   const row = results[index];
   const tableMap = {
-    'class-drop':'classes','b-class-drop':'classes','w-class-drop':'classes',
-    'subclass-drop':'subclasses','b-subclass-drop':'subclasses','w-subclass-drop':'subclasses',
-    'ancestry-drop':'ancestries','b-ancestry-drop':'ancestries','w-ancestry-drop':'ancestries',
-    'community-drop':'communities','b-community-drop':'communities','w-community-drop':'communities',
-    'b-wpn1-drop':'weapons','w-wpn1-drop':'weapons',
-    'b-wpn2-drop':'weapons','w-wpn2-drop':'weapons',
-    'b-armor-drop':'armor','w-armor-drop':'armor',
+    'class-drop':'classes','b-class-drop':'classes','w-class-drop':'classes','s-class-drop':'classes',
+    'subclass-drop':'subclasses','b-subclass-drop':'subclasses','w-subclass-drop':'subclasses','s-subclass-drop':'subclasses',
+    'ancestry-drop':'ancestries','b-ancestry-drop':'ancestries','w-ancestry-drop':'ancestries','s-ancestry-drop':'ancestries',
+    'community-drop':'communities','b-community-drop':'communities','w-community-drop':'communities','s-community-drop':'communities',
+    'b-wpn1-drop':'weapons','w-wpn1-drop':'weapons','s-wpn1-drop':'weapons',
+    'b-wpn2-drop':'weapons','w-wpn2-drop':'weapons','s-wpn2-drop':'weapons',
+    'b-armor-drop':'armor','w-armor-drop':'armor','s-armor-drop':'armor',
   };
   const table = tableMap[dropId];
   const cfg = LS_CONFIG[table];

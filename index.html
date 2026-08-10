@@ -1383,13 +1383,17 @@ function initSheetDicePreviews() {
 function renderSheetHTML(c) {
   const initial = (c.name||'?').trim().charAt(0).toUpperCase() || '?';
   return `
-  <div class="section-header">
+<div class="section-header">
     <h2>Character Sheet</h2>
     <div class="section-actions">
       <button class="btn btn-gold btn-sm" onclick="saveSheetInline('${c.id}')">Save Sheet</button>
       <button class="btn btn-danger btn-sm" onclick="unassignCharacter('${c.id}')">Remove from Campaign</button>
     </div>
   </div>
+  ${isSheetLocked() ? `
+  <div style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 1rem;background:rgba(201,149,58,0.06);border:1px solid var(--gold);border-radius:var(--radius);margin-bottom:1rem;font-size:0.85rem;color:var(--muted)">
+    🔒 <span>This sheet is <strong style="color:var(--gold-light)">locked</strong> — base stats are fixed while in a campaign. HP, Stress, Hope, Weapons and Armor can still be updated.</span>
+  </div>` : ''}
 
   <!-- Banner header -->
   <div class="sheet-banner">
@@ -1397,38 +1401,42 @@ function renderSheetHTML(c) {
     <div class="sheet-banner-text">
       <input type="text" class="name-input" id="s-name" value="${c.name||''}" placeholder="Character Name" />
       <div class="sheet-subline" style="flex-wrap:wrap;gap:0.5rem;align-items:flex-start;margin-top:0.4rem">
-        <div style="display:flex;flex-direction:column;gap:0.2rem">
+       <div style="display:flex;flex-direction:column;gap:0.2rem">
           <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Ancestry</span>
+          ${isSheetLocked() ? lockedPicker(c.ancestry) : `
           <button class="picker-trigger${c.ancestry?' has-value':''}" style="min-width:100px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('ancestries','s-ancestry','Ancestry')">
             <span>${c.ancestry||'Choose…'}</span><span class="pt-arrow">▼</span>
           </button>
+          <div class="ls-info-panel" id="ancestry-info" style="display:none;max-width:200px"></div>`}
           <input type="hidden" id="s-ancestry" value="${c.ancestry||''}" />
-          <div class="ls-info-panel" id="ancestry-info" style="display:none;max-width:200px"></div>
         </div>
         <span class="sep" style="margin-top:1.4rem">·</span>
-        <div style="display:flex;flex-direction:column;gap:0.2rem">
+       <div style="display:flex;flex-direction:column;gap:0.2rem">
           <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Class</span>
+          ${isSheetLocked() ? lockedPicker(c.class) : `
           <button class="picker-trigger${c.class?' has-value':''}" style="min-width:100px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('classes','s-class','Class')">
             <span>${c.class||'Choose…'}</span><span class="pt-arrow">▼</span>
           </button>
+          <div class="ls-info-panel" id="class-info" style="display:none;max-width:200px"></div>`}
           <input type="hidden" id="s-class" value="${c.class||''}" />
-          <div class="ls-info-panel" id="class-info" style="display:none;max-width:200px"></div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:0.2rem">
+     <div style="display:flex;flex-direction:column;gap:0.2rem">
           <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Subclass</span>
+          ${isSheetLocked() ? lockedPicker(c.subclass) : `
           <button class="picker-trigger${c.subclass?' has-value':''}" style="min-width:110px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('subclasses','s-subclass','Subclass')">
             <span>${c.subclass||'Choose…'}</span><span class="pt-arrow">▼</span>
-          </button>
+          </button>`}
           <input type="hidden" id="s-subclass" value="${c.subclass||''}" />
         </div>
         <span class="sep" style="margin-top:1.4rem">·</span>
         <div style="display:flex;flex-direction:column;gap:0.2rem">
           <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Community</span>
+          ${isSheetLocked() ? lockedPicker(c.community) : `
           <button class="picker-trigger${c.community?' has-value':''}" style="min-width:110px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('communities','s-community','Community')">
             <span>${c.community||'Choose…'}</span><span class="pt-arrow">▼</span>
           </button>
+          <div class="ls-info-panel" id="community-info" style="display:none;max-width:200px"></div>`}
           <input type="hidden" id="s-community" value="${c.community||''}" />
-          <div class="ls-info-panel" id="community-info" style="display:none;max-width:200px"></div>
         </div>
       </div>
     </div>
@@ -1440,8 +1448,8 @@ function renderSheetHTML(c) {
 
   <!-- Evasion / Armor / Armor Slots -->
   <div class="shield-row">
-    <div class="shield-badge"><input type="number" id="s-evasion" value="${c.evasion||10}" /><div class="shield-lbl">Evasion</div></div>
-    <div class="shield-badge"><input type="number" id="s-max-armor-display" value="${c.max_armor||3}" onchange="rebuildPips('armor',this.value,${c.current_armor||0})" /><div class="shield-lbl">Armor</div></div>
+   <div class="shield-badge">${isSheetLocked() ? `<div style="font-family:'Cinzel',serif;font-size:1.5rem;font-weight:600;color:var(--gold-light)">${c.evasion||10}</div>` : `<input type="number" id="s-evasion" value="${c.evasion||10}" />`}<div class="shield-lbl">Evasion</div></div>
+    <div class="shield-badge">${isSheetLocked() ? `<div style="font-family:'Cinzel',serif;font-size:1.5rem;font-weight:600;color:var(--gold-light)">${c.max_armor||3}</div>` : `<input type="number" id="s-max-armor-display" value="${c.max_armor||3}" onchange="rebuildPips('armor',this.value,${c.current_armor||0})" />`}<div class="shield-lbl">Armor</div></div>
     <div class="armor-slots-card">
       <span style="font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">Armor Slots Marked</span>
       <div class="pip-row" id="pip-armor" style="margin-top:0"></div>
@@ -1453,7 +1461,9 @@ function renderSheetHTML(c) {
     ${Object.entries(ATTRIBUTE_SKILLS).map(([key,skills]) => `
       <div class="attr-card">
         <div class="attr-name">${key}</div>
-        <input type="number" id="s-${key}" value="${c[key]||0}" />
+       ${isSheetLocked()
+          ? `<div style="font-family:'Cinzel',serif;font-size:1.3rem;font-weight:600;color:var(--gold-light);padding:0.2rem 0">${fmtMod(c[key]||0)}</div>`
+          : `<input type="number" id="s-${key}" value="${c[key]||0}" />`}
         <div class="attr-skills">${skills.join('<br>')}</div>
       </div>
     `).join('')}
@@ -1463,9 +1473,9 @@ function renderSheetHTML(c) {
   <div class="card">
     <h3>Damage Thresholds</h3>
     <div class="threshold-bar">
-      <div class="threshold-seg"><div class="th-lbl">Minor</div><input type="number" id="s-minor" value="${c.minor_threshold||5}" /><div class="th-mark">Mark 1 HP</div></div>
-      <div class="threshold-seg"><div class="th-lbl">Major</div><input type="number" id="s-major" value="${c.major_threshold||10}" /><div class="th-mark">Mark 2 HP</div></div>
-      <div class="threshold-seg"><div class="th-lbl">Severe</div><input type="number" id="s-severe" value="${c.severe_threshold||15}" /><div class="th-mark">Mark 3 HP</div></div>
+      <div class="threshold-seg"><div class="th-lbl">Minor</div>${isSheetLocked() ? `<div style="font-family:'Cinzel',serif;font-size:1.3rem;font-weight:600;color:var(--text);padding:0.15rem 0">${c.minor_threshold||5}</div>` : `<input type="number" id="s-minor" value="${c.minor_threshold||5}" />`}<div class="th-mark">Mark 1 HP</div></div>
+      <div class="threshold-seg"><div class="th-lbl">Major</div>${isSheetLocked() ? `<div style="font-family:'Cinzel',serif;font-size:1.3rem;font-weight:600;color:var(--text);padding:0.15rem 0">${c.major_threshold||10}</div>` : `<input type="number" id="s-major" value="${c.major_threshold||10}" />`}<div class="th-mark">Mark 2 HP</div></div>
+      <div class="threshold-seg"><div class="th-lbl">Severe</div>${isSheetLocked() ? `<div style="font-family:'Cinzel',serif;font-size:1.3rem;font-weight:600;color:var(--text);padding:0.15rem 0">${c.severe_threshold||15}</div>` : `<input type="number" id="s-severe" value="${c.severe_threshold||15}" />`}<div class="th-mark">Mark 3 HP</div></div>
     </div>
   </div>
 
@@ -2498,6 +2508,7 @@ async function loadPlayersTab() {
               <div style="font-size:0.85rem;color:var(--muted)">@${m.profiles?.username || ''}</div>
               ${pChar ? `<div style="margin-top:0.5rem;font-size:0.9rem"><strong style="color:var(--gold)">${pChar.name}</strong> — ${pChar.class||'No class'} Lv.${pChar.level||1}</div>` : '<div style="margin-top:0.5rem;font-size:0.85rem;color:var(--muted)">No character assigned</div>'}
             </div>
+           <button class="btn btn-ghost btn-sm" onclick="toggleSheetLock('${m.player_id}','${pChar?.id}',${pChar?.sheet_locked})">${pChar?.sheet_locked ? '🔓 Unlock Sheet' : '🔒 Lock Sheet'}</button>
             <button class="btn btn-danger btn-sm" onclick="removePlayer('${m.player_id}')">Remove</button>
           </div>
         </div>`;
@@ -3684,6 +3695,26 @@ function selectArmor(row, dropId) {
 /* ═══════════════════════════════════════════════════════
    UTILITIES
 ════════════════════════════════════════════════════════ */
+function isSheetLocked() {
+  return charPageData && charPageData.sheet_locked === true;
+}
+
+function lockedPicker(value, fallback='Not set') {
+  const val = value || fallback;
+  return `<span style="font-family:'Cinzel',serif;color:var(--amethyst);font-size:0.85rem;padding:0.3rem 0;display:block">${val} <span style="color:var(--muted);font-size:0.7rem">🔒</span></span>`;
+}
+
+async function toggleSheetLock(playerId, charId, currentlyLocked) {
+  if (!charId) { toast('Player has no character assigned', 'error'); return; }
+  const { error } = await sb.from('characters')
+    .update({ sheet_locked: !currentlyLocked })
+    .eq('id', charId)
+    .eq('campaign_id', currentCampaign.id);
+  if (error) { toast(error.message, 'error'); return; }
+  toast(currentlyLocked ? 'Sheet unlocked for player' : 'Sheet locked', 'success');
+  loadPlayersTab();
+}
+
 function v(id) { return document.getElementById(id)?.value?.trim() || ''; }
 function n(id) { return parseInt(document.getElementById(id)?.value)||0; }
 

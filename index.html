@@ -2458,7 +2458,10 @@ async function loadAssignCharList() {
 }
 
 async function assignChar(charId) {
-  const { error } = await sb.from('characters').update({ campaign_id: currentCampaign.id }).eq('id', charId);
+  const { error } = await sb.from('characters').update({ 
+    campaign_id: currentCampaign.id,
+    sheet_locked: true 
+  }).eq('id', charId);
   if (error) { toast(error.message, 'error'); return; }
   closeModal('modal-assign-char');
   toast('Character assigned!', 'success');
@@ -2467,7 +2470,7 @@ async function assignChar(charId) {
 
 async function unassignCharacter(charId) {
   if (!confirm('Remove this character from the campaign? Your character data is kept — it just won\'t be linked to this campaign anymore.')) return;
-  const { error } = await sb.from('characters').update({ campaign_id: null }).eq('id', charId);
+  const { error } = await sb.from('characters').update({ campaign_id: null, sheet_locked: false }).eq('id', charId);
   if (error) { toast(error.message, 'error'); return; }
   toast('Character removed from campaign', 'success');
   loadSheetTab();

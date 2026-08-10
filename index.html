@@ -1102,7 +1102,7 @@ async function loadMyCharacters() {
     const isComplete = c.class && c.ancestry;
     return `
     <div class="char-mini-card">
-      <h4>${c.name||'Unnamed Hero'}</h4>
+      <h4>${c.name||'Unnamed Hero'} ${c.sheet_locked ? '<span title="Locked — assigned to a campaign" style="color:var(--gold);font-size:0.85rem">🔒</span>' : ''}</h4>
       <p>${classLine}</p>
       <p>${heritageLine}</p>
       <div class="char-card-footer">

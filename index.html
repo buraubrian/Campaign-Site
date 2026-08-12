@@ -235,6 +235,36 @@ select option { background: var(--panel); }
 .review-label { font-family:'Cinzel',serif; font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); min-width:110px; }
 .review-value { color:var(--text); }
 
+/* ── Feature Cards & Domain Cards ── */
+.feature-card { border:1px solid var(--border); border-radius:var(--radius-lg); margin-bottom:0.85rem; overflow:hidden; transition:border-color 0.2s; }
+.feature-card:hover { border-color:var(--amethyst); }
+.feature-card-header { display:flex; align-items:center; gap:0.65rem; flex-wrap:wrap; padding:0.85rem 1rem; background:rgba(14,11,20,0.4); }
+.feature-card-title { font-family:'Cinzel',serif; font-size:0.95rem; color:var(--gold-light); }
+.feature-card-type { font-family:'Cinzel',serif; font-size:0.62rem; letter-spacing:0.08em; text-transform:uppercase; padding:0.15rem 0.5rem; border-radius:999px; border:1px solid var(--amethyst); color:var(--amethyst); }
+.feature-card-body { padding:0.85rem 1rem; font-size:0.9rem; line-height:1.65; color:var(--text); }
+.domain-card-tile { border:1px solid var(--border); border-radius:var(--radius-lg); margin-bottom:0.85rem; overflow:hidden; transition:border-color 0.2s; }
+.domain-card-tile.loadout { border-color:var(--gold); background:rgba(201,149,58,0.04); }
+.domain-card-tile.vault-tile { border-color:var(--border); opacity:0.75; }
+.domain-card-header { display:flex; align-items:center; gap:0.65rem; flex-wrap:wrap; padding:0.85rem 1rem; background:rgba(14,11,20,0.4); justify-content:space-between; }
+.domain-card-header-left { display:flex; align-items:center; gap:0.65rem; flex-wrap:wrap; }
+.domain-card-body { padding:0.85rem 1rem; font-size:0.9rem; line-height:1.65; color:var(--text); }
+.vault-move-btn { font-family:'Cinzel',serif; font-size:0.65rem; letter-spacing:0.08em; text-transform:uppercase; padding:0.25rem 0.65rem; border-radius:999px; border:1px solid; cursor:pointer; transition:all 0.2s; background:transparent; }
+.vault-to-loadout { border-color:var(--gold); color:var(--gold); }
+.vault-to-loadout:hover { background:rgba(201,149,58,0.1); }
+.vault-to-vault { border-color:var(--muted); color:var(--muted); }
+.vault-to-vault:hover { border-color:var(--ruby); color:var(--ruby); }
+.vault-label { font-family:'Cinzel',serif; font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; padding:0.15rem 0.55rem; border-radius:999px; }
+.vault-label.loadout { border:1px solid var(--gold); color:var(--gold); }
+.vault-label.vault-tag { border:1px solid var(--muted); color:var(--muted); }
+.dc-section-label { font-family:'Cinzel',serif; font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin:1rem 0 0.5rem; display:flex; align-items:center; gap:0.5rem; }
+.dc-section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+.exp-row { display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; border:1px solid var(--border); border-radius:var(--radius); margin-bottom:0.5rem; background:rgba(14,11,20,0.3); }
+.exp-name { font-family:'Cinzel',serif; font-size:0.88rem; color:var(--text); }
+.exp-bonus { font-family:'Cinzel Decorative',serif; font-size:0.95rem; color:var(--gold-light); padding:0.2rem 0.65rem; border:1px solid var(--gold); border-radius:var(--radius); background:rgba(201,149,58,0.08); }
+.vault-toggle-strip { display:flex; gap:0.35rem; margin-bottom:1rem; }
+.vault-toggle-btn { font-family:'Cinzel',serif; font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase; padding:0.4rem 1rem; border-radius:var(--radius); border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; transition:all 0.2s; }
+.vault-toggle-btn.active { border-color:var(--gold); color:var(--gold-light); background:rgba(201,149,58,0.08); }
+
 
 /* ── Stat Box ── */
 .stat-box { background: rgba(14,11,20,0.5); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.65rem 0.5rem; text-align: center; }
@@ -1383,17 +1413,12 @@ function initSheetDicePreviews() {
 function renderSheetHTML(c) {
   const initial = (c.name||'?').trim().charAt(0).toUpperCase() || '?';
   return `
-<div class="section-header">
+  <div class="section-header">
     <h2>Character Sheet</h2>
-   <div class="section-actions">
-  <button class="btn btn-gold btn-sm" onclick="saveSheetInline('${c.id}')">Save Sheet</button>
-
-  ${c.campaign_id != null ? `
-    <button class="btn btn-danger btn-sm" onclick="unassignCharacter('${c.id}')">
-      Remove from Campaign
-    </button>
-  ` : ''}
-</div>
+    <div class="section-actions">
+      <button class="btn btn-gold btn-sm" onclick="saveSheetInline('${c.id}')">Save Sheet</button>
+      <button class="btn btn-danger btn-sm" onclick="unassignCharacter('${c.id}')">Remove from Campaign</button>
+    </div>
   </div>
   ${isSheetLocked() ? `
   <div style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 1rem;background:rgba(201,149,58,0.06);border:1px solid var(--gold);border-radius:var(--radius);margin-bottom:1rem;font-size:0.85rem;color:var(--muted)">
@@ -1404,56 +1429,41 @@ function renderSheetHTML(c) {
   <div class="sheet-banner">
     <div class="sheet-portrait">${initial}</div>
     <div class="sheet-banner-text">
-      <input type="text" class="name-input" id="s-name" value="${c.name||''}" placeholder="Character Name" />
+      <input type="text" class="name-input" id="s-name" value="${c.name||''}" placeholder="Character Name" ${isSheetLocked()?'readonly style="opacity:0.8;cursor:default"':''} />
       <div class="sheet-subline" style="flex-wrap:wrap;gap:0.5rem;align-items:flex-start;margin-top:0.4rem">
-       <div style="display:flex;flex-direction:column;gap:0.2rem">
+        <div style="display:flex;flex-direction:column;gap:0.2rem">
           <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Ancestry</span>
-          ${isSheetLocked() ? lockedPicker(c.ancestry) : `
-          <button class="picker-trigger${c.ancestry?' has-value':''}" style="min-width:100px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('ancestries','s-ancestry','Ancestry')">
-            <span>${c.ancestry||'Choose…'}</span><span class="pt-arrow">▼</span>
-          </button>
-          <div class="ls-info-panel" id="ancestry-info" style="display:none;max-width:200px"></div>`}
+          ${isSheetLocked() ? lockedPicker(c.ancestry) : `<button class="picker-trigger${c.ancestry?' has-value':''}" style="min-width:100px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('ancestries','s-ancestry','Ancestry')"><span>${c.ancestry||'Choose…'}</span><span class="pt-arrow">▼</span></button><div class="ls-info-panel" id="ancestry-info" style="display:none;max-width:200px"></div>`}
           <input type="hidden" id="s-ancestry" value="${c.ancestry||''}" />
         </div>
         <span class="sep" style="margin-top:1.4rem">·</span>
-       <div style="display:flex;flex-direction:column;gap:0.2rem">
+        <div style="display:flex;flex-direction:column;gap:0.2rem">
           <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Class</span>
-          ${isSheetLocked() ? lockedPicker(c.class) : `
-          <button class="picker-trigger${c.class?' has-value':''}" style="min-width:100px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('classes','s-class','Class')">
-            <span>${c.class||'Choose…'}</span><span class="pt-arrow">▼</span>
-          </button>
-          <div class="ls-info-panel" id="class-info" style="display:none;max-width:200px"></div>`}
+          ${isSheetLocked() ? lockedPicker(c.class) : `<button class="picker-trigger${c.class?' has-value':''}" style="min-width:100px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('classes','s-class','Class')"><span>${c.class||'Choose…'}</span><span class="pt-arrow">▼</span></button><div class="ls-info-panel" id="class-info" style="display:none;max-width:200px"></div>`}
           <input type="hidden" id="s-class" value="${c.class||''}" />
         </div>
-     <div style="display:flex;flex-direction:column;gap:0.2rem">
+        <div style="display:flex;flex-direction:column;gap:0.2rem">
           <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Subclass</span>
-          ${isSheetLocked() ? lockedPicker(c.subclass) : `
-          <button class="picker-trigger${c.subclass?' has-value':''}" style="min-width:110px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('subclasses','s-subclass','Subclass')">
-            <span>${c.subclass||'Choose…'}</span><span class="pt-arrow">▼</span>
-          </button>`}
+          ${isSheetLocked() ? lockedPicker(c.subclass) : `<button class="picker-trigger${c.subclass?' has-value':''}" style="min-width:110px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('subclasses','s-subclass','Subclass')"><span>${c.subclass||'Choose…'}</span><span class="pt-arrow">▼</span></button>`}
           <input type="hidden" id="s-subclass" value="${c.subclass||''}" />
         </div>
         <span class="sep" style="margin-top:1.4rem">·</span>
         <div style="display:flex;flex-direction:column;gap:0.2rem">
           <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Community</span>
-          ${isSheetLocked() ? lockedPicker(c.community) : `
-          <button class="picker-trigger${c.community?' has-value':''}" style="min-width:110px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('communities','s-community','Community')">
-            <span>${c.community||'Choose…'}</span><span class="pt-arrow">▼</span>
-          </button>
-          <div class="ls-info-panel" id="community-info" style="display:none;max-width:200px"></div>`}
+          ${isSheetLocked() ? lockedPicker(c.community) : `<button class="picker-trigger${c.community?' has-value':''}" style="min-width:110px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('communities','s-community','Community')"><span>${c.community||'Choose…'}</span><span class="pt-arrow">▼</span></button><div class="ls-info-panel" id="community-info" style="display:none;max-width:200px"></div>`}
           <input type="hidden" id="s-community" value="${c.community||''}" />
         </div>
       </div>
     </div>
     <div class="level-badge">
-      <input type="number" id="s-level" value="${c.level||1}" min="1" max="10" />
+      ${isSheetLocked() ? `<div style="font-family:'Cinzel Decorative',serif;font-size:1.3rem;color:var(--gold-light)">${c.level||1}</div>` : `<input type="number" id="s-level" value="${c.level||1}" min="1" max="10" />`}
       <div class="lvl-lbl">Level</div>
     </div>
   </div>
 
   <!-- Evasion / Armor / Armor Slots -->
   <div class="shield-row">
-   <div class="shield-badge">${isSheetLocked() ? `<div style="font-family:'Cinzel',serif;font-size:1.5rem;font-weight:600;color:var(--gold-light)">${c.evasion||10}</div>` : `<input type="number" id="s-evasion" value="${c.evasion||10}" />`}<div class="shield-lbl">Evasion</div></div>
+    <div class="shield-badge">${isSheetLocked() ? `<div style="font-family:'Cinzel',serif;font-size:1.5rem;font-weight:600;color:var(--gold-light)">${c.evasion||10}</div>` : `<input type="number" id="s-evasion" value="${c.evasion||10}" />`}<div class="shield-lbl">Evasion</div></div>
     <div class="shield-badge">${isSheetLocked() ? `<div style="font-family:'Cinzel',serif;font-size:1.5rem;font-weight:600;color:var(--gold-light)">${c.max_armor||3}</div>` : `<input type="number" id="s-max-armor-display" value="${c.max_armor||3}" onchange="rebuildPips('armor',this.value,${c.current_armor||0})" />`}<div class="shield-lbl">Armor</div></div>
     <div class="armor-slots-card">
       <span style="font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">Armor Slots Marked</span>
@@ -1466,7 +1476,7 @@ function renderSheetHTML(c) {
     ${Object.entries(ATTRIBUTE_SKILLS).map(([key,skills]) => `
       <div class="attr-card">
         <div class="attr-name">${key}</div>
-       ${isSheetLocked()
+        ${isSheetLocked()
           ? `<div style="font-family:'Cinzel',serif;font-size:1.3rem;font-weight:600;color:var(--gold-light);padding:0.2rem 0">${fmtMod(c[key]||0)}</div>`
           : `<input type="number" id="s-${key}" value="${c[key]||0}" />`}
         <div class="attr-skills">${skills.join('<br>')}</div>
@@ -1538,27 +1548,44 @@ function renderSheetHTML(c) {
 
   <!-- Tabbed lower section -->
   <div class="sheet-tab-strip">
-    <button class="sheet-tab-chip active" onclick="showSheetSubPanel('features')">Effects & Features</button>
-    <button class="sheet-tab-chip" onclick="showSheetSubPanel('inventory')">Equipment</button>
-    <button class="sheet-tab-chip" onclick="showSheetSubPanel('experiences')">Experiences</button>
-    <button class="sheet-tab-chip" onclick="showSheetSubPanel('notes')">Notes & Backstory</button>
+    <button class="sheet-tab-chip active" onclick="showSheetSubPanel('features',this)">Effects & Features</button>
+    <button class="sheet-tab-chip" onclick="showSheetSubPanel('inventory',this)">Equipment</button>
+    <button class="sheet-tab-chip" onclick="showSheetSubPanel('experiences',this)">Experiences</button>
+    <button class="sheet-tab-chip" onclick="showSheetSubPanel('notes',this)">Notes & Backstory</button>
   </div>
   <div class="card">
     <div class="sheet-sub-panel active" id="sheet-sub-features">
-      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.75rem">Class features, domain cards, and abilities — jot them here for now.</p>
-      <textarea id="s-features" style="min-height:160px">${c.features||''}</textarea>
+      <div id="features-card-content"><div class="loading">Loading features…</div></div>
     </div>
     <div class="sheet-sub-panel" id="sheet-sub-inventory">
+      <div style="margin-bottom:1rem">
+        <label>Armor</label>
+        <button class="picker-trigger${c.armor_name?' has-value':''}" style="width:100%;text-align:left;font-size:0.92rem;padding:0.4rem 0.6rem;font-family:'Cinzel',serif;margin-bottom:0.5rem" onclick="openPicker('armor','s-armor','Armor')">
+          <span>${c.armor_name||'Choose armor…'}</span><span class="pt-arrow">▼</span>
+        </button>
+        <input type="hidden" id="s-armor" value="${c.armor_name||''}" />
+      </div>
       <label>Inventory & Gear</label>
       <textarea id="s-inventory" style="min-height:160px">${c.inventory||''}</textarea>
     </div>
     <div class="sheet-sub-panel" id="sheet-sub-experiences">
-      <label>Experiences</label>
-      <textarea id="s-experiences" style="min-height:160px">${c.experiences||''}</textarea>
+      ${c.experience_1_name ? `
+        <div class="exp-row">
+          <span class="exp-name">${c.experience_1_name}</span>
+          <span class="exp-bonus">${c.experience_1_bonus||'+2'}</span>
+        </div>` : '<div class="empty-state">No experience 1 set</div>'}
+      ${c.experience_2_name ? `
+        <div class="exp-row">
+          <span class="exp-name">${c.experience_2_name}</span>
+          <span class="exp-bonus">${c.experience_2_bonus||'+2'}</span>
+        </div>` : '<div class="empty-state">No experience 2 set</div>'}
+      <p style="font-size:0.8rem;color:var(--muted);margin-top:0.75rem">To change experiences, use the Character Builder tab.</p>
     </div>
     <div class="sheet-sub-panel" id="sheet-sub-notes">
-      <label>Notes & Backstory</label>
-      <textarea id="s-notes" style="min-height:160px">${c.notes||''}</textarea>
+      <label style="margin-bottom:0.5rem;display:block">Notes</label>
+      <textarea id="s-notes" style="min-height:130px">${c.notes||''}</textarea>
+      <label style="margin-top:1rem;margin-bottom:0.5rem;display:block">Backstory</label>
+      <textarea id="s-backstory" style="min-height:130px">${c.backstory||''}</textarea>
     </div>
   </div>
 
@@ -1570,11 +1597,133 @@ function renderSheetHTML(c) {
   `;
 }
 
-function showSheetSubPanel(id) {
+function showSheetSubPanel(id, btn) {
   document.querySelectorAll('.sheet-sub-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.sheet-tab-chip').forEach(b => b.classList.remove('active'));
   document.getElementById('sheet-sub-' + id).classList.add('active');
-  event.currentTarget.classList.add('active');
+  if (btn) btn.classList.add('active');
+  else { const active = document.querySelector(`.sheet-tab-chip[onclick*="'${id}'"]`); if(active) active.classList.add('active'); }
+  if (id === 'features' && charPageData) loadSheetFeatures(charPageData);
+}
+
+async function loadSheetFeatures(c) {
+  const el = document.getElementById('features-card-content');
+  if (!el) return;
+  el.innerHTML = '<div class="loading">Loading features…</div>';
+
+  // load class features, subclass features, and domain cards in parallel
+  const [classFeats, subFeats, domainCards] = await Promise.all([
+    c.class ? sb.from('class_features').select('*').ilike('class_id', c.class) : { data: [] },
+    c.subclass ? sb.from('subclass_features').select('*').ilike('subclass_id', c.subclass) : { data: [] },
+    sb.from('character_domain_cards').select('*, domain_cards(*)').eq('character_id', c.id)
+  ]);
+
+  const cf = classFeats.data || [];
+  const sf = subFeats.data || [];
+  const dc = domainCards.data || [];
+  const loadout = dc.filter(r => r.location === 'loadout');
+  const vault = dc.filter(r => r.location === 'vault');
+
+  let html = '';
+
+  // Domain Cards — Loadout
+  if (dc.length > 0) {
+    html += `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem">
+      <div class="vault-toggle-strip">
+        <button class="vault-toggle-btn active" id="btn-loadout" onclick="switchVaultView('loadout')">Loadout (${loadout.length}/5)</button>
+        <button class="vault-toggle-btn" id="btn-vault" onclick="switchVaultView('vault')">Vault (${vault.length})</button>
+      </div>
+      <span style="font-size:0.78rem;color:var(--muted)">Max 5 in loadout · Swap costs Recall Cost in Stress</span>
+    </div>
+    <div id="dc-loadout-view">
+      ${loadout.length === 0 ? '<div class="empty-state">No cards in loadout</div>' : loadout.map(r => renderDomainCardSheet(r, 'loadout', c.id)).join('')}
+    </div>
+    <div id="dc-vault-view" style="display:none">
+      ${vault.length === 0 ? '<div class="empty-state">No cards in vault</div>' : vault.map(r => renderDomainCardSheet(r, 'vault', c.id)).join('')}
+    </div>`;
+    if (cf.length > 0 || sf.length > 0) html += '<hr style="margin:1.25rem 0">';
+  }
+
+  // Class Features
+  if (cf.length > 0) {
+    html += `<div class="dc-section-label">Class Features — ${c.class}</div>`;
+    html += cf.map(f => `
+      <div class="feature-card">
+        <div class="feature-card-header">
+          <span class="feature-card-title">${f.name}</span>
+          ${f.feature_type ? `<span class="feature-card-type">${f.feature_type}</span>` : ''}
+        </div>
+        ${f.feature_text ? `<div class="feature-card-body">${f.feature_text}</div>` : ''}
+      </div>`).join('');
+  }
+
+  // Subclass Features
+  if (sf.length > 0) {
+    html += `<div class="dc-section-label">Subclass Features — ${c.subclass}</div>`;
+    html += sf.map(f => `
+      <div class="feature-card">
+        <div class="feature-card-header">
+          <span class="feature-card-title">${f.name}</span>
+          ${f.tier ? `<span class="feature-card-type">${f.tier}</span>` : ''}
+        </div>
+        ${f.feature_text ? `<div class="feature-card-body">${f.feature_text}</div>` : ''}
+      </div>`).join('');
+  }
+
+  if (!html) {
+    html = `<div class="empty-state" style="padding:2rem">
+      No features loaded yet — make sure your class, subclass and domain cards are set, and that the reference tables have data imported.
+    </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function renderDomainCardSheet(r, location, charId) {
+  const card = r.domain_cards;
+  if (!card) return '';
+  const isLoadout = location === 'loadout';
+  return `
+  <div class="domain-card-tile ${isLoadout ? 'loadout' : 'vault-tile'}" id="dc-tile-${r.id}">
+    <div class="domain-card-header">
+      <div class="domain-card-header-left">
+        <span class="feature-card-title">${card.name}</span>
+        ${card.card_type ? `<span class="feature-card-type">${card.card_type}</span>` : ''}
+        <span style="font-family:'Cinzel',serif;font-size:0.62rem;color:var(--muted)">Lv.${card.level}</span>
+        ${card.recall_cost != null ? `<span style="font-family:'Cinzel',serif;font-size:0.62rem;color:var(--ruby)">⚡ ${card.recall_cost}</span>` : ''}
+        <span class="vault-label ${isLoadout ? 'loadout' : 'vault-tag'}">${isLoadout ? 'Loadout' : 'Vault'}</span>
+      </div>
+      <button class="vault-move-btn ${isLoadout ? 'vault-to-vault' : 'vault-to-loadout'}"
+        onclick="moveDomainCard('${r.id}','${isLoadout ? 'vault' : 'loadout'}','${charId}')">
+        ${isLoadout ? '→ Move to Vault' : '→ Move to Loadout'}
+      </button>
+    </div>
+    ${card.feature_text ? `<div class="domain-card-body">${card.feature_text}</div>` : ''}
+  </div>`;
+}
+
+function switchVaultView(view) {
+  document.getElementById('dc-loadout-view').style.display = view === 'loadout' ? 'block' : 'none';
+  document.getElementById('dc-vault-view').style.display = view === 'vault' ? 'block' : 'none';
+  document.getElementById('btn-loadout').classList.toggle('active', view === 'loadout');
+  document.getElementById('btn-vault').classList.toggle('active', view === 'vault');
+}
+
+async function moveDomainCard(rowId, newLocation, charId) {
+  if (newLocation === 'loadout') {
+    // check loadout count first
+    const { data: existing } = await sb.from('character_domain_cards')
+      .select('id').eq('character_id', charId).eq('location', 'loadout');
+    if (existing && existing.length >= 5) {
+      toast('Loadout is full (max 5). Move a card to the Vault first.', 'error'); return;
+    }
+  }
+  const { error } = await sb.from('character_domain_cards')
+    .update({ location: newLocation }).eq('id', rowId);
+  if (error) { toast(error.message, 'error'); return; }
+  toast(`Card moved to ${newLocation}`, 'success');
+  if (charPageData) loadSheetFeatures(charPageData);
 }
 
 function rollSheetDuality() {
@@ -1641,6 +1790,7 @@ async function saveSheetInline(charId) {
     max_hope: n('s-max-hope'), current_hope: n('s-cur-hope'),
     experiences: v('s-experiences'), inventory: v('s-inventory'), notes: v('s-notes'),
     weapon_primary: v('s-wpn1'), weapon_secondary: v('s-wpn2'), features: v('s-features'),
+    armor_name: v('s-armor'), backstory: v('s-backstory'),
     updated_at: new Date().toISOString()
   };
   const { error } = await sb.from('characters').update(updates).eq('id', id);
@@ -1663,7 +1813,7 @@ async function openCharPage(charId, tab='sheet') {
   charPageId = charId;
   charPageData = c;
   editingCharId = charId;
-  document.getElementById('char-page-name').textContent = c.name || 'Unnamed Hero';
+  document.getElementById('char-page-name').innerHTML = (c.name || 'Unnamed Hero') + (c.sheet_locked ? ' <span title="Locked — assigned to a campaign" style="color:var(--gold);font-size:0.85rem">🔒</span>' : '');
   showView('view-char-page');
   switchCharPageTab(tab);
 }
@@ -1683,6 +1833,8 @@ function renderCharSheet() {
   el.innerHTML = renderSheetHTML(c);
   renderAllPips(c);
   initSheetDicePreviews();
+  // auto-load features tab
+  if (c) loadSheetFeatures(c);
 }
 
 function renderCharBuilder() {
@@ -2072,6 +2224,7 @@ function charEditorHTML(c) {
 const WIZARD_STEPS = [
   { id:'getting-started', label:'Getting Started' },
   { id:'class-gear',      label:'Class & Gear' },
+  { id:'domain-cards',    label:'Domain Cards' },
   { id:'heritage',        label:'Heritage' },
   { id:'experiences',     label:'Experiences' },
   { id:'review',          label:'Review' },
@@ -2130,6 +2283,7 @@ function renderWizardStep() {
   const content = document.getElementById('wizard-step-content');
   if (step === 'getting-started') content.innerHTML = wizardStep1HTML();
   if (step === 'class-gear')      content.innerHTML = wizardStep2HTML();
+  if (step === 'domain-cards')    { content.innerHTML = wizardStep2bHTML(); loadDomainCardPicker(); }
   if (step === 'heritage')        content.innerHTML = wizardStep3HTML();
   if (step === 'experiences')     content.innerHTML = wizardStep4HTML();
   if (step === 'review')          content.innerHTML = wizardReviewHTML();
@@ -2243,6 +2397,129 @@ function wizardStep2HTML() {
   </div>`;
 }
 
+/* ═══════════════════════════════════════════════════════
+   WIZARD STEP 2B — DOMAIN CARDS
+════════════════════════════════════════════════════════ */
+function wizardStep2bHTML() {
+  if (!wizardData.class) {
+    return `
+    <div class="card" style="text-align:center;padding:2.5rem">
+      <div style="font-size:2rem;margin-bottom:0.75rem">⚠️</div>
+      <h3 style="margin-bottom:0.5rem">Choose a Class First</h3>
+      <p style="color:var(--muted)">Go back to Step 2 and select a class before choosing domain cards.</p>
+      <button class="btn btn-ghost" style="margin-top:1rem" onclick="wizardPrev()">← Back to Class & Gear</button>
+    </div>`;
+  }
+  const selected = wizardData.selectedDomainCards || [];
+  return `
+  <div class="card">
+    <h3>Domain Cards</h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:0.5rem">
+      Your class gives you access to two domains. Choose <strong style="color:var(--gold-light)">2 domain cards</strong> to start — one from each domain, or two from one.
+      You can only choose cards at or below your level (Level ${wizardData.level||1}).
+    </p>
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1.25rem;flex-wrap:wrap">
+      <span style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--muted)">Domains for <strong style="color:var(--gold-light)">${wizardData.class}</strong>:</span>
+      <span id="w-domain-names" style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--amethyst)">Loading…</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
+      <span style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--muted)">Selected: <strong id="w-dc-count" style="color:${selected.length>=2?'var(--emerald)':'var(--gold-light)'}">${selected.length}/2</strong></span>
+      <span style="font-size:0.8rem;color:var(--muted)">These go into your Loadout (active cards).</span>
+    </div>
+    <div id="w-selected-cards" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem">
+      ${selected.length===0 ? '<span style="color:var(--muted);font-size:0.85rem;font-style:italic">No cards selected yet</span>' :
+        selected.map(c => `
+          <div style="background:rgba(201,149,58,0.1);border:1px solid var(--gold);border-radius:var(--radius);padding:0.4rem 0.75rem;display:flex;align-items:center;gap:0.5rem;font-family:'Cinzel',serif;font-size:0.78rem;color:var(--gold-light)">
+            ${c.name}
+            <button onclick="removeWizardDomainCard(${c.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.9rem;padding:0">✕</button>
+          </div>`).join('')}
+    </div>
+  </div>
+  <div id="w-domain-cards-list"><div class="loading">Loading domain cards…</div></div>`;
+}
+
+async function loadDomainCardPicker() {
+  if (!wizardData.class) return;
+  // 1. find class id
+  const { data: classRow } = await sb.from('classes').select('id,name').ilike('name', wizardData.class).single();
+  if (!classRow) { document.getElementById('w-domain-names').textContent = 'Class not found in database'; return; }
+  // 2. get domain ids for this class
+  const { data: classDomains } = await sb.from('class_domains').select('domain_id, domains(id,name)').eq('class_id', classRow.id);
+  if (!classDomains || classDomains.length === 0) { document.getElementById('w-domain-names').textContent = 'No domains found for this class'; return; }
+  const domainIds = classDomains.map(cd => cd.domain_id);
+  const domainNames = classDomains.map(cd => cd.domains?.name || cd.domain_id).join(' & ');
+  const nameEl = document.getElementById('w-domain-names');
+  if (nameEl) nameEl.textContent = domainNames;
+  // 3. get domain cards for those domains at or below character level
+  const { data: cards } = await sb.from('domain_cards').select('*')
+    .in('domain_id', domainIds)
+    .lte('level', wizardData.level || 1)
+    .order('level').order('name');
+  const el = document.getElementById('w-domain-cards-list');
+  if (!el) return;
+  if (!cards || cards.length === 0) {
+    el.innerHTML = '<div class="empty-state">No domain cards found — check that your domain_cards table has data.</div>'; return;
+  }
+  // group by domain
+  const byDomain = {};
+  cards.forEach(c => {
+    const domain = classDomains.find(cd => cd.domain_id === c.domain_id)?.domains?.name || `Domain ${c.domain_id}`;
+    if (!byDomain[domain]) byDomain[domain] = [];
+    byDomain[domain].push(c);
+  });
+  el.innerHTML = Object.entries(byDomain).map(([domain, domCards]) => `
+    <div class="card" style="margin-bottom:1rem">
+      <h3>${domain}</h3>
+      ${domCards.map(c => renderDomainCardWizard(c)).join('')}
+    </div>
+  `).join('');
+}
+
+function renderDomainCardWizard(c) {
+  const selected = (wizardData.selectedDomainCards || []);
+  const isSelected = selected.some(s => s.id === c.id);
+  return `
+  <div id="wdc-${c.id}" style="border:1px solid ${isSelected?'var(--gold)':'var(--border)'};border-radius:var(--radius-lg);padding:0.85rem 1rem;margin-bottom:0.6rem;background:${isSelected?'rgba(201,149,58,0.06)':'rgba(14,11,20,0.3)'};transition:all 0.2s">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;margin-bottom:0.4rem">
+      <div>
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
+          <span style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:0.95rem">${c.name}</span>
+          <span style="font-family:'Cinzel',serif;font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;padding:0.15rem 0.5rem;border-radius:999px;border:1px solid var(--amethyst);color:var(--amethyst)">${c.card_type||'Ability'}</span>
+          <span style="font-family:'Cinzel',serif;font-size:0.65rem;color:var(--muted)">Lv.${c.level}</span>
+          ${c.recall_cost!=null?`<span style="font-family:'Cinzel',serif;font-size:0.65rem;color:var(--ruby)">⚡ Recall: ${c.recall_cost}</span>`:''}
+        </div>
+      </div>
+      <button class="btn btn-sm ${isSelected?'btn-danger':'btn-gold'}" onclick="toggleWizardDomainCard(${c.id},'${c.name.replace(/'/g,"\\'")}',${c.domain_id})">
+        ${isSelected?'Remove':'Select'}
+      </button>
+    </div>
+    ${c.feature_text?`<p style="font-size:0.85rem;color:var(--muted);line-height:1.6">${c.feature_text}</p>`:''}
+  </div>`;
+}
+
+function toggleWizardDomainCard(cardId, cardName, domainId) {
+  if (!wizardData.selectedDomainCards) wizardData.selectedDomainCards = [];
+  const idx = wizardData.selectedDomainCards.findIndex(c => c.id === cardId);
+  if (idx >= 0) {
+    wizardData.selectedDomainCards.splice(idx, 1);
+  } else {
+    if (wizardData.selectedDomainCards.length >= 2) {
+      toast('You can only select 2 domain cards to start. Remove one first.', 'error'); return;
+    }
+    wizardData.selectedDomainCards.push({ id: cardId, name: cardName, domain_id: domainId });
+  }
+  // re-render the card and counter
+  loadDomainCardPicker();
+  const countEl = document.getElementById('w-dc-count');
+  if (countEl) { countEl.textContent = `${wizardData.selectedDomainCards.length}/2`; countEl.style.color = wizardData.selectedDomainCards.length>=2?'var(--emerald)':'var(--gold-light)'; }
+}
+
+function removeWizardDomainCard(cardId) {
+  if (!wizardData.selectedDomainCards) return;
+  wizardData.selectedDomainCards = wizardData.selectedDomainCards.filter(c => c.id !== cardId);
+  renderWizardStep();
+}
+
 function wizardStep3HTML() {
   return `
   <div class="card">
@@ -2353,6 +2630,10 @@ function collectWizardStep() {
     wizardData.weapon_primary = v('w-wpn1'); wizardData.weapon_secondary = v('w-wpn2');
     wizardData.armor_name = v('w-armor'); wizardData.inventory = v('w-inventory');
   }
+  if (step === 'domain-cards') {
+    // domain cards stored in wizardData.selectedDomainCards (array of card ids)
+    // nothing extra to collect — already stored on selection
+  }
   if (step === 'heritage') {
     wizardData.ancestry = v('w-ancestry'); wizardData.community = v('w-community');
   }
@@ -2431,15 +2712,29 @@ async function saveWizardProgress() {
     experience_2_name: wizardData.experience_2_name, experience_2_bonus: wizardData.experience_2_bonus,
     updated_at: new Date().toISOString()
   };
-  if (wizardCharId) {
-    const { error } = await sb.from('characters').update(payload).eq('id', wizardCharId);
-    if (error) { toast('Auto-save failed: ' + error.message, 'error'); }
-    else toast('Progress saved', 'success');
+  let charId = wizardCharId;
+  if (charId) {
+    const { error } = await sb.from('characters').update(payload).eq('id', charId);
+    if (error) { toast('Auto-save failed: ' + error.message, 'error'); return; }
   } else {
     const { data, error } = await sb.from('characters').insert(payload).select().single();
-    if (error) { toast('Save failed: ' + error.message, 'error'); }
-    else { wizardCharId = data.id; wizardData.id = data.id; toast('Progress saved', 'success'); }
+    if (error) { toast('Save failed: ' + error.message, 'error'); return; }
+    charId = data.id; wizardCharId = data.id; wizardData.id = data.id;
   }
+  // save domain cards if any selected
+  if (wizardData.selectedDomainCards && wizardData.selectedDomainCards.length > 0 && charId) {
+    // remove existing wizard-level domain cards first to avoid duplicates
+    await sb.from('character_domain_cards').delete().eq('character_id', charId).eq('acquired_at_level', wizardData.level||1);
+    const cardRows = wizardData.selectedDomainCards.map(c => ({
+      character_id: charId,
+      domain_card_id: c.id,
+      location: 'loadout',
+      acquired_at_level: wizardData.level||1
+    }));
+    const { error: cardError } = await sb.from('character_domain_cards').insert(cardRows);
+    if (cardError) toast('Domain cards save failed: ' + cardError.message, 'error');
+  }
+  toast('Progress saved', 'success');
 }
 
 async function finalizeCharacter() {
@@ -2473,10 +2768,7 @@ async function loadAssignCharList() {
 }
 
 async function assignChar(charId) {
-  const { error } = await sb.from('characters').update({ 
-    campaign_id: currentCampaign.id,
-    sheet_locked: true 
-  }).eq('id', charId);
+  const { error } = await sb.from('characters').update({ campaign_id: currentCampaign.id }).eq('id', charId);
   if (error) { toast(error.message, 'error'); return; }
   closeModal('modal-assign-char');
   toast('Character assigned!', 'success');
@@ -2485,7 +2777,7 @@ async function assignChar(charId) {
 
 async function unassignCharacter(charId) {
   if (!confirm('Remove this character from the campaign? Your character data is kept — it just won\'t be linked to this campaign anymore.')) return;
-  const { error } = await sb.from('characters').update({ campaign_id: null, sheet_locked: false }).eq('id', charId);
+  const { error } = await sb.from('characters').update({ campaign_id: null }).eq('id', charId);
   if (error) { toast(error.message, 'error'); return; }
   toast('Character removed from campaign', 'success');
   loadSheetTab();
@@ -2513,7 +2805,7 @@ async function loadPlayersTab() {
               <div style="font-size:0.85rem;color:var(--muted)">@${m.profiles?.username || ''}</div>
               ${pChar ? `<div style="margin-top:0.5rem;font-size:0.9rem"><strong style="color:var(--gold)">${pChar.name}</strong> — ${pChar.class||'No class'} Lv.${pChar.level||1}</div>` : '<div style="margin-top:0.5rem;font-size:0.85rem;color:var(--muted)">No character assigned</div>'}
             </div>
-           <button class="btn btn-ghost btn-sm" onclick="toggleSheetLock('${m.player_id}','${pChar?.id}',${pChar?.sheet_locked})">${pChar?.sheet_locked ? '🔓 Unlock Sheet' : '🔒 Lock Sheet'}</button>
+            <button class="btn btn-ghost btn-sm" onclick="toggleSheetLock('${m.player_id}','${pChar?.id}',${pChar?.sheet_locked})">${pChar?.sheet_locked ? '🔓 Unlock Sheet' : '🔒 Lock Sheet'}</button>
             <button class="btn btn-danger btn-sm" onclick="removePlayer('${m.player_id}')">Remove</button>
           </div>
         </div>`;

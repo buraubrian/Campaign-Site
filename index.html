@@ -1615,13 +1615,26 @@ function renderSheetHTML(c) {
 function showSheetSubPanel(id, btn) {
   document.querySelectorAll('.sheet-sub-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.sheet-tab-chip').forEach(b => b.classList.remove('active'));
+
   document.getElementById('sheet-sub-' + id).classList.add('active');
-  if (btn) btn.classList.add('active');
-  else { const active = document.querySelector(`.sheet-tab-chip[onclick*="'${id}'"]`); if(active) active.classList.add('active'); }
-  if (id === 'features' && charPageData) loadSheetFeatures(charPageData);
-}
+
+  if (btn) {
+    btn.classList.add('active');
+  } else {
+    const active = document.querySelector(
+      `.sheet-tab-chip[onclick*="'${id}'"]`
+    );
+
+    if (active) active.classList.add('active');
+  }
+
+  if (id === 'features' && charPageData) {
+    loadSheetFeatures(charPageData);
+  }
+
   if (id === 'inventory' && charPageData) {
-  loadCharacterEquipment(charPageData.id);
+    loadCharacterEquipment(charPageData.id);
+  }
 }
 
 async function loadCharacterEquipment(characterId) {

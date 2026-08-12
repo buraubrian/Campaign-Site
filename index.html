@@ -2262,28 +2262,34 @@ async function saveBuilderChanges() {
     presence: charPageData.presence||0, knowledge: charPageData.knowledge||0,
     updated_at: new Date().toISOString()
   };
- const { error } = await sb.from('characters').update(payload).eq('id', charPageId);
+const { error } = await sb
+  .from('characters')
+  .update(payload)
+  .eq('id', charPageId);
 
 if (error) {
   toast(error.message, 'error');
   return;
 }
 
-// Sync equipped weapons into character_items
+// Sync Primary + Secondary into character_items
 const weaponsSaved = await syncCharacterWeaponsToInventory(
   charPageId,
   payload.weapon_primary,
   payload.weapon_secondary
 );
 
-if (!weaponsSaved) return;
+if (!weaponsSaved) {
+  return;
+}
 
 // refresh local data
 charPageData = { ...charPageData, ...payload };
-  document.getElementById('char-page-name').textContent = payload.name || charPageData.name;
-  toast('Character updated!', 'success');
-}
 
+document.getElementById('char-page-name').textContent =
+  payload.name || charPageData.name;
+
+toast('Character updated!', 'success');
 function openCharCreatorForCampaign() { openCharWizard(); }
 
 async function openCharEditor(charId) { openCharPage(charId, 'builder'); }

@@ -1407,6 +1407,7 @@ el.innerHTML = renderSheetHTML(c);
 renderAllPips(c);
 initSheetDicePreviews();
 loadSheetFeatures(c);
+loadActiveWeapons(c.id);
 }
 
 function initSheetDicePreviews() {
@@ -1527,23 +1528,16 @@ function renderSheetHTML(c) {
 
   <!-- Weapons + Quick Duality Roll -->
   <div class="field-row cols-2" style="align-items:start">
-    <div class="card" style="margin-bottom:0">
-      <h3>Active Weapons</h3>
-      <div class="weapon-card-display">
-        <button class="picker-trigger${c.weapon_primary?' has-value':''}" style="width:100%;text-align:left;font-size:0.92rem;padding:0.4rem 0.6rem;font-family:'Cinzel',serif" onclick="openPicker('weapons','s-wpn1','Primary Weapon')">
-          <span>${c.weapon_primary||'Choose primary weapon…'}</span><span class="pt-arrow">▼</span>
-        </button>
-        <input type="hidden" id="s-wpn1" value="${c.weapon_primary||''}" />
-        <div class="w-meta" style="margin-top:0.35rem">Primary · Melee or Ranged</div>
-      </div>
-      <div class="weapon-card-display">
-        <button class="picker-trigger${c.weapon_secondary?' has-value':''}" style="width:100%;text-align:left;font-size:0.92rem;padding:0.4rem 0.6rem;font-family:'Cinzel',serif" onclick="openPicker('weapons','s-wpn2','Secondary Weapon')">
-          <span>${c.weapon_secondary||'Choose secondary weapon…'}</span><span class="pt-arrow">▼</span>
-        </button>
-        <input type="hidden" id="s-wpn2" value="${c.weapon_secondary||''}" />
-        <div class="w-meta" style="margin-top:0.35rem">Secondary</div>
-      </div>
-    </div>
+   <div class="card" style="margin-bottom:0">
+  <h3>Active Weapons</h3>
+
+  <div id="active-weapons-display">
+    <div class="loading">Loading active weapons…</div>
+  </div>
+
+  <input type="hidden" id="s-wpn1" value="${c.weapon_primary||''}" />
+  <input type="hidden" id="s-wpn2" value="${c.weapon_secondary||''}" />
+</div>
     <div class="duality-quick-panel">
       <h3 style="margin-bottom:0.5rem">Quick Duality Roll</h3>
       <p style="font-size:0.8rem;color:var(--muted);margin-bottom:0.5rem">Roll Hope &amp; Fear right from your sheet.</p>
@@ -1768,6 +1762,142 @@ async function loadCharacterEquipment(characterId) {
         </div>
         <div style="font-size:0.75rem;color:var(--muted)">
           ${item.item_type}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+  async function loadActiveWeapons(characterId) {
+  const el = document.getElementById('active-weapons-display');
+  if (!el) return;
+
+  const { data: items, error } = await sb
+    .from('character_items')
+    .select('*')
+    .eq('character_id', characterId)
+    .eq('item_type', 'weapon')
+    .eq('is_equipped', true);
+
+  if (error) {
+    el.innerHTML = `
+      <div class="empty-state" style="color:var(--ruby)">
+        Could not load active weapons: ${error.message}
+      </div>
+    `;
+    return;
+  }
+
+  if (!items || items.length === 0) {
+    el.innerHTML = `
+      <div class="empty-state" style="padding:1rem">
+        No weapons equipped.
+      </div>
+    `;
+    return;
+  }
+
+  const weaponIds = items.map(i => i.item_id);
+
+  const { data: weapons, error: weaponError } = await sb
+    .from('weapons')
+    .select('id,name,tier,burden,weapon_feature_id')
+    .in('id', weaponIds);
+
+  if (weaponError) {
+    el.innerHTML = `
+      <div class="empty-state" style="color:var(--ruby)">
+        Could not load weapon details: ${weaponError.message}
+      </div>
+    `;
+    return;
+  }
+
+  const featureIds = [
+    ...new Set(
+      (weapons || [])
+        .map(w => w.weapon_feature_id)
+        .filter(Boolean)
+    )
+  ];
+
+  let featuresById = {};
+
+  if (featureIds.length > 0) {
+    const { data: features } = await sb
+      .from('weapon_features')
+      .select('id,name,rules_text')
+      .in('id', featureIds);
+
+    featuresById = Object.fromEntries(
+      (features || []).map(f => [f.id, f])
+    );
+  }
+
+  const itemsByWeaponId = Object.fromEntries(
+    items.map(i => [i.item_id, i])
+  );
+
+  const sortedWeapons = [...(weapons || [])].sort((a, b) => {
+    const aSlot = itemsByWeaponId[a.id]?.equipment_slot;
+    const bSlot = itemsByWeaponId[b.id]?.equipment_slot;
+
+    if (aSlot === 'primary' && bSlot !== 'primary') return -1;
+    if (bSlot === 'primary' && aSlot !== 'primary') return 1;
+
+    return 0;
+  });
+
+  el.innerHTML = sortedWeapons.map(weapon => {
+    const item = itemsByWeaponId[weapon.id];
+    const feature = featuresById[weapon.weapon_feature_id];
+
+    const hands =
+      Number(weapon.burden) === 2
+        ? '✋ ✋'
+        : '✋';
+
+    return `
+      <div class="weapon-card-display" style="padding:0.85rem 1rem">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem">
+
+          <div style="flex:1">
+
+            <div style="
+              font-family:'Cinzel',serif;
+              color:var(--gold-light);
+              font-size:0.95rem;
+            ">
+              ${weapon.name} ${hands}
+            </div>
+
+            <div style="
+              font-size:0.75rem;
+              color:var(--muted);
+              margin-top:0.15rem;
+            ">
+              Tier ${weapon.tier}
+              ${item?.equipment_slot ? ` · ${item.equipment_slot}` : ''}
+            </div>
+
+            ${
+              feature
+                ? `
+                  <div style="font-size:0.82rem;margin-top:0.4rem">
+                    <strong style="color:var(--gold)">Feature:</strong>
+                    <strong>${feature.name}</strong> — ${feature.rules_text}
+                  </div>
+                `
+                : ''
+            }
+
+          </div>
+
+          <button
+            class="btn btn-gold btn-sm"
+            onclick="openWeaponAttackRoll('${characterId}', ${weapon.id})">
+            Attack
+          </button>
+
         </div>
       </div>
     `;
@@ -2212,9 +2342,10 @@ async function loadCharacterEquipment(characterId) {
     }
   }
 
-  toast(`${weapon.name} equipped!`, 'success');
+toast(`${weapon.name} equipped!`, 'success');
 
-  await loadCharacterEquipment(characterId);
+await loadCharacterEquipment(characterId);
+await loadActiveWeapons(characterId);
 }
   async function unequipCharacterWeapon(characterId, characterItemId) {
   const { data: item, error: itemError } = await sb
@@ -2293,7 +2424,8 @@ async function loadCharacterEquipment(characterId) {
 
   toast(`${weapon?.name || 'Weapon'} unequipped`, 'success');
 
-  await loadCharacterEquipment(characterId);
+await loadCharacterEquipment(characterId);
+await loadActiveWeapons(characterId);
 }
 async function loadSheetFeatures(c) {
   const el = document.getElementById('features-card-content');
@@ -2662,6 +2794,7 @@ function renderCharSheet() {
   initSheetDicePreviews();
   // auto-load features tab
   if (c) loadSheetFeatures(c);
+  if (c) loadActiveWeapons(c.id);
 }
 
 function renderCharBuilder() {

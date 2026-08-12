@@ -1570,14 +1570,20 @@ function renderSheetHTML(c) {
       <div id="features-card-content"><div class="loading">Loading features…</div></div>
     </div>
    <div class="sheet-sub-panel" id="sheet-sub-inventory">
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1rem">
-    <div>
-      <h3 style="margin:0">Equipment</h3>
-      <div style="font-size:0.8rem;color:var(--muted);margin-top:0.2rem">
-        Weapons, armor, consumables, and carried gear.
-      </div>
+ <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1rem">
+  <div>
+    <h3 style="margin:0">Equipment</h3>
+    <div style="font-size:0.8rem;color:var(--muted);margin-top:0.2rem">
+      Weapons, armor, consumables, and carried gear.
     </div>
   </div>
+
+  <button
+    class="btn btn-gold btn-sm"
+    onclick="openEquipmentPicker('${c.id}')">
+    + Add Equipment
+  </button>
+</div>
 
   <div id="character-equipment-list">
     <div class="loading">Loading equipment…</div>
@@ -1746,6 +1752,216 @@ async function loadCharacterEquipment(characterId) {
         </div>
         <div style="font-size:0.75rem;color:var(--muted)">
           ${item.item_type}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+  function openEquipmentPicker(characterId) {
+  document.getElementById('picker-title').textContent = 'Add Equipment';
+
+  document.getElementById('picker-search').value = '';
+  document.getElementById('picker-search').style.display = 'none';
+
+  document.getElementById('picker-body').innerHTML = `
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem">
+      <button
+        class="sheet-tab-chip active"
+        id="equipment-tab-weapons"
+        onclick="showEquipmentPickerCategory('weapons','${characterId}',this)">
+        Weapons
+      </button>
+
+      <button
+        class="sheet-tab-chip"
+        id="equipment-tab-armor"
+        onclick="showEquipmentPickerCategory('armor','${characterId}',this)">
+        Armor
+      </button>
+
+      <button
+        class="sheet-tab-chip"
+        id="equipment-tab-consumables"
+        onclick="showEquipmentPickerCategory('consumables','${characterId}',this)">
+        Consumables
+      </button>
+
+      <button
+        class="sheet-tab-chip"
+        id="equipment-tab-loot"
+        onclick="showEquipmentPickerCategory('loot','${characterId}',this)">
+        Loot
+      </button>
+    </div>
+
+    <div id="equipment-picker-content">
+      <div class="loading">Loading weapons…</div>
+    </div>
+  `;
+
+  document.getElementById('picker-overlay').classList.add('open');
+  document.getElementById('picker-panel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  showEquipmentPickerCategory('weapons', characterId);
+}
+  async function showEquipmentPickerCategory(category, characterId, btn = null) {
+  document
+    .querySelectorAll('#picker-body .sheet-tab-chip')
+    .forEach(b => b.classList.remove('active'));
+
+  if (btn) {
+    btn.classList.add('active');
+  } else {
+    document
+      .getElementById(`equipment-tab-${category}`)
+      ?.classList.add('active');
+  }
+
+  const el = document.getElementById('equipment-picker-content');
+  if (!el) return;
+
+  if (category !== 'weapons') {
+    const label =
+      category === 'armor' ? 'Armor' :
+      category === 'consumables' ? 'Consumables' :
+      'Loot';
+
+    el.innerHTML = `
+      <div class="empty-state">
+        ${label} will appear here once that reference data is imported.
+      </div>
+    `;
+
+    return;
+  }
+
+  el.innerHTML = '<div class="loading">Loading weapons…</div>';
+
+  const characterLevel = charPageData?.level || 1;
+
+  const { data: levelRow } = await sb
+    .from('levels')
+    .select('tier')
+    .eq('level', characterLevel)
+    .single();
+
+  const tier = levelRow?.tier || 1;
+
+  const { data: weapons, error } = await sb
+    .from('weapons')
+    .select(`
+      id,
+      name,
+      category,
+      weapon_type,
+      tier,
+      burden,
+      weapon_feature_id
+    `)
+    .lte('tier', tier)
+    .order('name');
+
+  if (error) {
+    el.innerHTML = `
+      <div class="empty-state" style="color:var(--ruby)">
+        Could not load weapons: ${error.message}
+      </div>
+    `;
+    return;
+  }
+
+  const featureIds = [
+    ...new Set(
+      (weapons || [])
+        .map(w => w.weapon_feature_id)
+        .filter(Boolean)
+    )
+  ];
+
+  let featuresById = {};
+
+  if (featureIds.length > 0) {
+    const { data: features } = await sb
+      .from('weapon_features')
+      .select('id,name,rules_text')
+      .in('id', featureIds);
+
+    featuresById = Object.fromEntries(
+      (features || []).map(f => [f.id, f])
+    );
+  }
+
+  el.innerHTML = (weapons || []).map(weapon => {
+    const hands =
+      Number(weapon.burden) === 2
+        ? '✋ ✋'
+        : '✋';
+
+    const feature =
+      featuresById[weapon.weapon_feature_id];
+
+    return `
+      <div class="weapon-card-display"
+           style="padding:1rem;margin-bottom:0.75rem">
+
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          align-items:flex-start;
+          gap:1rem;
+        ">
+
+          <div style="flex:1">
+
+            <div style="
+              font-family:'Cinzel',serif;
+              color:var(--gold-light);
+              font-size:0.95rem;
+            ">
+              ${weapon.name} ${hands}
+            </div>
+
+            <div style="
+              font-size:0.75rem;
+              color:var(--muted);
+              margin-top:0.2rem;
+            ">
+              ${weapon.category} Weapon · ${weapon.weapon_type}
+            </div>
+
+            <div style="
+              font-size:0.75rem;
+              color:var(--muted);
+            ">
+              Tier ${weapon.tier}
+            </div>
+
+            <div style="
+              font-size:0.82rem;
+              margin-top:0.45rem;
+            ">
+              <strong style="color:var(--gold)">
+                Feature:
+              </strong>
+              ${
+                feature
+                  ? `<strong>${feature.name}</strong> — ${feature.rules_text}`
+                  : 'None'
+              }
+            </div>
+
+          </div>
+
+          <button
+            class="btn btn-gold btn-sm"
+            onclick="addWeaponToCharacterInventory(
+              '${characterId}',
+              ${weapon.id}
+            )">
+            Add
+          </button>
+
         </div>
       </div>
     `;
@@ -4086,6 +4302,7 @@ const PICKER_CONFIG = {
 };
 
 async function openPicker(table, targetInputId, label) {
+  document.getElementById('picker-search').style.display = '';
   pickerTable = table;
   pickerTargetId = targetInputId;
   const cfg = PICKER_CONFIG[table];

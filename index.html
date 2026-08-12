@@ -1415,10 +1415,15 @@ function renderSheetHTML(c) {
   return `
   <div class="section-header">
     <h2>Character Sheet</h2>
-    <div class="section-actions">
-      <button class="btn btn-gold btn-sm" onclick="saveSheetInline('${c.id}')">Save Sheet</button>
-      <button class="btn btn-danger btn-sm" onclick="unassignCharacter('${c.id}')">Remove from Campaign</button>
-    </div>
+   <div class="section-actions">
+  <button class="btn btn-gold btn-sm" onclick="saveSheetInline('${c.id}')">Save Sheet</button>
+
+  ${c.campaign_id != null ? `
+    <button class="btn btn-danger btn-sm" onclick="unassignCharacter('${c.id}')">
+      Remove from Campaign
+    </button>
+  ` : ''}
+</div>
   </div>
   ${isSheetLocked() ? `
   <div style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 1rem;background:rgba(201,149,58,0.06);border:1px solid var(--gold);border-radius:var(--radius);margin-bottom:1rem;font-size:0.85rem;color:var(--muted)">
@@ -1611,7 +1616,6 @@ async function loadSheetFeatures(c) {
   if (!el) return;
   el.innerHTML = '<div class="loading">Loading features…</div>';
 
-  // load class features, subclass features, and domain cards in parallel
   const [classFeats, subFeats, domainCards] = await Promise.all([
     c.class ? sb.from('class_features').select('*').ilike('class_id', c.class) : { data: [] },
     c.subclass ? sb.from('subclass_features').select('*').ilike('subclass_id', c.subclass) : { data: [] },
@@ -1626,24 +1630,26 @@ async function loadSheetFeatures(c) {
 
   let html = '';
 
-  // Domain Cards — Loadout
-  if (dc.length > 0) {
-    html += `
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem">
-      <div class="vault-toggle-strip">
-        <button class="vault-toggle-btn active" id="btn-loadout" onclick="switchVaultView('loadout')">Loadout (${loadout.length}/5)</button>
-        <button class="vault-toggle-btn" id="btn-vault" onclick="switchVaultView('vault')">Vault (${vault.length})</button>
-      </div>
+  // Domain Cards section — always shown
+  html += `
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem">
+    <div class="vault-toggle-strip">
+      <button class="vault-toggle-btn active" id="btn-loadout" onclick="switchVaultView('loadout')">Loadout (${loadout.length}/5)</button>
+      <button class="vault-toggle-btn" id="btn-vault" onclick="switchVaultView('vault')">Vault (${vault.length})</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
       <span style="font-size:0.78rem;color:var(--muted)">Max 5 in loadout · Swap costs Recall Cost in Stress</span>
+      <button class="btn btn-gold btn-sm" onclick="openDomainCardAdder('${c.id}','${c.class||''}',${c.level||1})">+ Add Card</button>
     </div>
-    <div id="dc-loadout-view">
-      ${loadout.length === 0 ? '<div class="empty-state">No cards in loadout</div>' : loadout.map(r => renderDomainCardSheet(r, 'loadout', c.id)).join('')}
-    </div>
-    <div id="dc-vault-view" style="display:none">
-      ${vault.length === 0 ? '<div class="empty-state">No cards in vault</div>' : vault.map(r => renderDomainCardSheet(r, 'vault', c.id)).join('')}
-    </div>`;
-    if (cf.length > 0 || sf.length > 0) html += '<hr style="margin:1.25rem 0">';
-  }
+  </div>
+  <div id="dc-loadout-view">
+    ${loadout.length === 0 ? '<div class="empty-state" style="margin-bottom:0.75rem">No cards in loadout yet — click + Add Card to browse your class domains.</div>' : loadout.map(r => renderDomainCardSheet(r, 'loadout', c.id)).join('')}
+  </div>
+  <div id="dc-vault-view" style="display:none">
+    ${vault.length === 0 ? '<div class="empty-state" style="margin-bottom:0.75rem">No cards in vault</div>' : vault.map(r => renderDomainCardSheet(r, 'vault', c.id)).join('')}
+  </div>`;
+
+  if (cf.length > 0 || sf.length > 0) html += '<hr style="margin:1.25rem 0">';
 
   // Class Features
   if (cf.length > 0) {
@@ -1671,15 +1677,126 @@ async function loadSheetFeatures(c) {
       </div>`).join('');
   }
 
-  if (!html) {
-    html = `<div class="empty-state" style="padding:2rem">
-      No features loaded yet — make sure your class, subclass and domain cards are set, and that the reference tables have data imported.
-    </div>`;
+  if (!cf.length && !sf.length && !dc.length) {
+    html += `<div class="empty-state" style="padding:1rem">No features loaded yet — make sure your class and subclass are set and reference tables have data imported.</div>`;
   }
 
   el.innerHTML = html;
 }
+let domainAdderCharId = null;
+let domainAdderLevel = 1;
+let domainAdderExisting = [];
 
+async function openDomainCardAdder(charId, className, level) {
+  domainAdderCharId = charId;
+  domainAdderLevel = level;
+
+  if (!className) {
+    toast('No class set — set a class on your sheet first', 'error'); return;
+  }
+
+  // get existing card ids so we can mark already-owned ones
+  const { data: owned } = await sb.from('character_domain_cards')
+    .select('domain_card_id').eq('character_id', charId);
+  domainAdderExisting = (owned || []).map(r => r.domain_card_id);
+
+  // open the picker panel reusing the existing infrastructure
+  document.getElementById('picker-title').textContent = 'Add Domain Card';
+  document.getElementById('picker-search').value = '';
+  document.getElementById('picker-body').innerHTML = '<div class="picker-loading">Loading domain cards…</div>';
+  document.getElementById('picker-overlay').classList.add('open');
+  document.getElementById('picker-panel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // find class → domains → cards
+  const { data: classRow } = await sb.from('classes').select('id').ilike('name', className).single();
+  if (!classRow) {
+    document.getElementById('picker-body').innerHTML = '<div class="picker-empty">Class not found in database</div>'; return;
+  }
+  const { data: classDomains } = await sb.from('class_domains')
+    .select('domain_id, domains(id,name)').eq('class_id', classRow.id);
+  if (!classDomains || classDomains.length === 0) {
+    document.getElementById('picker-body').innerHTML = '<div class="picker-empty">No domains found for this class</div>'; return;
+  }
+  const domainIds = classDomains.map(cd => cd.domain_id);
+  const { data: cards } = await sb.from('domain_cards').select('*')
+    .in('domain_id', domainIds)
+    .lte('level', level)
+    .order('level').order('name');
+
+  pickerAllItems = cards || [];
+  pickerTable = '_domain_adder';
+
+  const body = document.getElementById('picker-body');
+  if (!cards || cards.length === 0) {
+    body.innerHTML = '<div class="picker-empty">No domain cards available at your level</div>'; return;
+  }
+
+  const byDomain = {};
+  cards.forEach(c => {
+    const domain = classDomains.find(cd => cd.domain_id === c.domain_id)?.domains?.name || `Domain ${c.domain_id}`;
+    if (!byDomain[domain]) byDomain[domain] = [];
+    byDomain[domain].push(c);
+  });
+
+  body.innerHTML = Object.entries(byDomain).map(([domain, domCards]) => `
+    <div style="margin-bottom:1rem">
+      <div class="dc-section-label">${domain}</div>
+      ${domCards.map((c, i) => {
+        const alreadyOwned = domainAdderExisting.includes(c.id);
+        return `
+        <div class="picker-item" id="da-item-${c.id}">
+          <div class="picker-item-header" onclick="togglePickerAccordion('da-item-${c.id}')">
+            <div class="picker-item-left">
+              <div class="picker-item-name">${c.name} ${alreadyOwned ? '<span style="color:var(--emerald);font-size:0.7rem">✓ Owned</span>' : ''}</div>
+              <div class="picker-item-meta">${[c.card_type, `Lv.${c.level}`, c.recall_cost != null ? `⚡ Recall: ${c.recall_cost}` : null].filter(Boolean).join(' · ')}</div>
+            </div>
+            <span class="picker-item-chevron">▼</span>
+          </div>
+          <div class="picker-item-body">
+            ${c.feature_text ? `<p>${c.feature_text}</p>` : ''}
+            ${alreadyOwned
+              ? `<button class="btn btn-ghost btn-sm picker-select-btn" disabled style="opacity:0.5">Already in collection</button>`
+              : `<button class="btn btn-gold btn-sm picker-select-btn" onclick="addDomainCardToCharacter(${c.id})">Add to Loadout</button>`}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `).join('');
+}
+
+function togglePickerAccordion(idOrIndex) {
+  // support both string id and numeric index
+  let item;
+  if (typeof idOrIndex === 'string') {
+    item = document.getElementById(idOrIndex);
+  } else {
+    item = document.getElementById(`picker-item-${idOrIndex}`);
+  }
+  if (!item) return;
+  const isExpanded = item.classList.contains('expanded');
+  document.querySelectorAll('.picker-item.expanded').forEach(el => el.classList.remove('expanded'));
+  if (!isExpanded) item.classList.add('expanded');
+}
+
+async function addDomainCardToCharacter(cardId) {
+  // check loadout space
+  const { data: existing } = await sb.from('character_domain_cards')
+    .select('id,location').eq('character_id', domainAdderCharId);
+  const loadoutCount = (existing || []).filter(r => r.location === 'loadout').length;
+  const location = loadoutCount < 5 ? 'loadout' : 'vault';
+
+  const { error } = await sb.from('character_domain_cards').insert({
+    character_id: domainAdderCharId,
+    domain_card_id: cardId,
+    location,
+    acquired_at_level: domainAdderLevel
+  });
+  if (error) { toast(error.message, 'error'); return; }
+  toast(`Card added to ${location}${location === 'vault' ? ' (loadout full)' : ''}`, 'success');
+  closePicker();
+  if (charPageData) loadSheetFeatures(charPageData);
+}
 function renderDomainCardSheet(r, location, charId) {
   const card = r.domain_cards;
   if (!card) return '';
@@ -3678,10 +3795,15 @@ function renderPickerItems(items) {
   }).join('');
 }
 
-function togglePickerAccordion(index) {
-  const item = document.getElementById(`picker-item-${index}`);
+function togglePickerAccordion(idOrIndex) {
+  let item;
+  if (typeof idOrIndex === 'string') {
+    item = document.getElementById(idOrIndex);
+  } else {
+    item = document.getElementById(`picker-item-${idOrIndex}`);
+  }
+  if (!item) return;
   const isExpanded = item.classList.contains('expanded');
-  // close all others
   document.querySelectorAll('.picker-item.expanded').forEach(el => el.classList.remove('expanded'));
   if (!isExpanded) item.classList.add('expanded');
 }

@@ -718,7 +718,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
       <span class="char-page-name" id="char-page-name"></span>
       <div class="char-page-tabs">
         <button class="char-page-tab active" id="char-tab-sheet" onclick="switchCharPageTab('sheet')">Character Sheet</button>
-        <button class="char-page-tab" id="char-tab-builder" onclick="switchCharPageTab('builder')">Character Builder</button>
+        ${charPageData?.campaign_id == null ? `
+  <button class="char-page-tab" id="char-tab-builder" onclick="switchCharPageTab('builder')">
+    Character Builder
+  </button>
+` : ''}
       </div>
       <button class="btn btn-gold btn-sm" id="char-page-save" onclick="saveSheetInline()" style="margin-left:auto">Save Changes</button>
     </div>
@@ -1137,7 +1141,11 @@ async function loadMyCharacters() {
       <p>${heritageLine}</p>
       <div class="char-card-footer">
         <button class="btn btn-gold btn-sm" onclick="openCharPage('${c.id}','sheet')">View Sheet</button>
-        <button class="btn btn-ghost btn-sm" onclick="openCharPage('${c.id}','builder')">${isComplete?'Edit':'Continue Building'}</button>
+        ${c.campaign_id == null ? `
+  <button class="btn btn-ghost btn-sm" onclick="openCharPage('${c.id}','builder')">
+    ${isComplete ? 'Edit' : 'Continue Building'}
+  </button>
+` : ''}
         <button class="btn btn-danger btn-sm" onclick="softDeleteCharacter('${c.id}','${(c.name||'this character').replace(/'/g,"\\'")}')">Delete</button>
       </div>
     </div>`;
@@ -1396,10 +1404,11 @@ async function loadSheetTab() {
       </div>`;
     return;
   }
-  const c = chars[0];
-  el.innerHTML = renderSheetHTML(c);
-  renderAllPips(c);
-  initSheetDicePreviews();
+const c = chars[0];
+el.innerHTML = renderSheetHTML(c);
+renderAllPips(c);
+initSheetDicePreviews();
+loadSheetFeatures(c);
 }
 
 function initSheetDicePreviews() {
@@ -1934,8 +1943,11 @@ async function openCharPage(charId, tab='sheet') {
   showView('view-char-page');
   switchCharPageTab(tab);
 }
-
 function switchCharPageTab(tab) {
+  if (tab === 'builder' && charPageData?.campaign_id != null) {
+    tab = 'sheet';
+  }
+
   document.querySelectorAll('.char-page-tab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.char-page-panel').forEach(p => p.classList.remove('active'));
   document.getElementById(`char-tab-${tab}`).classList.add('active');
@@ -3035,7 +3047,7 @@ async function loadNPCsTab() {
   const { data: npcs } = await sb.from('npcs').select('*').eq('campaign_id', currentCampaign.id).order('created_at');
   el.innerHTML = `
     <div class="section-header"><h2>NPCs & Enemies</h2>
-      <div class="section-actions"><button class="btn btn-gold btn-sm" onclick="editingNpcId=null;openModal('modal-new-npc')">+ New NPC</button></div>
+      <div class="section-actions"><button class="btn btn-gold btn-sm" onclick="openNewNPCModal()">+ New NPC</button></div>
     </div>
     ${(!npcs||npcs.length===0) ? '<div class="empty-state">No NPCs yet. Build your cast of characters and enemies.</div>' :
       npcs.map(n => `
@@ -3055,19 +3067,56 @@ async function loadNPCsTab() {
             </div>
             ${n.notes ? `<p style="font-size:0.82rem;color:var(--muted);margin-top:0.4rem;font-style:italic">${n.notes}</p>` : ''}
           </div>
-          <div style="display:flex;flex-direction:column;gap:0.4rem">
-            <button class="btn btn-ghost btn-sm" onclick="addNPCToEncounter('${n.id}','${n.name}',${n.hp},${n.evasion})">+ Encounter</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteNPC('${n.id}')">Delete</button>
-          </div>
+         <div style="display:flex;flex-direction:column;gap:0.4rem">
+  <button class="btn btn-ghost btn-sm" onclick="editNPC('${n.id}')">Edit</button>
+  <button class="btn btn-ghost btn-sm" onclick="addNPCToEncounter('${n.id}','${n.name}',${n.hp},${n.evasion})">+ Encounter</button>
+  <button class="btn btn-danger btn-sm" onclick="deleteNPC('${n.id}')">Delete</button>
+</div>
         </div>
       `).join('')
     }
   `;
 }
+  function openNewNPCModal() {
+  editingNpcId = null;
 
+  document.getElementById('npc-name').value = '';
+  document.getElementById('npc-type').value = 'npc';
+  document.getElementById('npc-desc').value = '';
+  document.getElementById('npc-hp').value = 10;
+  document.getElementById('npc-evasion').value = 10;
+  document.getElementById('npc-atk').value = 0;
+  document.getElementById('npc-dmg').value = '1d6';
+  document.getElementById('npc-notes').value = '';
+  document.getElementById('npc-visible').value = 'false';
+
+  openModal('modal-new-npc');
+}
+async function editNPC(id) {
+  const { data: n, error } = await sb.from('npcs').select('*').eq('id', id).single();
+
+  if (error || !n) {
+    toast('Could not load NPC', 'error');
+    return;
+  }
+
+  editingNpcId = id;
+
+  document.getElementById('npc-name').value = n.name || '';
+  document.getElementById('npc-type').value = n.type || 'npc';
+  document.getElementById('npc-desc').value = n.description || '';
+  document.getElementById('npc-hp').value = n.hp ?? 10;
+  document.getElementById('npc-evasion').value = n.evasion ?? 10;
+  document.getElementById('npc-atk').value = n.attack_bonus ?? 0;
+  document.getElementById('npc-dmg').value = n.damage_dice || '1d6';
+  document.getElementById('npc-notes').value = n.notes || '';
+  document.getElementById('npc-visible').value = n.is_visible_to_players ? 'true' : 'false';
+
+  openModal('modal-new-npc');
+}
 async function saveNPC() {
-  const payload = {
-    campaign_id: currentCampaign.id, created_by: currentUser.id,
+    const payload = {
+  campaign_id: currentCampaign.id,
     name: document.getElementById('npc-name').value.trim(),
     type: document.getElementById('npc-type').value,
     description: document.getElementById('npc-desc').value,
@@ -3079,9 +3128,22 @@ async function saveNPC() {
     is_visible_to_players: document.getElementById('npc-visible').value === 'true'
   };
   if (!payload.name) { toast('Enter a name', 'error'); return; }
-  const { error } = await sb.from('npcs').insert(payload);
+  let error;
+
+if (editingNpcId) {
+  ({ error } = await sb.from('npcs')
+    .update(payload)
+    .eq('id', editingNpcId));
+} else {
+ ({ error } = await sb.from('npcs')
+  .insert({
+    ...payload,
+    created_by: currentUser.id
+  }));
+}
   if (error) { toast(error.message, 'error'); return; }
   closeModal('modal-new-npc');
+  editingNpcId = null;
   toast('NPC saved!', 'success');
   loadNPCsTab();
 }

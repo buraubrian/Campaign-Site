@@ -1822,16 +1822,24 @@ async function loadCharacterEquipment(characterId) {
 
   let featuresById = {};
 
-  if (featureIds.length > 0) {
-    const { data: features } = await sb
-      .from('weapon_features')
-      .select('id,name,rules_text')
-      .in('id', featureIds);
+ if (featureIds.length > 0) {
+  const { data: features, error: featureError } = await sb
+    .from('weapon_features')
+    .select('id,name,rules_text')
+    .in('id', featureIds);
 
+  if (featureError) {
+    console.error('Could not load weapon features:', featureError);
+  } else {
     featuresById = Object.fromEntries(
       (features || []).map(f => [f.id, f])
     );
   }
+
+  console.log('Active weapons:', weapons);
+  console.log('Weapon feature IDs:', featureIds);
+  console.log('Loaded weapon features:', features);
+}
 
   const itemsByWeaponId = Object.fromEntries(
     items.map(i => [i.item_id, i])

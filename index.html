@@ -1569,17 +1569,20 @@ function renderSheetHTML(c) {
     <div class="sheet-sub-panel active" id="sheet-sub-features">
       <div id="features-card-content"><div class="loading">Loading features…</div></div>
     </div>
-    <div class="sheet-sub-panel" id="sheet-sub-inventory">
-      <div style="margin-bottom:1rem">
-        <label>Armor</label>
-        <button class="picker-trigger${c.armor_name?' has-value':''}" style="width:100%;text-align:left;font-size:0.92rem;padding:0.4rem 0.6rem;font-family:'Cinzel',serif;margin-bottom:0.5rem" onclick="openPicker('armor','s-armor','Armor')">
-          <span>${c.armor_name||'Choose armor…'}</span><span class="pt-arrow">▼</span>
-        </button>
-        <input type="hidden" id="s-armor" value="${c.armor_name||''}" />
+   <div class="sheet-sub-panel" id="sheet-sub-inventory">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1rem">
+    <div>
+      <h3 style="margin:0">Equipment</h3>
+      <div style="font-size:0.8rem;color:var(--muted);margin-top:0.2rem">
+        Weapons, armor, consumables, and carried gear.
       </div>
-      <label>Inventory & Gear</label>
-      <textarea id="s-inventory" style="min-height:160px">${c.inventory||''}</textarea>
     </div>
+  </div>
+
+  <div id="character-equipment-list">
+    <div class="loading">Loading equipment…</div>
+  </div>
+</div>
     <div class="sheet-sub-panel" id="sheet-sub-experiences">
       ${c.experience_1_name ? `
         <div class="exp-row">
@@ -1617,7 +1620,124 @@ function showSheetSubPanel(id, btn) {
   else { const active = document.querySelector(`.sheet-tab-chip[onclick*="'${id}'"]`); if(active) active.classList.add('active'); }
   if (id === 'features' && charPageData) loadSheetFeatures(charPageData);
 }
+  if (id === 'inventory' && charPageData) {
+  loadCharacterEquipment(charPageData.id);
+}
 
+async function loadCharacterEquipment(characterId) {
+  const el = document.getElementById('character-equipment-list');
+  if (!el) return;
+
+  el.innerHTML = '<div class="loading">Loading equipment…</div>';
+
+  const { data: items, error } = await sb
+    .from('character_items')
+    .select('*')
+    .eq('character_id', characterId)
+    .order('id');
+
+  if (error) {
+    el.innerHTML = `
+      <div class="empty-state" style="color:var(--ruby)">
+        Could not load equipment: ${error.message}
+      </div>
+    `;
+    return;
+  }
+
+  if (!items || items.length === 0) {
+    el.innerHTML = `
+      <div class="empty-state">
+        No equipment in this character's inventory yet.
+      </div>
+    `;
+    return;
+  }
+
+  const weaponItems = items.filter(item => item.item_type === 'weapon');
+
+  const weaponIds = weaponItems.map(item => item.item_id);
+
+  let weaponsById = {};
+
+  if (weaponIds.length > 0) {
+    const { data: weapons, error: weaponError } = await sb
+      .from('weapons')
+      .select('id,name,category,weapon_type,tier,burden')
+      .in('id', weaponIds);
+
+    if (weaponError) {
+      el.innerHTML = `
+        <div class="empty-state" style="color:var(--ruby)">
+          Could not load weapon details: ${weaponError.message}
+        </div>
+      `;
+      return;
+    }
+
+    weaponsById = Object.fromEntries(
+      (weapons || []).map(w => [w.id, w])
+    );
+  }
+
+  el.innerHTML = items.map(item => {
+
+    if (item.item_type === 'weapon') {
+      const weapon = weaponsById[item.item_id];
+
+      if (!weapon) {
+        return `
+          <div class="weapon-card-display">
+            <div style="color:var(--ruby)">
+              Missing weapon data for item ${item.item_id}
+            </div>
+          </div>
+        `;
+      }
+
+      const hands = Number(weapon.burden) === 2 ? '✋ ✋' : '✋';
+
+      return `
+        <div class="weapon-card-display" style="padding:1rem;margin-bottom:0.75rem">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem">
+            <div>
+              <div style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:0.95rem">
+                ${weapon.name} ${hands}
+              </div>
+
+              <div style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem">
+                ${weapon.category} Weapon · ${weapon.weapon_type}
+              </div>
+
+              <div style="font-size:0.75rem;color:var(--muted)">
+                Tier ${weapon.tier}
+              </div>
+            </div>
+
+            <div>
+              ${
+                item.is_equipped
+                  ? `<span class="vault-label loadout">${item.equipment_slot || 'Equipped'}</span>`
+                  : `<button class="btn btn-gold btn-sm">Equip</button>`
+              }
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="weapon-card-display" style="padding:1rem;margin-bottom:0.75rem">
+        <div style="font-family:'Cinzel',serif;color:var(--gold-light)">
+          Item ${item.item_id}
+        </div>
+        <div style="font-size:0.75rem;color:var(--muted)">
+          ${item.item_type}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
 async function loadSheetFeatures(c) {
   const el = document.getElementById('features-card-content');
   if (!el) return;

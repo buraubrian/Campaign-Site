@@ -1733,13 +1733,29 @@ async function loadCharacterEquipment(characterId) {
               </div>
             </div>
 
-            <div>
-              ${
-                item.is_equipped
-                  ? `<span class="vault-label loadout">${item.equipment_slot || 'Equipped'}</span>`
-                  : `<button class="btn btn-gold btn-sm">Equip</button>`
-              }
-            </div>
+           <div style="display:flex;align-items:center;gap:0.5rem">
+  ${
+    item.is_equipped
+      ? `
+        <span class="vault-label loadout">
+          ${item.equipment_slot || 'Equipped'}
+        </span>
+
+        <button
+          class="btn btn-ghost btn-sm"
+          onclick="unequipCharacterWeapon('${characterId}', ${item.id})">
+          Unequip
+        </button>
+      `
+      : `
+        <button
+          class="btn btn-gold btn-sm"
+          onclick="equipCharacterWeapon('${characterId}', ${item.id})">
+          Equip
+        </button>
+      `
+  }
+</div>
           </div>
         </div>
       `;
@@ -2012,6 +2028,271 @@ async function loadCharacterEquipment(characterId) {
   toast('Weapon added to equipment!', 'success');
 
   // Refresh the character's Equipment list behind the panel
+  await loadCharacterEquipment(characterId);
+}
+ async function equipCharacterWeapon(characterId, characterItemId) {
+  // Get the inventory row
+  const { data: item, error: itemError } = await sb
+    .from('character_items')
+    .select('*')
+    .eq('id', characterItemId)
+    .eq('character_id', characterId)
+    .single();
+
+  if (itemError || !item) {
+    toast('Could not find that inventory item', 'error');
+    return;
+  }
+
+  if (item.item_type !== 'weapon') {
+    toast('That item is not a weapon', 'error');
+    return;
+  }
+
+  // Get the weapon details
+  const { data: weapon, error: weaponError } = await sb
+    .from('weapons')
+    .select('id,name,category,burden')
+    .eq('id', item.item_id)
+    .single();
+
+  if (weaponError || !weapon) {
+    toast('Could not load weapon details', 'error');
+    return;
+  }
+
+  const slot = weapon.category === 'Secondary'
+    ? 'secondary'
+    : 'primary';
+
+  // Find the weapons currently equipped
+  const { data: equippedItems, error: equippedError } = await sb
+    .from('character_items')
+    .select('*')
+    .eq('character_id', characterId)
+    .eq('item_type', 'weapon')
+    .eq('is_equipped', true);
+
+  if (equippedError) {
+    toast('Could not check equipped weapons: ' + equippedError.message, 'error');
+    return;
+  }
+
+  const equippedIds = (equippedItems || []).map(i => i.item_id);
+
+  let equippedWeapons = [];
+
+  if (equippedIds.length > 0) {
+    const { data, error } = await sb
+      .from('weapons')
+      .select('id,name,category,burden')
+      .in('id', equippedIds);
+
+    if (error) {
+      toast('Could not check weapon burden: ' + error.message, 'error');
+      return;
+    }
+
+    equippedWeapons = data || [];
+  }
+
+  const currentPrimaryItem = (equippedItems || []).find(
+    i => i.equipment_slot === 'primary'
+  );
+
+  const currentSecondaryItem = (equippedItems || []).find(
+    i => i.equipment_slot === 'secondary'
+  );
+
+  const currentPrimary = currentPrimaryItem
+    ? equippedWeapons.find(w => w.id === currentPrimaryItem.item_id)
+    : null;
+
+  const currentSecondary = currentSecondaryItem
+    ? equippedWeapons.find(w => w.id === currentSecondaryItem.item_id)
+    : null;
+
+  // ─────────────────────────────────────
+  // BURDEN RULES
+  // ─────────────────────────────────────
+
+  // Two-handed Primary cannot be equipped with a Secondary
+  if (
+    slot === 'primary' &&
+    Number(weapon.burden) === 2 &&
+    currentSecondary
+  ) {
+    toast(
+      `Unequip ${currentSecondary.name} first — ${weapon.name} requires two hands.`,
+      'error'
+    );
+    return;
+  }
+
+  // Secondary cannot be equipped while a two-handed Primary is equipped
+  if (
+    slot === 'secondary' &&
+    currentPrimary &&
+    Number(currentPrimary.burden) === 2
+  ) {
+    toast(
+      `Unequip ${currentPrimary.name} first — it requires two hands.`,
+      'error'
+    );
+    return;
+  }
+
+  // Unequip anything already occupying this slot
+  const { error: clearError } = await sb
+    .from('character_items')
+    .update({
+      is_equipped: false,
+      equipment_slot: null
+    })
+    .eq('character_id', characterId)
+    .eq('item_type', 'weapon')
+    .eq('equipment_slot', slot);
+
+  if (clearError) {
+    toast('Could not change equipped weapon: ' + clearError.message, 'error');
+    return;
+  }
+
+  // Equip the selected item
+  const { error: equipError } = await sb
+    .from('character_items')
+    .update({
+      is_equipped: true,
+      equipment_slot: slot
+    })
+    .eq('id', characterItemId)
+    .eq('character_id', characterId);
+
+  if (equipError) {
+    toast('Could not equip weapon: ' + equipError.message, 'error');
+    return;
+  }
+
+  // Keep the old character columns synchronized for now
+  const legacyField =
+    slot === 'primary'
+      ? 'weapon_primary'
+      : 'weapon_secondary';
+
+  const { error: characterError } = await sb
+    .from('characters')
+    .update({
+      [legacyField]: weapon.name,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', characterId);
+
+  if (characterError) {
+    toast(
+      'Weapon equipped, but character sheet sync failed: ' +
+      characterError.message,
+      'error'
+    );
+    return;
+  }
+
+  // Keep currently rendered sheet values synchronized too
+  if (charPageData?.id === characterId) {
+    charPageData[legacyField] = weapon.name;
+
+    const inputId =
+      slot === 'primary'
+        ? 's-wpn1'
+        : 's-wpn2';
+
+    const input = document.getElementById(inputId);
+
+    if (input) {
+      input.value = weapon.name;
+    }
+  }
+
+  toast(`${weapon.name} equipped!`, 'success');
+
+  await loadCharacterEquipment(characterId);
+}
+  async function unequipCharacterWeapon(characterId, characterItemId) {
+  const { data: item, error: itemError } = await sb
+    .from('character_items')
+    .select('*')
+    .eq('id', characterItemId)
+    .eq('character_id', characterId)
+    .single();
+
+  if (itemError || !item) {
+    toast('Could not find that equipped weapon', 'error');
+    return;
+  }
+
+  const slot = item.equipment_slot;
+
+  const { data: weapon } = await sb
+    .from('weapons')
+    .select('name')
+    .eq('id', item.item_id)
+    .single();
+
+  const { error } = await sb
+    .from('character_items')
+    .update({
+      is_equipped: false,
+      equipment_slot: null
+    })
+    .eq('id', characterItemId)
+    .eq('character_id', characterId);
+
+  if (error) {
+    toast('Could not unequip weapon: ' + error.message, 'error');
+    return;
+  }
+
+  // Keep legacy character weapon fields synchronized
+  if (slot === 'primary' || slot === 'secondary') {
+    const legacyField =
+      slot === 'primary'
+        ? 'weapon_primary'
+        : 'weapon_secondary';
+
+    const { error: characterError } = await sb
+      .from('characters')
+      .update({
+        [legacyField]: '',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', characterId);
+
+    if (characterError) {
+      toast(
+        'Weapon unequipped, but character sheet sync failed: ' +
+        characterError.message,
+        'error'
+      );
+      return;
+    }
+
+    if (charPageData?.id === characterId) {
+      charPageData[legacyField] = '';
+
+      const inputId =
+        slot === 'primary'
+          ? 's-wpn1'
+          : 's-wpn2';
+
+      const input = document.getElementById(inputId);
+
+      if (input) {
+        input.value = '';
+      }
+    }
+  }
+
+  toast(`${weapon?.name || 'Weapon'} unequipped`, 'success');
+
   await loadCharacterEquipment(characterId);
 }
 async function loadSheetFeatures(c) {

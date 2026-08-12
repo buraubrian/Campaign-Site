@@ -1917,9 +1917,27 @@ async function saveSheetInline(charId) {
     armor_name: v('s-armor'), backstory: v('s-backstory'),
     updated_at: new Date().toISOString()
   };
-  const { error } = await sb.from('characters').update(updates).eq('id', id);
-  if (error) toast(error.message, 'error');
-  else toast('Character saved!', 'success');
+ const { error } = await sb
+  .from('characters')
+  .update(updates)
+  .eq('id', id);
+
+if (error) {
+  toast(error.message, 'error');
+  return;
+}
+
+const weaponsSaved = await syncCharacterWeaponsToInventory(
+  id,
+  updates.weapon_primary,
+  updates.weapon_secondary
+);
+
+if (!weaponsSaved) {
+  return;
+}
+
+toast('Character saved!', 'success');
 }
 
 /* ═══════════════════════════════════════════════════════

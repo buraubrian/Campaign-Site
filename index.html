@@ -3784,7 +3784,11 @@ const PICKER_CONFIG = {
           ${r.range ? `<span class="picker-stat stat-ev">Range: ${r.range}</span>` : ''}
           ${r.trait ? `<span class="picker-stat stat-gold">Trait: ${r.trait}</span>` : ''}
           ${r.damage_type ? `<span class="picker-stat stat-hp">${r.damage_type}</span>` : ''}
-          ${r.burden ? `<span class="picker-stat" style="border-color:var(--muted);color:var(--muted)">Burden: ${r.burden}</span>` : ''}
+          ${r.burden ? `
+  <span class="picker-stat" style="border-color:var(--muted);color:var(--muted)">
+    ${r.burden === 2 ? '✋ ✋' : '✋'}
+  </span>
+` : ''}
           ${r.tier ? `<span class="picker-stat stat-gold">Tier ${r.tier}</span>` : ''}
         </div>
         ${r.feature ? `<div class="feature-block"><div class="feature-title">Feature</div>${r.feature}</div>` : ''}
@@ -3820,49 +3824,118 @@ async function openPicker(table, targetInputId, label) {
   document.getElementById('picker-panel').classList.add('open');
   document.body.style.overflow = 'hidden';
 
-  // fetch all items
-  let qb = sb.from(table).select('*').order('name');
-  // if subclasses and a class is selected, filter
-  if (table === 'subclasses' && currentClassId) qb = qb.eq('class_id', currentClassId);
-  const { data, error } = await qb;
-  if (error) {
-    document.getElementById('picker-body').innerHTML = `<div class="picker-empty" style="color:var(--ruby)">Error loading: ${error.message}</div>`;
+// fetch all items
+let qb = sb.from(table).select('*').order('name');
+
+// if subclasses and a class is selected, filter
+if (table === 'subclasses' && currentClassId) {
+  qb = qb.eq('class_id', currentClassId);
+}
+
+// filter weapons by slot and character tier
+if (table === 'weapons') {
+
+  // Primary vs Secondary
+  if (targetInputId.includes('wpn1')) {
+    qb = qb.eq('category', 'Primary');
+  }
+
+  if (targetInputId.includes('wpn2')) {
+    qb = qb.eq('category', 'Secondary');
+  }
+
+  // Determine current character level
+  const characterLevel =
+    charPageData?.level ||
+    wizardData?.level ||
+    1;
+
+  // Convert level to tier
+  const { data: levelRow, error: levelError } = await sb
+    .from('levels')
+    .select('tier')
+    .eq('level', characterLevel)
+    .single();
+
+  if (levelError || !levelRow) {
+    document.getElementById('picker-body').innerHTML =
+      `<div class="picker-empty">Could not determine weapon tier.</div>`;
     return;
   }
-  pickerAllItems = data || [];
-  renderPickerItems(pickerAllItems);
+
+  // Only show weapons available at this tier or lower
+  qb = qb.lte('tier', levelRow.tier);
+}
+
+const { data, error } = await qb;
+
+if (error) {
+  document.getElementById('picker-body').innerHTML =
+    `<div class="picker-empty" style="color:var(--ruby)">
+      Error loading: ${error.message}
+    </div>`;
+  return;
+}
+
+pickerAllItems = data || [];
+renderPickerItems(pickerAllItems);
 }
 
 function renderPickerItems(items) {
   const body = document.getElementById('picker-body');
   const cfg = PICKER_CONFIG[pickerTable];
   const currentVal = document.getElementById(pickerTargetId)?.value || '';
+
   if (!items || items.length === 0) {
-    body.innerHTML = '<div class="picker-empty">No options available yet — check back once data has been imported.</div>';
+    body.innerHTML =
+      '<div class="picker-empty">No options available yet — check back once data has been imported.</div>';
     return;
   }
+
   body.innerHTML = items.map((r, i) => {
-    const rendered = cfg ? cfg.renderItem(r) : { name: r.name, meta: '', body: r.description || '' };
+    const rendered = cfg
+      ? cfg.renderItem(r)
+      : {
+          name: r.name,
+          meta: '',
+          body: r.description || ''
+        };
+
     const isSelected = r.name === currentVal;
+
     return `
-    <div class="picker-item${isSelected ? ' selected' : ''}" id="picker-item-${i}">
-      <div class="picker-item-header" onclick="togglePickerAccordion(${i})">
-        <div class="picker-item-left">
-          <div class="picker-item-name">${rendered.name}${isSelected ? ' <span style="color:var(--gold);font-size:0.7rem">✓ Selected</span>' : ''}</div>
-          ${rendered.meta ? `<div class="picker-item-meta">${rendered.meta}</div>` : ''}
+      <div class="picker-item${isSelected ? ' selected' : ''}" id="picker-item-${i}">
+        <div class="picker-item-header" onclick="togglePickerAccordion(${i})">
+          <div class="picker-item-left">
+            <div class="picker-item-name">
+              ${rendered.name}
+              ${isSelected
+                ? ' <span style="color:var(--gold);font-size:0.7rem">✓ Selected</span>'
+                : ''}
+            </div>
+
+            ${rendered.meta
+              ? `<div class="picker-item-meta">${rendered.meta}</div>`
+              : ''}
+          </div>
+
+          <span class="picker-item-chevron">▼</span>
         </div>
-        <span class="picker-item-chevron">▼</span>
+
+        <div class="picker-item-body">
+          ${rendered.body}
+
+          <button
+            class="btn btn-gold btn-sm picker-select-btn"
+            onclick="pickItem(${i})">
+            ${isSelected ? '✓ Selected' : `Select ${rendered.name}`}
+          </button>
+        </div>
       </div>
-      <div class="picker-item-body">
-        ${rendered.body}
-        <button class="btn btn-gold btn-sm picker-select-btn" onclick="pickItem(${i})">
-          ${isSelected ? '✓ Selected' : `Select ${rendered.name}`}
-        </button>
-      </div>
-    </div>`;
+    `;
   }).join('');
 }
-
+  
 function togglePickerAccordion(idOrIndex) {
   let item;
   if (typeof idOrIndex === 'string') {

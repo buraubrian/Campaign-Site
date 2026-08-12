@@ -1967,6 +1967,53 @@ async function loadCharacterEquipment(characterId) {
     `;
   }).join('');
 }
+  async function addWeaponToCharacterInventory(characterId, weaponId) {
+  if (!characterId || !weaponId) {
+    toast('Could not add weapon', 'error');
+    return;
+  }
+
+  // Check whether this character already owns this weapon
+  const { data: existing, error: existingError } = await sb
+    .from('character_items')
+    .select('id')
+    .eq('character_id', characterId)
+    .eq('item_type', 'weapon')
+    .eq('item_id', weaponId)
+    .maybeSingle();
+
+  if (existingError) {
+    toast('Could not check inventory: ' + existingError.message, 'error');
+    return;
+  }
+
+  if (existing) {
+    toast('This weapon is already in your equipment.', 'error');
+    return;
+  }
+
+  // Add weapon as owned, but not equipped
+  const { error: insertError } = await sb
+    .from('character_items')
+    .insert({
+      character_id: characterId,
+      item_type: 'weapon',
+      item_id: weaponId,
+      quantity: 1,
+      is_equipped: false,
+      equipment_slot: null
+    });
+
+  if (insertError) {
+    toast('Could not add weapon: ' + insertError.message, 'error');
+    return;
+  }
+
+  toast('Weapon added to equipment!', 'success');
+
+  // Refresh the character's Equipment list behind the panel
+  await loadCharacterEquipment(characterId);
+}
 async function loadSheetFeatures(c) {
   const el = document.getElementById('features-card-content');
   if (!el) return;

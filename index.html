@@ -2856,16 +2856,103 @@ async function saveWizardProgress() {
   // save domain cards if any selected
   if (wizardData.selectedDomainCards && wizardData.selectedDomainCards.length > 0 && charId) {
     // remove existing wizard-level domain cards first to avoid duplicates
-    await sb.from('character_domain_cards').delete().eq('character_id', charId).eq('acquired_at_level', wizardData.level||1);
+    await sb.from('character_domain_cards')
+      .delete()
+      .eq('character_id', charId)
+      .eq('acquired_at_level', wizardData.level||1);
+
     const cardRows = wizardData.selectedDomainCards.map(c => ({
       character_id: charId,
       domain_card_id: c.id,
       location: 'loadout',
       acquired_at_level: wizardData.level||1
     }));
-    const { error: cardError } = await sb.from('character_domain_cards').insert(cardRows);
-    if (cardError) toast('Domain cards save failed: ' + cardError.message, 'error');
+
+    const { error: cardError } = await sb
+      .from('character_domain_cards')
+      .insert(cardRows);
+
+    if (cardError) {
+      toast('Domain cards save failed: ' + cardError.message, 'error');
+    }
   }
+
+  // sync starting weapons into character_items
+  if (charId) {
+
+    const { error: deleteWeaponError } = await sb
+      .from('character_items')
+      .delete()
+      .eq('character_id', charId)
+      .eq('item_type', 'weapon');
+
+    if (deleteWeaponError) {
+      toast('Could not update weapon inventory: ' + deleteWeaponError.message, 'error');
+      return;
+    }
+
+    const weaponRows = [];
+
+    if (wizardData.weapon_primary) {
+      const { data: primaryWeapon, error: primaryError } = await sb
+        .from('weapons')
+        .select('id,burden')
+        .eq('name', wizardData.weapon_primary)
+        .single();
+
+      if (primaryError) {
+        toast('Could not find primary weapon: ' + primaryError.message, 'error');
+        return;
+      }
+
+      if (primaryWeapon) {
+        weaponRows.push({
+          character_id: charId,
+          item_type: 'weapon',
+          item_id: primaryWeapon.id,
+          quantity: 1,
+          is_equipped: true,
+          equipment_slot: 'primary'
+        });
+      }
+    }
+
+    if (wizardData.weapon_secondary) {
+      const { data: secondaryWeapon, error: secondaryError } = await sb
+        .from('weapons')
+        .select('id,burden')
+        .eq('name', wizardData.weapon_secondary)
+        .single();
+
+      if (secondaryError) {
+        toast('Could not find secondary weapon: ' + secondaryError.message, 'error');
+        return;
+      }
+
+      if (secondaryWeapon) {
+        weaponRows.push({
+          character_id: charId,
+          item_type: 'weapon',
+          item_id: secondaryWeapon.id,
+          quantity: 1,
+          is_equipped: true,
+          equipment_slot: 'secondary'
+        });
+      }
+    }
+
+    if (weaponRows.length > 0) {
+      const { error: weaponItemError } = await sb
+        .from('character_items')
+        .insert(weaponRows);
+
+      if (weaponItemError) {
+        toast('Weapon inventory save failed: ' + weaponItemError.message, 'error');
+        return;
+      }
+    }
+  }
+
   toast('Progress saved', 'success');
 }
 
@@ -3777,7 +3864,12 @@ const PICKER_CONFIG = {
     title: 'Choose a Weapon',
     renderItem: (r) => ({
       name: r.name,
-      meta: [r.damage, r.range, r.trait, r.burden ? `Burden: ${r.burden}` : null].filter(Boolean).join(' · '),
+      meta: [
+  r.category,
+  r.weapon_type,
+  `Tier ${r.tier}`,
+  r.burden ? (Number(r.burden) === 2 ? '✋ ✋' : '✋') : null
+].filter(Boolean).join(' · '),
       body: `
         <div style="margin-bottom:0.5rem">
           ${r.damage ? `<span class="picker-stat stat-dmg">Damage: ${r.damage}</span>` : ''}

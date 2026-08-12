@@ -2167,7 +2167,84 @@ function applyTraitAssignments() {
   }
   toast('Traits assigned!', 'success');
 }
+async function syncCharacterWeaponsToInventory(characterId, primaryName, secondaryName) {
+  if (!characterId) return true;
 
+  // Remove only currently equipped weapon rows.
+  // Unequipped weapons in inventory are left alone.
+  const { error: deleteError } = await sb
+    .from('character_items')
+    .delete()
+    .eq('character_id', characterId)
+    .eq('item_type', 'weapon')
+    .eq('is_equipped', true);
+
+  if (deleteError) {
+    toast('Could not update equipped weapons: ' + deleteError.message, 'error');
+    return false;
+  }
+
+  const weaponRows = [];
+
+  // PRIMARY
+  if (primaryName) {
+    const { data: weapon, error } = await sb
+      .from('weapons')
+      .select('id')
+      .eq('name', primaryName)
+      .single();
+
+    if (error || !weapon) {
+      toast('Could not find primary weapon: ' + primaryName, 'error');
+      return false;
+    }
+
+    weaponRows.push({
+      character_id: characterId,
+      item_type: 'weapon',
+      item_id: weapon.id,
+      quantity: 1,
+      is_equipped: true,
+      equipment_slot: 'primary'
+    });
+  }
+
+  // SECONDARY
+  if (secondaryName) {
+    const { data: weapon, error } = await sb
+      .from('weapons')
+      .select('id')
+      .eq('name', secondaryName)
+      .single();
+
+    if (error || !weapon) {
+      toast('Could not find secondary weapon: ' + secondaryName, 'error');
+      return false;
+    }
+
+    weaponRows.push({
+      character_id: characterId,
+      item_type: 'weapon',
+      item_id: weapon.id,
+      quantity: 1,
+      is_equipped: true,
+      equipment_slot: 'secondary'
+    });
+  }
+
+  if (weaponRows.length > 0) {
+    const { error: insertError } = await sb
+      .from('character_items')
+      .insert(weaponRows);
+
+    if (insertError) {
+      toast('Weapon inventory save failed: ' + insertError.message, 'error');
+      return false;
+    }
+  }
+
+  return true;
+}
 async function saveBuilderChanges() {
   if (!charPageId) { toast('No character loaded', 'error'); return; }
   const payload = {
@@ -2185,10 +2262,24 @@ async function saveBuilderChanges() {
     presence: charPageData.presence||0, knowledge: charPageData.knowledge||0,
     updated_at: new Date().toISOString()
   };
-  const { error } = await sb.from('characters').update(payload).eq('id', charPageId);
-  if (error) { toast(error.message, 'error'); return; }
-  // refresh local data
-  charPageData = { ...charPageData, ...payload };
+ const { error } = await sb.from('characters').update(payload).eq('id', charPageId);
+
+if (error) {
+  toast(error.message, 'error');
+  return;
+}
+
+// Sync equipped weapons into character_items
+const weaponsSaved = await syncCharacterWeaponsToInventory(
+  charPageId,
+  payload.weapon_primary,
+  payload.weapon_secondary
+);
+
+if (!weaponsSaved) return;
+
+// refresh local data
+charPageData = { ...charPageData, ...payload };
   document.getElementById('char-page-name').textContent = payload.name || charPageData.name;
   toast('Character updated!', 'success');
 }
@@ -2853,19 +2944,18 @@ async function saveWizardProgress() {
     if (error) { toast('Save failed: ' + error.message, 'error'); return; }
     charId = data.id; wizardCharId = data.id; wizardData.id = data.id;
   }
-  // save domain cards if any selected
+    // save domain cards if any selected
   if (wizardData.selectedDomainCards && wizardData.selectedDomainCards.length > 0 && charId) {
-    // remove existing wizard-level domain cards first to avoid duplicates
     await sb.from('character_domain_cards')
       .delete()
       .eq('character_id', charId)
-      .eq('acquired_at_level', wizardData.level||1);
+      .eq('acquired_at_level', wizardData.level || 1);
 
     const cardRows = wizardData.selectedDomainCards.map(c => ({
       character_id: charId,
       domain_card_id: c.id,
       location: 'loadout',
-      acquired_at_level: wizardData.level||1
+      acquired_at_level: wizardData.level || 1
     }));
 
     const { error: cardError } = await sb
@@ -2877,81 +2967,13 @@ async function saveWizardProgress() {
     }
   }
 
-  // sync starting weapons into character_items
-  if (charId) {
+  const weaponsSaved = await syncCharacterWeaponsToInventory(
+    charId,
+    wizardData.weapon_primary,
+    wizardData.weapon_secondary
+  );
 
-    const { error: deleteWeaponError } = await sb
-      .from('character_items')
-      .delete()
-      .eq('character_id', charId)
-      .eq('item_type', 'weapon');
-
-    if (deleteWeaponError) {
-      toast('Could not update weapon inventory: ' + deleteWeaponError.message, 'error');
-      return;
-    }
-
-    const weaponRows = [];
-
-    if (wizardData.weapon_primary) {
-      const { data: primaryWeapon, error: primaryError } = await sb
-        .from('weapons')
-        .select('id,burden')
-        .eq('name', wizardData.weapon_primary)
-        .single();
-
-      if (primaryError) {
-        toast('Could not find primary weapon: ' + primaryError.message, 'error');
-        return;
-      }
-
-      if (primaryWeapon) {
-        weaponRows.push({
-          character_id: charId,
-          item_type: 'weapon',
-          item_id: primaryWeapon.id,
-          quantity: 1,
-          is_equipped: true,
-          equipment_slot: 'primary'
-        });
-      }
-    }
-
-    if (wizardData.weapon_secondary) {
-      const { data: secondaryWeapon, error: secondaryError } = await sb
-        .from('weapons')
-        .select('id,burden')
-        .eq('name', wizardData.weapon_secondary)
-        .single();
-
-      if (secondaryError) {
-        toast('Could not find secondary weapon: ' + secondaryError.message, 'error');
-        return;
-      }
-
-      if (secondaryWeapon) {
-        weaponRows.push({
-          character_id: charId,
-          item_type: 'weapon',
-          item_id: secondaryWeapon.id,
-          quantity: 1,
-          is_equipped: true,
-          equipment_slot: 'secondary'
-        });
-      }
-    }
-
-    if (weaponRows.length > 0) {
-      const { error: weaponItemError } = await sb
-        .from('character_items')
-        .insert(weaponRows);
-
-      if (weaponItemError) {
-        toast('Weapon inventory save failed: ' + weaponItemError.message, 'error');
-        return;
-      }
-    }
-  }
+  if (!weaponsSaved) return;
 
   toast('Progress saved', 'success');
 }

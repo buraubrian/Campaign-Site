@@ -3964,13 +3964,74 @@ function filterPickerItems(query) {
   renderPickerItems(filtered);
 }
 
-function pickItem(index) {
+async function pickItem(index) {
   const items = document.querySelectorAll('.picker-item');
   const nameEl = items[index]?.querySelector('.picker-item-name');
   const name = nameEl?.textContent?.replace('✓ Selected','').trim();
   if (!name) return;
   const row = pickerAllItems.find(r => r.name === name);
   if (!row) return;
+  // ── WEAPON BURDEN CHECK ──
+if (pickerTable === 'weapons') {
+
+  // Trying to equip a Secondary weapon
+  if (pickerTargetId.includes('wpn2')) {
+
+    const primaryInputId = pickerTargetId.replace('wpn2', 'wpn1');
+    const primaryName = document.getElementById(primaryInputId)?.value;
+
+    if (primaryName) {
+      const { data: primaryWeapon } = await sb
+        .from('weapons')
+        .select('burden')
+        .eq('name', primaryName)
+        .single();
+
+      if (primaryWeapon && Number(primaryWeapon.burden) >= 2) {
+        toast('Your primary weapon uses both hands. You cannot equip a secondary weapon.', 'error');
+        return;
+      }
+    }
+  }
+
+  // Equipping a two-handed Primary weapon
+  if (pickerTargetId.includes('wpn1') && Number(row.burden) >= 2) {
+
+    const secondaryInputId = pickerTargetId.replace('wpn1', 'wpn2');
+    const secondaryInput = document.getElementById(secondaryInputId);
+
+    if (secondaryInput && secondaryInput.value) {
+      secondaryInput.value = '';
+
+      const secondaryButton = secondaryInput.previousElementSibling;
+
+      if (secondaryButton?.classList.contains('picker-trigger')) {
+        const label = secondaryButton.querySelector('span:first-child');
+
+        if (label) {
+          label.textContent = 'Choose secondary weapon…';
+        }
+
+        secondaryButton.classList.remove('has-value');
+      }
+    }
+
+    // Keep character data in sync
+    if (pickerTargetId.startsWith('w-')) {
+      wizardData.weapon_secondary = '';
+    }
+
+    if (
+      (pickerTargetId.startsWith('b-') || pickerTargetId.startsWith('s-')) &&
+      typeof charPageData !== 'undefined' &&
+      charPageData
+    ) {
+      charPageData.weapon_secondary = '';
+    }
+
+    toast('Two-handed weapon equipped. Secondary weapon removed.', 'success');
+  }
+}
 
   // set the hidden/text input value
   const input = document.getElementById(pickerTargetId);

@@ -718,11 +718,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
       <span class="char-page-name" id="char-page-name"></span>
       <div class="char-page-tabs">
         <button class="char-page-tab active" id="char-tab-sheet" onclick="switchCharPageTab('sheet')">Character Sheet</button>
-        ${charPageData?.campaign_id == null ? `
   <button class="char-page-tab" id="char-tab-builder" onclick="switchCharPageTab('builder')">
-    Character Builder
-  </button>
-` : ''}
+  Character Builder
+</button>
       </div>
       <button class="btn btn-gold btn-sm" id="char-page-save" onclick="saveSheetInline()" style="margin-left:auto">Save Changes</button>
     </div>
@@ -1939,6 +1937,11 @@ async function openCharPage(charId, tab='sheet') {
   charPageId = charId;
   charPageData = c;
   editingCharId = charId;
+  const builderTab = document.getElementById('char-tab-builder');
+
+if (builderTab) {
+  builderTab.style.display = c.campaign_id != null ? 'none' : '';
+}
   document.getElementById('char-page-name').innerHTML = (c.name || 'Unnamed Hero') + (c.sheet_locked ? ' <span title="Locked — assigned to a campaign" style="color:var(--gold);font-size:0.85rem">🔒</span>' : '');
   showView('view-char-page');
   switchCharPageTab(tab);

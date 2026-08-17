@@ -1749,19 +1749,29 @@ async function loadCharacterEquipment(characterId) {
         </button>
       `
   }
+  <button class="btn btn-ghost btn-sm" onclick="giveItemToPlayer('${characterId}', ${item.id}, '${item.item_type}')">Give</button>
+  <button class="btn btn-danger btn-sm" onclick="removeItemFromInventory('${characterId}', ${item.id})">Remove</button>
 </div>
           </div>
         </div>
       `;
     }
 
-    return `
+       return `
       <div class="weapon-card-display" style="padding:1rem;margin-bottom:0.75rem">
-        <div style="font-family:'Cinzel',serif;color:var(--gold-light)">
-          Item ${item.item_id}
-        </div>
-        <div style="font-size:0.75rem;color:var(--muted)">
-          ${item.item_type}
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
+          <div>
+            <div style="font-family:'Cinzel',serif;color:var(--gold-light)">
+              Item ${item.item_id}
+            </div>
+            <div style="font-size:0.75rem;color:var(--muted)">
+              ${item.item_type} ${item.quantity > 1 ? `× ${item.quantity}` : ''}
+            </div>
+          </div>
+          <div style="display:flex;gap:0.4rem">
+            <button class="btn btn-ghost btn-sm" onclick="giveItemToPlayer('${characterId}', ${item.id}, '${item.item_type}')">Give</button>
+            <button class="btn btn-danger btn-sm" onclick="removeItemFromInventory('${characterId}', ${item.id})">Remove</button>
+          </div>
         </div>
       </div>
     `;
@@ -2602,7 +2612,60 @@ function togglePickerAccordion(idOrIndex) {
   document.querySelectorAll('.picker-item.expanded').forEach(el => el.classList.remove('expanded'));
   if (!isExpanded) item.classList.add('expanded');
 }
+async function removeItemFromInventory(characterId, itemId) {
+  if (!confirm('Remove this item from your inventory? This cannot be undone.')) return;
+  const { error } = await sb.from('character_items')
+    .delete()
+    .eq('id', itemId)
+    .eq('character_id', characterId);
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Item removed from inventory', 'success');
+  await loadCharacterEquipment(characterId);
+}
 
+async function giveItemToPlayer(fromCharId, itemId, itemType) {
+  if (!currentCampaign) { toast('Must be in a campaign to give items', 'error'); return; }
+
+  // get other characters in this campaign
+  const { data: members } = await sb.from('campaign_members')
+    .select('player_id, profiles(display_name, username)')
+    .eq('campaign_id', currentCampaign.id)
+    .neq('player_id', currentUser.id);
+
+  const { data: gmChars } = await sb.from('characters')
+    .select('id, name, owner_id')
+    .eq('campaign_id', currentCampaign.id)
+    .neq('owner_id', currentUser.id);
+
+  if (!gmChars || gmChars.length === 0) {
+    toast('No other characters in this campaign to give to', 'error'); return;
+  }
+
+  // build a modal with the other characters
+  const listHTML = gmChars.map(c => `
+    <div class="char-mini-card" style="cursor:pointer;margin-bottom:0.5rem" 
+      onclick="confirmGiveItem('${fromCharId}', ${itemId}, '${c.id}', '${c.name.replace(/'/g,"\\'")}')">
+      <h4>${c.name}</h4>
+      <p style="font-size:0.8rem;color:var(--muted)">Click to give item</p>
+    </div>
+  `).join('');
+
+  document.getElementById('assign-char-list').innerHTML = listHTML;
+  document.querySelector('#modal-assign-char h3').textContent = 'Give Item To…';
+  openModal('modal-assign-char');
+}
+
+async function confirmGiveItem(fromCharId, itemId, toCharId, toCharName) {
+  // move the item to the other character
+  const { error } = await sb.from('character_items')
+    .update({ character_id: toCharId })
+    .eq('id', itemId)
+    .eq('character_id', fromCharId);
+  if (error) { toast(error.message, 'error'); return; }
+  closeModal('modal-assign-char');
+  toast(`Item given to ${toCharName}!`, 'success');
+  await loadCharacterEquipment(fromCharId);
+}
 async function addDomainCardToCharacter(cardId) {
   // check loadout space
   const { data: existing } = await sb.from('character_domain_cards')

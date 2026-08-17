@@ -273,13 +273,106 @@ select option { background: var(--panel); }
 .stat-box input[type="number"] { text-align: center; font-size: 1.4rem; font-weight: 600; color: var(--gold-light); border: none; background: transparent; padding: 0; width: 100%; }
 
 /* ── Pips ── */
-.pip-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 0.5rem; }
-.pip { width: 20px; height: 20px; border: 2px solid; border-radius: 3px; cursor: pointer; transition: background 0.15s; }
-.pip-hp { border-color: var(--emerald); } .pip-hp.on { background: var(--emerald); }
-.pip-stress { border-color: var(--ruby); } .pip-stress.on { background: var(--ruby); }
-.pip-armor { border-color: var(--sapphire); } .pip-armor.on { background: var(--sapphire); }
-.pip-hope { border-color: var(--gold-light); border-radius: 4px; transform: rotate(45deg); }
-.pip-hope.on { background: var(--gold-light); }
+/* HP — Hearts */
+.pip-hp {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  position: relative;
+}
+
+.pip-hp::before {
+  content: '♥';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 25px;
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--emerald);
+}
+
+.pip-hp.on {
+  background: transparent;
+}
+
+.pip-hp.on::before {
+  color: var(--emerald);
+}
+
+
+/* Stress — Diamonds */
+.pip-stress {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--ruby);
+  border-radius: 2px;
+  transform: rotate(45deg);
+  margin: 3px;
+}
+
+.pip-stress.on {
+  background: var(--ruby);
+}
+
+
+/* Armor — Shields */
+.pip-armor {
+  width: 23px;
+  height: 25px;
+  border: 2px solid var(--sapphire);
+  border-radius: 4px 4px 8px 8px;
+  background: transparent;
+  clip-path: polygon(
+    50% 0%,
+    100% 14%,
+    92% 67%,
+    50% 100%,
+    8% 67%,
+    0% 14%
+  );
+}
+
+.pip-armor.on {
+  background: var(--sapphire);
+}
+
+
+/* Hope — Stars */
+.pip-hope {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  transform: none;
+  position: relative;
+}
+
+.pip-hope::before {
+  content: '✦';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 25px;
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1.2px var(--gold-light);
+}
+
+.pip-hope.on {
+  background: transparent;
+}
+
+.pip-hope.on::before {
+  color: var(--gold-light);
+}
 
 /* ── Character Sheet v2 ── */
 .sheet-banner {

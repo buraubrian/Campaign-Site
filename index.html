@@ -318,7 +318,29 @@ select option { background: var(--panel); }
 .pip-hp.on::before {
   color: var(--emerald);
 }
+/* Temporary HP — Gold Hearts */
+.pip-temp-hp {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  position: relative;
+  flex-shrink: 0;
+}
 
+.pip-temp-hp::before {
+  content: '♥';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 25px;
+  line-height: 1;
+  color: var(--gold);
+  -webkit-text-stroke: 1.2px var(--gold-light);
+}
 
 /* Stress — Diamonds */
 .pip-stress {
@@ -1617,8 +1639,44 @@ function renderSheetHTML(c) {
   <!-- HP / Stress -->
   <div class="field-row cols-2">
     <div class="card" style="margin-bottom:0">
-      <h3>Hit Points <input type="number" id="s-max-hp" value="${c.max_hp||6}" min="1" max="30" style="width:50px;display:inline;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-family:'Crimson Pro',serif;font-size:0.9rem;margin-left:0.4rem" onchange="rebuildPips('hp',this.value,${c.current_hp||c.max_hp||6})" /></h3>
-      <div class="pip-row" id="pip-hp"></div>
+      <h3 style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
+  Hit Points
+
+  <input
+    type="number"
+    id="s-max-hp"
+    value="${c.max_hp||6}"
+    min="1"
+    max="30"
+    style="width:50px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-family:'Crimson Pro',serif;font-size:0.9rem"
+    onchange="rebuildPips('hp',this.value,${c.current_hp||c.max_hp||6})"
+  />
+
+  <span style="
+    font-family:'Cinzel',serif;
+    font-size:0.62rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-left:0.5rem;
+  ">
+    Temp
+  </span>
+
+  <input
+    type="number"
+    id="s-temp-hp"
+    value="${c.temp_hp||0}"
+    min="0"
+    max="30"
+    style="width:50px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--gold-light);text-align:center;font-family:'Crimson Pro',serif;font-size:0.9rem"
+    oninput="renderTemporaryHP(this.value)"
+  />
+</h3>
+
+<div class="pip-row" id="pip-hp">
+  <div id="pip-temp-hp" style="display:flex;gap:8px;margin-left:6px"></div>
+</div>
     </div>
     <div class="card" style="margin-bottom:0">
       <h3>Stress <input type="number" id="s-max-stress" value="${c.max_stress||6}" min="1" max="12" style="width:50px;display:inline;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-family:'Crimson Pro',serif;font-size:0.9rem;margin-left:0.4rem" onchange="rebuildPips('stress',this.value,${c.current_stress||0})" /></h3>
@@ -2906,6 +2964,8 @@ function rollSheetDuality() {
 
 function renderAllPips(c) {
   buildPips('hp', c.max_hp||6, c.current_hp||c.max_hp||6);
+  renderTemporaryHP(c.temp_hp || 0);
+
   buildPips('stress', c.max_stress||6, c.current_stress||0);
   buildPips('armor', c.max_armor||3, c.current_armor||0);
   buildPips('hope', c.max_hope||6, c.current_hope||c.max_hope||6);
@@ -2924,7 +2984,20 @@ function buildPips(kind, max, filled) {
 }
 
 function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseInt(cur)||0); }
+function renderTemporaryHP(value) {
+  const container = document.getElementById('pip-temp-hp');
+  if (!container) return;
 
+  const amount = Math.max(0, parseInt(value) || 0);
+
+  container.innerHTML = '';
+
+  for (let i = 0; i < amount; i++) {
+    const pip = document.createElement('div');
+    pip.className = 'pip-temp-hp';
+    container.appendChild(pip);
+  }
+}
 function togglePip(kind, idx, max) {
   const container = document.getElementById('pip-' + kind);
   const pips = container.querySelectorAll('.pip');
@@ -2946,7 +3019,9 @@ async function saveSheetInline(charId) {
     agility: n('s-agility'), strength: n('s-strength'), finesse: n('s-finesse'),
     instinct: n('s-instinct'), presence: n('s-presence'), knowledge: n('s-knowledge'),
     evasion: n('s-evasion'), minor_threshold: n('s-minor'), major_threshold: n('s-major'), severe_threshold: n('s-severe'),
-    max_hp: n('s-max-hp'), current_hp: n('s-cur-hp'),
+    max_hp: n('s-max-hp'),
+current_hp: n('s-cur-hp'),
+temp_hp: n('s-temp-hp'),
     max_stress: n('s-max-stress'), current_stress: n('s-cur-stress'),
     max_armor: n('s-max-armor-display'), current_armor: n('s-cur-armor'),
     max_hope: n('s-max-hope'), current_hope: n('s-cur-hope'),
@@ -3437,7 +3512,10 @@ function charEditorHTML(c) {
   <div class="field-row cols-2">
     <div class="card" style="margin-bottom:0">
       <h3>Hit Points <input type="number" id="s-max-hp" value="${c.max_hp||6}" min="1" max="30" style="width:50px;display:inline;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-family:'Crimson Pro',serif;font-size:0.9rem;margin-left:0.4rem" onchange="rebuildPips('hp',this.value,this.value)" /></h3>
-      <div class="pip-row" id="pip-hp"></div>
+      <div class="pip-row">
+  <div id="pip-hp" style="display:flex;gap:8px"></div>
+  <div id="pip-temp-hp" style="display:flex;gap:8px"></div>
+</div>
     </div>
     <div class="card" style="margin-bottom:0">
       <h3>Stress <input type="number" id="s-max-stress" value="${c.max_stress||6}" min="1" max="12" style="width:50px;display:inline;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-family:'Crimson Pro',serif;font-size:0.9rem;margin-left:0.4rem" onchange="rebuildPips('stress',this.value,0)" /></h3>

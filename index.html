@@ -273,6 +273,21 @@ select option { background: var(--panel); }
 .stat-box input[type="number"] { text-align: center; font-size: 1.4rem; font-weight: 600; color: var(--gold-light); border: none; background: transparent; padding: 0; width: 100%; }
 
 /* ── Pips ── */
+  .pip-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+  margin-top: 0.5rem;
+}
+
+.pip {
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.15s;
+}
 /* HP — Hearts */
 .pip-hp {
   width: 24px;
@@ -312,7 +327,6 @@ select option { background: var(--panel); }
   border: 2px solid var(--ruby);
   border-radius: 2px;
   transform: rotate(45deg);
-  margin: 3px;
 }
 
 .pip-stress.on {

@@ -1614,7 +1614,7 @@ function renderSheetHTML(c) {
   <!-- Evasion / Armor / Armor Slots -->
   <div class="shield-row">
     <div class="shield-badge">${isSheetLocked() ? `<div style="font-family:'Cinzel',serif;font-size:1.5rem;font-weight:600;color:var(--gold-light)">${c.evasion||10}</div>` : `<input type="number" id="s-evasion" value="${c.evasion||10}" />`}<div class="shield-lbl">Evasion</div></div>
-    <div class="shield-badge">${isSheetLocked() ? `<div style="font-family:'Cinzel',serif;font-size:1.5rem;font-weight:600;color:var(--gold-light)">${c.max_armor||3}</div>` : `<input type="number" id="s-max-armor-display" value="${c.max_armor||3}" onchange="rebuildPips('armor',this.value,${c.current_armor||0})" />`}<div class="shield-lbl">Armor</div></div>
+    <div class="shield-badge">${isSheetLocked() ? `<div style="font-family:'Cinzel',serif;font-size:1.5rem;font-weight:600;color:var(--gold-light)">${c.max_armor||3}</div>` : `<input type="number" id="s-max-armor-display" value="${c.max_armor||3}" onchange="buildArmorPips(this.value,document.getElementById('s-cur-armor').value)" />`}<div class="shield-lbl">Armor</div></div>
     <div class="armor-slots-card">
       <span style="font-family:'Cinzel',serif;font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">Armor Slots Marked</span>
       <div class="pip-row" id="pip-armor" style="margin-top:0"></div>
@@ -2976,7 +2976,7 @@ function renderAllPips(c) {
   renderTemporaryHP(c.temp_hp || 0);
 
   buildPips('stress', c.max_stress||6, c.current_stress||0);
-  buildPips('armor', c.max_armor||3, c.current_armor||0);
+  buildArmorPips(c.max_armor || 3, c.current_armor || 0);
   buildPips('hope', c.max_hope||6, c.current_hope||c.max_hope||6);
 }
 
@@ -2993,6 +2993,47 @@ function buildPips(kind, max, filled) {
 }
 
 function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseInt(cur)||0); }
+  function buildArmorPips(max, marked) {
+  const container = document.getElementById('pip-armor');
+  if (!container) return;
+
+  max = parseInt(max) || 0;
+  marked = Math.max(0, Math.min(parseInt(marked) || 0, max));
+
+  container.innerHTML = '';
+
+  for (let i = 0; i < max; i++) {
+    const pip = document.createElement('div');
+
+    // Available armor is filled.
+    // Used armor becomes an outline from LEFT → RIGHT.
+    const isAvailable = i >= marked;
+
+    pip.className = `pip pip-armor${isAvailable ? ' on' : ''}`;
+    pip.onclick = () => toggleArmorSlot(i, max);
+
+    container.appendChild(pip);
+  }
+}
+
+function toggleArmorSlot(index, max) {
+  const hidden = document.getElementById('s-cur-armor');
+  if (!hidden) return;
+
+  const marked = parseInt(hidden.value) || 0;
+
+  let newMarked;
+
+  if (index < marked) {
+    newMarked = index;
+  } else {
+    newMarked = index + 1;
+  }
+
+  hidden.value = newMarked;
+
+  buildArmorPips(max, newMarked);
+}
 function renderTemporaryHP(value) {
   const container = document.getElementById('pip-temp-hp');
   if (!container) return;

@@ -2210,20 +2210,24 @@ async function loadCharacterEquipment(characterId) {
   const el = document.getElementById('equipment-picker-content');
   if (!el) return;
 
-  if (category !== 'weapons') {
-    const label =
-      category === 'armor' ? 'Armor' :
-      category === 'consumables' ? 'Consumables' :
-      'Loot';
+if (category === 'armor') {
+  await loadArmorEquipmentPicker(characterId, el);
+  return;
+}
 
-    el.innerHTML = `
-      <div class="empty-state">
-        ${label} will appear here once that reference data is imported.
-      </div>
-    `;
+if (category !== 'weapons') {
+  const label =
+    category === 'consumables' ? 'Consumables' :
+    'Loot';
 
-    return;
-  }
+  el.innerHTML = `
+    <div class="empty-state">
+      ${label} will appear here once that reference data is imported.
+    </div>
+  `;
+
+  return;
+}
 
   el.innerHTML = '<div class="loading">Loading weapons…</div>';
 
@@ -2355,6 +2359,199 @@ async function loadCharacterEquipment(characterId) {
       </div>
     `;
   }).join('');
+}
+  async function loadArmorEquipmentPicker(characterId, el) {
+  el.innerHTML = '<div class="loading">Loading armor…</div>';
+
+  const characterLevel = charPageData?.level || 1;
+
+  const { data: levelRow, error: levelError } = await sb
+    .from('levels')
+    .select('tier')
+    .eq('level', characterLevel)
+    .single();
+
+  if (levelError) {
+    el.innerHTML = `
+      <div class="empty-state" style="color:var(--ruby)">
+        Could not determine character tier: ${levelError.message}
+      </div>
+    `;
+    return;
+  }
+
+  const tier = levelRow?.tier || 1;
+
+  const { data: armors, error } = await sb
+    .from('armor')
+    .select(`
+      id,
+      name,
+      tier,
+      base_threshold_major,
+      base_threshold_severe,
+      base_score,
+      armor_feature_id
+    `)
+    .lte('tier', tier)
+    .order('name');
+
+  if (error) {
+    el.innerHTML = `
+      <div class="empty-state" style="color:var(--ruby)">
+        Could not load armor: ${error.message}
+      </div>
+    `;
+    return;
+  }
+
+  const featureIds = [
+    ...new Set(
+      (armors || [])
+        .map(a => a.armor_feature_id)
+        .filter(Boolean)
+    )
+  ];
+
+  let featuresById = {};
+
+  if (featureIds.length > 0) {
+    const { data: features, error: featureError } = await sb
+      .from('armor_features')
+      .select('id,name,rules_text')
+      .in('id', featureIds);
+
+    if (featureError) {
+      console.error('Could not load armor features:', featureError);
+    } else {
+      featuresById = Object.fromEntries(
+        (features || []).map(f => [f.id, f])
+      );
+    }
+  }
+
+  if (!armors || armors.length === 0) {
+    el.innerHTML = `
+      <div class="empty-state">
+        No armor is available for Tier ${tier}.
+      </div>
+    `;
+    return;
+  }
+
+  el.innerHTML = armors.map(armor => {
+    const feature = featuresById[armor.armor_feature_id];
+
+    return `
+      <div class="weapon-card-display"
+           style="padding:1rem;margin-bottom:0.75rem">
+
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          align-items:flex-start;
+          gap:1rem;
+        ">
+
+          <div style="flex:1">
+
+            <div style="
+              font-family:'Cinzel',serif;
+              color:var(--gold-light);
+              font-size:0.95rem;
+            ">
+              ${armor.name}
+            </div>
+
+            <div style="
+              font-size:0.75rem;
+              color:var(--muted);
+              margin-top:0.2rem;
+            ">
+              Tier ${armor.tier}
+            </div>
+
+            <div style="
+              font-size:0.8rem;
+              color:var(--text);
+              margin-top:0.35rem;
+            ">
+              Armor Score ${armor.base_score}
+              · Major ${armor.base_threshold_major}
+              · Severe ${armor.base_threshold_severe}
+            </div>
+
+            <div style="
+              font-size:0.82rem;
+              margin-top:0.45rem;
+            ">
+              <strong style="color:var(--gold)">Feature:</strong>
+              ${
+                feature
+                  ? `<strong>${feature.name}</strong> — ${feature.rules_text}`
+                  : 'None'
+              }
+            </div>
+
+          </div>
+
+          <button
+            class="btn btn-gold btn-sm"
+            onclick="addArmorToCharacterInventory(
+              '${characterId}',
+              ${armor.id}
+            )">
+            Add
+          </button>
+
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+  async function addArmorToCharacterInventory(characterId, armorId) {
+  if (!characterId || !armorId) {
+    toast('Could not add armor', 'error');
+    return;
+  }
+
+  const { data: existing, error: existingError } = await sb
+    .from('character_items')
+    .select('id')
+    .eq('character_id', characterId)
+    .eq('item_type', 'armor')
+    .eq('item_id', armorId)
+    .maybeSingle();
+
+  if (existingError) {
+    toast('Could not check inventory: ' + existingError.message, 'error');
+    return;
+  }
+
+  if (existing) {
+    toast('This armor is already in your equipment.', 'error');
+    return;
+  }
+
+  const { error: insertError } = await sb
+    .from('character_items')
+    .insert({
+      character_id: characterId,
+      item_type: 'armor',
+      item_id: armorId,
+      quantity: 1,
+      is_equipped: false,
+      equipment_slot: null
+    });
+
+  if (insertError) {
+    toast('Could not add armor: ' + insertError.message, 'error');
+    return;
+  }
+
+  toast('Armor added to equipment!', 'success');
+
+  await loadCharacterEquipment(characterId);
 }
   async function addWeaponToCharacterInventory(characterId, weaponId) {
   if (!characterId || !weaponId) {

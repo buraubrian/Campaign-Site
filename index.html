@@ -1303,7 +1303,7 @@ function showStatBreakdown(title, total, parts = []) {
 function showArmorHoverBreakdown(anchor, characterId) {
   hideStatHoverBreakdown();
 
-  const breakdown = armorBreakdowns[characterId];
+ const breakdown = armorBreakdowns[characterId]?.armor;
 
   const box = document.createElement('div');
   box.id = 'stat-hover-breakdown';
@@ -1353,7 +1353,64 @@ function showArmorHoverBreakdown(anchor, characterId) {
 
   anchor.appendChild(box);
 }
+function showThresholdHoverBreakdown(anchor, characterId, type) {
+  hideStatHoverBreakdown();
 
+  const breakdown = armorBreakdowns[characterId]?.[type];
+
+  const box = document.createElement('div');
+  box.id = 'stat-hover-breakdown';
+  box.className = 'stat-hover-breakdown';
+
+  const title =
+    type === 'major'
+      ? 'Major Threshold'
+      : 'Severe Threshold';
+
+  if (!breakdown) {
+    box.innerHTML = `
+      <div class="stat-hover-title">${title}</div>
+
+      <div style="color:var(--muted);font-size:0.85rem">
+        Loading threshold calculation…
+      </div>
+    `;
+
+    anchor.appendChild(box);
+    return;
+  }
+
+  const rows = breakdown.parts.map(part => `
+    <div class="stat-hover-row">
+      <span>${part.label}</span>
+
+      <strong style="color:var(--gold-light)">
+        ${part.value}
+      </strong>
+    </div>
+  `).join('');
+
+  box.innerHTML = `
+    <div class="stat-hover-title">${title}</div>
+
+    ${
+      rows || `
+        <div style="color:var(--muted);font-size:0.85rem">
+          No equipped armor is currently setting this threshold.
+        </div>
+      `
+    }
+
+    <div class="stat-hover-total">
+      <span>Total</span>
+      <strong style="color:var(--gold-light)">
+        ${breakdown.total}
+      </strong>
+    </div>
+  `;
+
+  anchor.appendChild(box);
+}
 function hideStatHoverBreakdown() {
   document.getElementById('stat-hover-breakdown')?.remove();
 }
@@ -1374,19 +1431,26 @@ function hideStatHoverBreakdown() {
     return;
   }
 
-  let total = 0;
-  const parts = [];
+let total = 0;
+let majorThreshold = 0;
+let severeThreshold = 0;
+
+const parts = [];
+const majorParts = [];
+const severeParts = [];
 
   // If armor is equipped, get its base Armor Score
   if (armorItem) {
     const { data: armor, error: armorError } = await sb
       .from('armor')
-      .select(`
-        id,
-        name,
-        base_score,
-        armor_feature_id
-      `)
+     .select(`
+  id,
+  name,
+  base_score,
+  base_threshold_major,
+  base_threshold_severe,
+  armor_feature_id
+`)
       .eq('id', armorItem.item_id)
       .single();
 
@@ -1395,23 +1459,49 @@ function hideStatHoverBreakdown() {
       return;
     }
 
-    if (armor) {
-      const baseScore = Number(armor.base_score) || 0;
+   if (armor) {
+  const baseScore = Number(armor.base_score) || 0;
+  const baseMajor = Number(armor.base_threshold_major) || 0;
+  const baseSevere = Number(armor.base_threshold_severe) || 0;
 
-      total += baseScore;
+  total += baseScore;
+  majorThreshold += baseMajor;
+  severeThreshold += baseSevere;
 
-      parts.push({
-        label: armor.name,
-        value: baseScore
-      });
-    }
+  parts.push({
+    label: armor.name,
+    value: baseScore
+  });
+
+  majorParts.push({
+    label: armor.name,
+    value: baseMajor
+  });
+
+  severeParts.push({
+    label: armor.name,
+    value: baseSevere
+  });
+}
   }
 
   // Save the breakdown for the hover card
-  armorBreakdowns[characterId] = {
+ armorBreakdowns[characterId] = {
+  armor: {
     total,
     parts
-  };
+  },
+
+  major: {
+    total: majorThreshold,
+    parts: majorParts
+  },
+
+  severe: {
+    total: severeThreshold,
+    parts: severeParts
+  }
+};
 
   // Update Armor Score displayed on the sheet
   const display = document.getElementById('sheet-armor-score');
@@ -1419,11 +1509,23 @@ function hideStatHoverBreakdown() {
   if (display) {
     display.textContent = total;
   }
+   const majorDisplay = document.getElementById('sheet-major-threshold');
+const severeDisplay = document.getElementById('sheet-severe-threshold');
+
+if (majorDisplay) {
+  majorDisplay.textContent = majorThreshold;
+}
+
+if (severeDisplay) {
+  severeDisplay.textContent = severeThreshold;
+}
 
   // Keep local character state synchronized
-  if (charPageData?.id === characterId) {
-    charPageData.max_armor = total;
-  }
+ if (charPageData?.id === characterId) {
+  charPageData.max_armor = total;
+  charPageData.major_threshold = majorThreshold;
+  charPageData.severe_threshold = severeThreshold;
+}
 
   // Armor slots already marked
   const armorMarkedInput =
@@ -1906,8 +2008,50 @@ function renderSheetHTML(c) {
     <h3>Damage Thresholds</h3>
     <div class="threshold-bar">
       <div class="threshold-seg"><div class="th-lbl">Minor</div>${isSheetLocked() ? `<div style="font-family:'Cinzel',serif;font-size:1.3rem;font-weight:600;color:var(--text);padding:0.15rem 0">${c.minor_threshold||5}</div>` : `<input type="number" id="s-minor" value="${c.minor_threshold||5}" />`}<div class="th-mark">Mark 1 HP</div></div>
-      <div class="threshold-seg"><div class="th-lbl">Major</div>${isSheetLocked() ? `<div style="font-family:'Cinzel',serif;font-size:1.3rem;font-weight:600;color:var(--text);padding:0.15rem 0">${c.major_threshold||10}</div>` : `<input type="number" id="s-major" value="${c.major_threshold||10}" />`}<div class="th-mark">Mark 2 HP</div></div>
-      <div class="threshold-seg"><div class="th-lbl">Severe</div>${isSheetLocked() ? `<div style="font-family:'Cinzel',serif;font-size:1.3rem;font-weight:600;color:var(--text);padding:0.15rem 0">${c.severe_threshold||15}</div>` : `<input type="number" id="s-severe" value="${c.severe_threshold||15}" />`}<div class="th-mark">Mark 3 HP</div></div>
+     <div
+  class="threshold-seg stat-hover-wrap"
+  onmouseenter="showThresholdHoverBreakdown(this, '${c.id}', 'major')"
+  onmouseleave="hideStatHoverBreakdown()"
+>
+  <div class="th-lbl">Major</div>
+
+  <div
+    id="sheet-major-threshold"
+    style="
+      font-family:'Cinzel',serif;
+      font-size:1.3rem;
+      font-weight:600;
+      color:var(--text);
+      padding:0.15rem 0;
+    "
+  >
+    ${c.major_threshold || 0}
+  </div>
+
+  <div class="th-mark">Mark 2 HP</div>
+</div>
+  <div
+  class="threshold-seg stat-hover-wrap"
+  onmouseenter="showThresholdHoverBreakdown(this, '${c.id}', 'severe')"
+  onmouseleave="hideStatHoverBreakdown()"
+>
+  <div class="th-lbl">Severe</div>
+
+  <div
+    id="sheet-severe-threshold"
+    style="
+      font-family:'Cinzel',serif;
+      font-size:1.3rem;
+      font-weight:600;
+      color:var(--text);
+      padding:0.15rem 0;
+    "
+  >
+    ${c.severe_threshold || 0}
+  </div>
+
+  <div class="th-mark">Mark 3 HP</div>
+</div>
     </div>
   </div>
 
@@ -3742,7 +3886,10 @@ async function saveSheetInline(charId) {
     ancestry: v('s-ancestry'), community: v('s-community'), level: n('s-level'),
     agility: n('s-agility'), strength: n('s-strength'), finesse: n('s-finesse'),
     instinct: n('s-instinct'), presence: n('s-presence'), knowledge: n('s-knowledge'),
-    evasion: n('s-evasion'), minor_threshold: n('s-minor'), major_threshold: n('s-major'), severe_threshold: n('s-severe'),
+    evasion: n('s-evasion'),
+minor_threshold: n('s-minor'),
+major_threshold: charPageData?.major_threshold ?? 0,
+severe_threshold: charPageData?.severe_threshold ?? 0,
     max_hp: n('s-max-hp'),
 current_hp: n('s-cur-hp'),
 temp_hp: n('s-temp-hp'),

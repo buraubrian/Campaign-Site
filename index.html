@@ -1970,23 +1970,67 @@ async function loadCharacterEquipment(characterId) {
         </div>`;
     }
 
-    // ── ARMOR ──
-    if (item.item_type === 'armor') {
-      const a = armorById[item.item_id];
-      const name = a ? a.name : `Armor #${item.item_id}`;
-      return `
-        <div class="weapon-card-display" style="padding:1rem;margin-bottom:0.75rem">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem">
-            <div>
-              <div style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:0.95rem">${name}</div>
-              ${a ? `<div style="font-size:0.75rem;color:var(--muted)">Base Score: ${a.base_score} · Tier ${a.tier}</div>` : ''}
-            </div>
-            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">
-              ${itemActions(item)}
-            </div>
+   // ── ARMOR ──
+if (item.item_type === 'armor') {
+  const a = armorById[item.item_id];
+  const name = a ? a.name : `Armor #${item.item_id}`;
+
+  return `
+    <div class="weapon-card-display" style="padding:1rem;margin-bottom:0.75rem">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem">
+
+        <div>
+          <div style="
+            font-family:'Cinzel',serif;
+            color:var(--gold-light);
+            font-size:0.95rem;
+          ">
+            ${name}
           </div>
-        </div>`;
-    }
+
+          ${a ? `
+            <div style="
+              font-size:0.75rem;
+              color:var(--muted);
+              margin-top:0.2rem;
+            ">
+              Armor Score ${a.base_score} · Tier ${a.tier}
+            </div>
+          ` : ''}
+        </div>
+
+        <div style="
+          display:flex;
+          align-items:center;
+          gap:0.4rem;
+          flex-wrap:wrap;
+        ">
+
+          ${item.is_equipped
+            ? `
+              <span class="vault-label loadout">Equipped</span>
+
+              <button
+                class="btn btn-ghost btn-sm"
+                onclick="unequipCharacterArmor('${characterId}', ${item.id})">
+                Unequip
+              </button>
+            `
+            : `
+              <button
+                class="btn btn-gold btn-sm"
+                onclick="equipCharacterArmor('${characterId}', ${item.id})">
+                Equip
+              </button>
+            `
+          }
+
+          ${itemActions(item)}
+
+        </div>
+      </div>
+    </div>`;
+}
 
     // ── FALLBACK (custom/other items) ──
     return `
@@ -2598,6 +2642,169 @@ if (category !== 'weapons') {
   toast('Weapon added to equipment!', 'success');
 
   // Refresh the character's Equipment list behind the panel
+  await loadCharacterEquipment(characterId);
+}
+ async function equipCharacterArmor(characterId, characterItemId) {
+
+  // Get this inventory item
+  const { data: item, error: itemError } = await sb
+    .from('character_items')
+    .select('*')
+    .eq('id', characterItemId)
+    .eq('character_id', characterId)
+    .single();
+
+  if (itemError || !item) {
+    toast('Could not find that armor', 'error');
+    return;
+  }
+
+  if (item.item_type !== 'armor') {
+    toast('That item is not armor', 'error');
+    return;
+  }
+
+  // Load armor information
+  const { data: armor, error: armorError } = await sb
+    .from('armor')
+    .select('id,name')
+    .eq('id', item.item_id)
+    .single();
+
+  if (armorError || !armor) {
+    toast('Could not load armor details', 'error');
+    return;
+  }
+
+  // Only one armor can be equipped.
+  // Unequip any armor currently being worn.
+  const { error: clearError } = await sb
+    .from('character_items')
+    .update({
+      is_equipped: false,
+      equipment_slot: null
+    })
+    .eq('character_id', characterId)
+    .eq('item_type', 'armor')
+    .eq('is_equipped', true);
+
+  if (clearError) {
+    toast(
+      'Could not change equipped armor: ' + clearError.message,
+      'error'
+    );
+    return;
+  }
+
+  // Equip selected armor
+  const { error: equipError } = await sb
+    .from('character_items')
+    .update({
+      is_equipped: true,
+      equipment_slot: 'armor'
+    })
+    .eq('id', characterItemId)
+    .eq('character_id', characterId);
+
+  if (equipError) {
+    toast(
+      'Could not equip armor: ' + equipError.message,
+      'error'
+    );
+    return;
+  }
+
+  // Keep old armor_name character field synchronized for now
+  const { error: characterError } = await sb
+    .from('characters')
+    .update({
+      armor_name: armor.name,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', characterId);
+
+  if (characterError) {
+    toast(
+      'Armor equipped, but character sheet sync failed: ' +
+      characterError.message,
+      'error'
+    );
+    return;
+  }
+
+  // Keep local character data synchronized
+  if (charPageData?.id === characterId) {
+    charPageData.armor_name = armor.name;
+  }
+
+  toast(`${armor.name} equipped!`, 'success');
+
+  await loadCharacterEquipment(characterId);
+} 
+  async function unequipCharacterArmor(characterId, characterItemId) {
+
+  const { data: item, error: itemError } = await sb
+    .from('character_items')
+    .select('*')
+    .eq('id', characterItemId)
+    .eq('character_id', characterId)
+    .single();
+
+  if (itemError || !item) {
+    toast('Could not find that equipped armor', 'error');
+    return;
+  }
+
+  const { data: armor } = await sb
+    .from('armor')
+    .select('name')
+    .eq('id', item.item_id)
+    .single();
+
+  const { error } = await sb
+    .from('character_items')
+    .update({
+      is_equipped: false,
+      equipment_slot: null
+    })
+    .eq('id', characterItemId)
+    .eq('character_id', characterId);
+
+  if (error) {
+    toast(
+      'Could not unequip armor: ' + error.message,
+      'error'
+    );
+    return;
+  }
+
+  // Clear old legacy armor field
+  const { error: characterError } = await sb
+    .from('characters')
+    .update({
+      armor_name: '',
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', characterId);
+
+  if (characterError) {
+    toast(
+      'Armor unequipped, but character sheet sync failed: ' +
+      characterError.message,
+      'error'
+    );
+    return;
+  }
+
+  if (charPageData?.id === characterId) {
+    charPageData.armor_name = '';
+  }
+
+  toast(
+    `${armor?.name || 'Armor'} unequipped`,
+    'success'
+  );
+
   await loadCharacterEquipment(characterId);
 }
  async function equipCharacterWeapon(characterId, characterItemId) {

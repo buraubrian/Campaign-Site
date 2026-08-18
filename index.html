@@ -265,7 +265,33 @@ select option { background: var(--panel); }
 .vault-toggle-btn { font-family:'Cinzel',serif; font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase; padding:0.4rem 1rem; border-radius:var(--radius); border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; transition:all 0.2s; }
 .vault-toggle-btn.active { border-color:var(--gold); color:var(--gold-light); background:rgba(201,149,58,0.08); }
 
+/* ── Stat Information Button ── */
+.stat-info-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ruby);
+  background: transparent;
+  color: var(--ruby);
+  font-family: Georgia, serif;
+  font-size: 12px;
+  font-weight: bold;
+  font-style: italic;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
 
+.stat-info-btn:hover {
+  background: rgba(155,35,53,0.15);
+  color: #e87b8a;
+  border-color: #e87b8a;
+}
 /* ── Stat Box ── */
 .stat-box { background: rgba(14,11,20,0.5); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.65rem 0.5rem; text-align: center; }
 .stat-label { font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 0.2rem; }
@@ -1193,7 +1219,57 @@ const ATTRIBUTE_SKILLS = {
   knowledge: ['Recall', 'Analyze', 'Comprehend'],
 };
 function fmtMod(n) { n = parseInt(n)||0; return (n>=0?'+':'') + n; }
+function showStatBreakdown(title, total, parts = []) {
+  const lines = parts.map(part => `
+    <div style="
+      display:flex;
+      justify-content:space-between;
+      gap:1rem;
+      padding:0.35rem 0;
+      border-bottom:1px solid rgba(61,47,92,0.4);
+    ">
+      <span>${part.label}</span>
+      <strong style="color:var(--gold-light)">
+        ${Number(part.value) >= 0 ? '+' : ''}${part.value}
+      </strong>
+    </div>
+  `).join('');
 
+  const html = `
+    <div class="modal-overlay open" id="stat-breakdown-modal">
+      <div class="modal-box" style="max-width:420px">
+        <button
+          class="modal-close"
+          onclick="document.getElementById('stat-breakdown-modal').remove()">
+          ✕
+        </button>
+
+        <h3>${title}</h3>
+
+        <div style="margin-bottom:1rem">
+          ${lines || `
+            <div style="color:var(--muted)">
+              No modifiers are currently affecting this value.
+            </div>
+          `}
+        </div>
+
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          border-top:1px solid var(--gold);
+          padding-top:0.65rem;
+          font-family:'Cinzel',serif;
+        ">
+          <span>Total</span>
+          <strong style="color:var(--gold-light)">${total}</strong>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', html);
+}
 function togglePassword(inputId, iconId) {
   const input = document.getElementById(inputId);
   const icon = document.getElementById(iconId);

@@ -2860,10 +2860,9 @@ if (category !== 'weapons') {
     return;
   }
 
-  toast(`${armor.name} equipped!`, 'success');
+toast('Armor added to equipment!', 'success');
 
 await loadCharacterEquipment(characterId);
-await loadCalculatedArmor(characterId);
 }
   async function addWeaponToCharacterInventory(characterId, weaponId) {
   if (!characterId || !weaponId) {
@@ -3006,9 +3005,10 @@ await loadCalculatedArmor(characterId);
     charPageData.armor_name = armor.name;
   }
 
-  toast(`${armor.name} equipped!`, 'success');
+ toast(`${armor.name} equipped!`, 'success');
 
-  await loadCharacterEquipment(characterId);
+await loadCharacterEquipment(characterId);
+await loadCalculatedArmor(characterId);
 } 
   async function unequipCharacterArmor(characterId, characterItemId) {
 
@@ -3075,6 +3075,7 @@ await loadCalculatedArmor(characterId);
   );
 
   await loadCharacterEquipment(characterId);
+await loadCalculatedArmor(characterId);
 }
  async function equipCharacterWeapon(characterId, characterItemId) {
   // Get the inventory row

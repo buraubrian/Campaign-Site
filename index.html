@@ -282,6 +282,14 @@ select option { background: var(--panel); }
   justify-content: flex-start;
   margin-top: 0.5rem;
 }
+  .hp-heart-row {
+  display: grid;
+  grid-template-columns: repeat(12, 24px);
+  gap: 8px;
+  align-items: center;
+  justify-content: start;
+  margin-top: 0.5rem;
+}
 
 .pip {
   flex-shrink: 0;
@@ -1674,9 +1682,9 @@ function renderSheetHTML(c) {
   />
 </h3>
 
-<div class="pip-row">
-  <div id="pip-hp" style="display:flex;gap:8px"></div>
-  <div id="pip-temp-hp" style="display:flex;gap:8px;margin-left:6px"></div>
+<div class="hp-heart-row">
+  <div id="pip-hp" style="display:contents"></div>
+  <div id="pip-temp-hp" style="display:contents"></div>
 </div>
     </div>
     <div class="card" style="margin-bottom:0">

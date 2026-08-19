@@ -1442,18 +1442,20 @@ const parts = [];
 const minorParts = [];
 const majorParts = [];
 const severeParts = [];
-  // If armor is equipped, get its base Armor Score
+  const characterLevel = Number(charPageData?.level) || 1;
+
+  // If armor is equipped, get its base Armor Score and thresholds.
   if (armorItem) {
     const { data: armor, error: armorError } = await sb
       .from('armor')
-     .select(`
-  id,
-  name,
-  base_score,
-  base_threshold_major,
-  base_threshold_severe,
-  armor_feature_id
-`)
+      .select(`
+        id,
+        name,
+        base_score,
+        base_threshold_major,
+        base_threshold_severe,
+        armor_feature_id
+      `)
       .eq('id', armorItem.item_id)
       .single();
 
@@ -1462,36 +1464,63 @@ const severeParts = [];
       return;
     }
 
-if (armor) {
-  const baseScore = Number(armor.base_score) || 0;
-  const baseMajor = Number(armor.base_threshold_major) || 0;
-  const baseSevere = Number(armor.base_threshold_severe) || 0;
+    if (armor) {
+      const baseScore = Number(armor.base_score) || 0;
+      const baseMajor = Number(armor.base_threshold_major) || 0;
+      const baseSevere = Number(armor.base_threshold_severe) || 0;
 
-  total += baseScore;
-  minorThreshold += baseScore;
-  majorThreshold += baseMajor;
-  severeThreshold += baseSevere;
+      total += baseScore;
+      minorThreshold += baseScore;
+      majorThreshold += baseMajor;
+      severeThreshold += baseSevere;
 
-  parts.push({
-    label: armor.name,
-    value: baseScore
-  });
+      parts.push({
+        label: armor.name,
+        value: baseScore
+      });
 
-  minorParts.push({
-    label: armor.name,
-    value: baseScore
-  });
+      minorParts.push({
+        label: armor.name,
+        value: baseScore
+      });
 
-  majorParts.push({
-    label: armor.name,
-    value: baseMajor
-  });
+      majorParts.push({
+        label: armor.name,
+        value: baseMajor
+      });
 
-  severeParts.push({
-    label: armor.name,
-    value: baseSevere
-  });
-}
+      severeParts.push({
+        label: armor.name,
+        value: baseSevere
+      });
+    }
+  } else {
+    // Daggerheart unarmored values:
+    // Armor Score 0, Minor 0, Major = level, Severe = level x 2.
+    total = 0;
+    minorThreshold = 0;
+    majorThreshold = characterLevel;
+    severeThreshold = characterLevel * 2;
+
+    parts.push({
+      label: 'Unarmored',
+      value: 0
+    });
+
+    minorParts.push({
+      label: 'Unarmored',
+      value: 0
+    });
+
+    majorParts.push({
+      label: `Level ${characterLevel}`,
+      value: characterLevel
+    });
+
+    severeParts.push({
+      label: `Level ${characterLevel} x 2`,
+      value: severeThreshold
+    });
   }
 
   // Save the breakdown for the hover card

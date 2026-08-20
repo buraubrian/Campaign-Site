@@ -2997,9 +2997,19 @@ function renderSheetHTML(c) {
           ${isSheetLocked() ? lockedPicker(c.community) : `<button class="picker-trigger${c.community?' has-value':''}" style="min-width:110px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('communities','s-community','Community')"><span>${c.community||'Choose…'}</span><span class="pt-arrow">▼</span></button><div class="ls-info-panel" id="community-info" style="display:none;max-width:200px"></div>`}
           <input type="hidden" id="s-community" value="${c.community||''}" />
         </div>
-      </div>
-    </div>
-    <div class="level-badge">
+         </div>
+  </div>
+
+  ${currentCampaign && c.campaign_id === currentCampaign.id ? `
+    <button
+      class="btn btn-gold btn-sm"
+      onclick="openDowntimeModal()"
+      style="margin-left:auto">
+      Downtime
+    </button>
+  ` : ''}
+
+  <div class="level-badge">
       ${isSheetLocked() ? `<div style="font-family:'Cinzel Decorative',serif;font-size:1.3rem;color:var(--gold-light)">${c.level||1}</div>` : `<input type="number" id="s-level" value="${c.level||1}" min="1" max="10" />`}
       <div class="lvl-lbl">Level</div>
     </div>

@@ -1035,8 +1035,19 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
       <div class="section-header">
         <h2>My Characters</h2>
         <div class="section-actions">
-          <button class="btn btn-gold btn-sm" onclick="openCharCreator()">+ New Character</button>
-        </div>
+  <button
+    class="btn btn-ghost btn-sm"
+    id="view-all-characters-btn"
+    onclick="openAllCharacters()">
+    View All
+  </button>
+
+  <button
+    class="btn btn-gold btn-sm"
+    onclick="openCharCreator()">
+    + New Character
+  </button>
+</div>
       </div>
       <div id="my-characters" class="char-mini-grid"><div class="loading">Loading characters…</div></div>
       <hr style="margin:2rem 0">
@@ -1067,6 +1078,36 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
       </div>
     </div>
   </div>
+  <!-- ALL CHARACTERS -->
+<div id="view-all-characters" class="view" style="display:none">
+
+  <div class="main-content">
+
+    <div class="section-header">
+      <h2>All Characters</h2>
+
+      <div class="section-actions">
+        <button
+          class="btn btn-ghost btn-sm"
+          onclick="goHome()">
+          ← Back
+        </button>
+
+        <button
+          class="btn btn-gold btn-sm"
+          onclick="openCharCreator()">
+          + New Character
+        </button>
+      </div>
+    </div>
+
+    <div id="all-characters" class="char-mini-grid">
+      <div class="loading">Loading characters…</div>
+    </div>
+
+  </div>
+
+</div>
   <div id="view-campaign" class="view" style="display:none">
     <div class="tab-nav" id="campaign-tabs"></div>
     <div class="main-content">
@@ -2105,22 +2146,32 @@ function goHome() { showView('view-home'); loadHome(); }
 /* ═══════════════════════════════════════════════════════
    HOME
 ════════════════════════════════════════════════════════ */
-async function loadHome() {
+  async function loadHome() {
   loadMyCharacters();
   loadMyCampaigns();
 }
 
 async function loadMyCharacters() {
   const el = document.getElementById('my-characters');
-  const { data: chars } = await sb.from('characters')
+
+  const { data: chars } = await sb
+    .from('characters')
     .select('*')
     .eq('owner_id', currentUser.id)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false });
-  if (!chars || chars.length === 0) {
+    .is('deleted_at', null);
+
+  const sortedChars = [...(chars || [])].sort((a, b) => {
+    const aDate = new Date(a.updated_at || a.created_at || 0);
+    const bDate = new Date(b.updated_at || b.created_at || 0);
+
+    return bDate - aDate;
+  });
+
+  const visibleChars = sortedChars.slice(0, 3);
+  if (!sortedChars.length) {
     el.innerHTML = '<div class="empty-state">No characters yet. Create your first hero!</div>'; return;
   }
-  el.innerHTML = chars.map(c => {
+  el.innerHTML = visibleChars.map(c => {
     const classLine = [c.class, c.subclass].filter(Boolean).join(' · ') || 'No class set';
     const heritageLine = `Level ${c.level||1} · ${c.ancestry||'Unknown ancestry'}`;
     const isComplete = c.class && c.ancestry;
@@ -2141,7 +2192,119 @@ async function loadMyCharacters() {
     </div>`;
   }).join('');
 }
+async function openAllCharacters() {
+  showView('view-all-characters');
+  await loadAllCharacters();
+}
 
+async function loadAllCharacters() {
+  const el = document.getElementById('all-characters');
+  if (!el) return;
+
+  el.innerHTML = `
+    <div class="loading">
+      Loading characters…
+    </div>
+  `;
+
+  const { data: chars, error } = await sb
+    .from('characters')
+    .select('*')
+    .eq('owner_id', currentUser.id)
+    .is('deleted_at', null);
+
+  if (error) {
+    el.innerHTML = `
+      <div class="empty-state" style="color:var(--ruby)">
+        Could not load characters: ${error.message}
+      </div>
+    `;
+    return;
+  }
+
+  const sortedChars = [...(chars || [])].sort((a, b) => {
+    const aDate = new Date(a.updated_at || a.created_at || 0);
+    const bDate = new Date(b.updated_at || b.created_at || 0);
+
+    return bDate - aDate;
+  });
+
+  if (!sortedChars.length) {
+    el.innerHTML = `
+      <div class="empty-state">
+        No characters yet. Create your first hero!
+      </div>
+    `;
+    return;
+  }
+
+  el.innerHTML = sortedChars.map(c => {
+    const classLine =
+      [c.class, c.subclass]
+        .filter(Boolean)
+        .join(' · ') || 'No class set';
+
+    const heritageLine =
+      `Level ${c.level || 1} · ${c.ancestry || 'Unknown ancestry'}`;
+
+    const isComplete = c.class && c.ancestry;
+
+    return `
+      <div class="char-mini-card">
+
+        <h4>
+          ${c.name || 'Unnamed Hero'}
+          ${
+            c.sheet_locked
+              ? `
+                <span
+                  title="Locked — assigned to a campaign"
+                  style="color:var(--gold);font-size:0.85rem">
+                  🔒
+                </span>
+              `
+              : ''
+          }
+        </h4>
+
+        <p>${classLine}</p>
+        <p>${heritageLine}</p>
+
+        <div class="char-card-footer">
+
+          <button
+            class="btn btn-gold btn-sm"
+            onclick="openCharPage('${c.id}','sheet')">
+            View Sheet
+          </button>
+
+          ${
+            c.campaign_id == null
+              ? `
+                <button
+                  class="btn btn-ghost btn-sm"
+                  onclick="openCharPage('${c.id}','builder')">
+                  ${isComplete ? 'Edit' : 'Continue Building'}
+                </button>
+              `
+              : ''
+          }
+
+          <button
+            class="btn btn-danger btn-sm"
+            onclick="softDeleteCharacter(
+              '${c.id}',
+              '${(c.name || 'this character').replace(/'/g,"\\'")}'
+            )">
+            Delete
+          </button>
+
+        </div>
+
+      </div>
+    `;
+  }).join('');
+}
 async function loadMyCampaigns() {
   const el = document.getElementById('my-campaigns');
   // campaigns I GM (include deleted ones for the deleted section)

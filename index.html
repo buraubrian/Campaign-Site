@@ -7105,7 +7105,31 @@ if (table === 'weapons') {
   // Only show weapons available at this tier or lower
   qb = qb.lte('tier', levelRow.tier);
 }
+// filter armor by character tier
+if (table === 'armor') {
 
+  // Determine current character level
+  const characterLevel =
+    charPageData?.level ||
+    wizardData?.level ||
+    1;
+
+  // Convert level to tier
+  const { data: levelRow, error: levelError } = await sb
+    .from('levels')
+    .select('tier')
+    .eq('level', characterLevel)
+    .single();
+
+  if (levelError || !levelRow) {
+    document.getElementById('picker-body').innerHTML =
+      `<div class="picker-empty">Could not determine armor tier.</div>`;
+    return;
+  }
+
+  // Only show armor available at this tier or lower
+  qb = qb.lte('tier', levelRow.tier);
+}
 const { data, error } = await qb;
 
 if (error) {

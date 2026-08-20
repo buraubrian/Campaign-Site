@@ -1055,8 +1055,18 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
       <div class="section-header">
         <h2>My Campaigns</h2>
         <div class="section-actions">
-          <button class="btn btn-gold btn-sm" onclick="openModal('modal-new-campaign')">+ New Campaign</button>
-        </div>
+  <button
+    class="btn btn-ghost btn-sm"
+    onclick="openAllCampaigns()">
+    View All
+  </button>
+
+  <button
+    class="btn btn-gold btn-sm"
+    onclick="openModal('modal-new-campaign')">
+    + New Campaign
+  </button>
+</div>
       </div>
       <div id="my-campaigns" class="campaign-grid"><div class="loading">Loading campaigns…</div></div>
 
@@ -1078,7 +1088,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
       </div>
     </div>
   </div>
-  <!-- ALL CHARACTERS -->
+<!-- ALL CHARACTERS -->
 <div id="view-all-characters" class="view" style="display:none">
 
   <div class="main-content">
@@ -1108,21 +1118,59 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
   </div>
 
 </div>
-  <div id="view-campaign" class="view" style="display:none">
-    <div class="tab-nav" id="campaign-tabs"></div>
-    <div class="main-content">
-      <!-- Player Tabs -->
-      <div id="tab-my-sheet" class="tab-panel"></div>
-      <div id="tab-wiki" class="tab-panel"></div>
-      <div id="tab-handouts" class="tab-panel"></div>
-      <div id="tab-dice" class="tab-panel"></div>
-      <!-- GM Tabs -->
-      <div id="tab-players" class="tab-panel"></div>
-      <div id="tab-npcs" class="tab-panel"></div>
-      <div id="tab-encounters" class="tab-panel"></div>
-      <div id="tab-gm-notes" class="tab-panel"></div>
+
+
+<!-- ALL CAMPAIGNS -->
+<div id="view-all-campaigns" class="view" style="display:none">
+
+  <div class="main-content">
+
+    <div class="section-header">
+      <h2>All Campaigns</h2>
+
+      <div class="section-actions">
+        <button
+          class="btn btn-ghost btn-sm"
+          onclick="goHome()">
+          ← Back
+        </button>
+
+        <button
+          class="btn btn-gold btn-sm"
+          onclick="openModal('modal-new-campaign')">
+          + New Campaign
+        </button>
+      </div>
     </div>
+
+    <div id="all-campaigns" class="campaign-grid">
+      <div class="loading">Loading campaigns…</div>
+    </div>
+
   </div>
+
+</div>
+
+
+<div id="view-campaign" class="view" style="display:none">
+  <div class="tab-nav" id="campaign-tabs"></div>
+
+  <div class="main-content">
+
+    <!-- Player Tabs -->
+    <div id="tab-my-sheet" class="tab-panel"></div>
+    <div id="tab-wiki" class="tab-panel"></div>
+    <div id="tab-handouts" class="tab-panel"></div>
+    <div id="tab-dice" class="tab-panel"></div>
+
+    <!-- GM Tabs -->
+    <div id="tab-players" class="tab-panel"></div>
+    <div id="tab-npcs" class="tab-panel"></div>
+    <div id="tab-encounters" class="tab-panel"></div>
+    <div id="tab-gm-notes" class="tab-panel"></div>
+
+  </div>
+</div>
 
   <!-- CHARACTER PAGE (Sheet + Builder tabs) -->
   <div id="view-char-page" class="view" style="display:none">
@@ -2318,10 +2366,18 @@ async function loadMyCampaigns() {
     ...(gmCamps || []).filter(c => !c.deleted_at).map(c => ({...c, role:'gm'})),
     ...playerCamps.filter(c => !c.deleted_at).map(c => ({...c, role:'player'}))
   ];
-  if (activeCamps.length === 0) {
+  const sortedCamps = [...activeCamps].sort((a, b) => {
+  const aDate = new Date(a.updated_at || a.created_at || 0);
+  const bDate = new Date(b.updated_at || b.created_at || 0);
+
+  return bDate - aDate;
+});
+
+const visibleCamps = sortedCamps.slice(0, 3);
+  if (sortedCamps.length === 0) {
     el.innerHTML = '<div class="empty-state">No campaigns yet. Create one or ask your GM to add you!</div>';
   } else {
-    el.innerHTML = activeCamps.map(c => `
+    el.innerHTML = visibleCamps.map(c => `
       <div class="campaign-card ${c.role==='gm'?'gm-card':''}">
         <div onclick="openCampaign('${c.id}','${c.role}')" style="cursor:pointer">
           <h3>${c.name}</h3>
@@ -2339,7 +2395,126 @@ async function loadMyCampaigns() {
   // load deleted section
   loadDeletedItems(gmCamps || []);
 }
+async function openAllCampaigns() {
+  showView('view-all-campaigns');
+  await loadAllCampaigns();
+}
 
+async function loadAllCampaigns() {
+  const el = document.getElementById('all-campaigns');
+  if (!el) return;
+
+  el.innerHTML = `
+    <div class="loading">
+      Loading campaigns…
+    </div>
+  `;
+
+  const { data: gmCamps, error: gmError } = await sb
+    .from('campaigns')
+    .select('*')
+    .eq('gm_id', currentUser.id);
+
+  if (gmError) {
+    el.innerHTML = `
+      <div class="empty-state" style="color:var(--ruby)">
+        Could not load campaigns: ${gmError.message}
+      </div>
+    `;
+    return;
+  }
+
+  const { data: memberRows, error: memberError } = await sb
+    .from('campaign_members')
+    .select('campaign_id, campaigns(*)')
+    .eq('player_id', currentUser.id);
+
+  if (memberError) {
+    el.innerHTML = `
+      <div class="empty-state" style="color:var(--ruby)">
+        Could not load campaigns: ${memberError.message}
+      </div>
+    `;
+    return;
+  }
+
+  const playerCamps = (memberRows || [])
+    .map(r => r.campaigns)
+    .filter(Boolean);
+
+  const activeCamps = [
+    ...(gmCamps || [])
+      .filter(c => !c.deleted_at)
+      .map(c => ({ ...c, role: 'gm' })),
+
+    ...playerCamps
+      .filter(c => !c.deleted_at)
+      .map(c => ({ ...c, role: 'player' }))
+  ];
+
+  const sortedCamps = [...activeCamps].sort((a, b) => {
+    const aDate = new Date(a.updated_at || a.created_at || 0);
+    const bDate = new Date(b.updated_at || b.created_at || 0);
+
+    return bDate - aDate;
+  });
+
+  if (!sortedCamps.length) {
+    el.innerHTML = `
+      <div class="empty-state">
+        No campaigns yet. Create one or ask your GM to add you!
+      </div>
+    `;
+    return;
+  }
+
+  el.innerHTML = sortedCamps.map(c => `
+    <div class="campaign-card ${c.role === 'gm' ? 'gm-card' : ''}">
+
+      <div
+        onclick="openCampaign('${c.id}','${c.role}')"
+        style="cursor:pointer">
+
+        <h3>${c.name}</h3>
+
+        <p>
+          ${c.description || c.game_system || 'No description'}
+        </p>
+
+        <span class="campaign-role role-${c.role}">
+          ${c.role === 'gm' ? '⚔ Game Master' : '🎲 Player'}
+        </span>
+
+      </div>
+
+      ${
+        c.role === 'gm'
+          ? `
+            <div style="
+              margin-top:0.75rem;
+              padding-top:0.75rem;
+              border-top:1px solid var(--border);
+              display:flex;
+              justify-content:flex-end;
+            ">
+
+              <button
+                class="btn btn-danger btn-sm"
+                onclick="softDeleteCampaign(
+                  '${c.id}',
+                  '${c.name.replace(/'/g,"\\'")}'
+                )">
+                Delete Campaign
+              </button>
+
+            </div>
+          `
+          : ''
+      }
+
+    </div>
+  `).join('');
+}
 /* ═══════════════════════════════════════════════════════
    SOFT DELETE & RESTORE
 ════════════════════════════════════════════════════════ */

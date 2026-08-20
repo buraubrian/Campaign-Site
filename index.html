@@ -703,6 +703,48 @@ select option { background: var(--panel); }
 .weapon-card-display .w-dice { position: absolute; top: 0.65rem; right: 0.85rem; font-family: 'Cinzel', serif; color: var(--gold-light); font-size: 0.95rem; }
 .weapon-card-display input.w-name { background: transparent; border: none; font-family: 'Cinzel', serif; font-size: 0.92rem; color: var(--text); padding: 0; width: 70%; margin-bottom: 0.15rem; }
 .weapon-card-display .w-meta { font-size: 0.7rem; color: var(--muted); }
+
+  .downtime-floating-card {
+  position: fixed;
+  width: 280px;
+
+  background: var(--panel);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-lg);
+
+  padding: 1rem;
+
+  box-shadow: 0 12px 32px rgba(0,0,0,0.55);
+
+  z-index: 500;
+  cursor: move;
+
+  user-select: none;
+}
+
+.downtime-floating-title {
+  font-family: 'Cinzel', serif;
+  color: var(--gold-light);
+  font-size: 0.9rem;
+  margin-bottom: 0.35rem;
+}
+
+.downtime-floating-text {
+  color: var(--text);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.downtime-floating-hint {
+  margin-top: 0.65rem;
+  padding-top: 0.5rem;
+
+  border-top: 1px solid var(--border);
+
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-align: right;
+}
 /* ── Compact Equipment Layout ── */
 .equipment-section-title {
   font-family: 'Cinzel', serif;
@@ -2964,18 +3006,355 @@ function switchCampaignTab(id) {
   if (id === 'gm-notes') loadGMNotesTab();
 }
 function openDowntimeModal() {
+  resetDowntimeRestChoice();
   openModal('modal-downtime');
 }
 
-function chooseDowntimeRest(restType) {
-  console.log('Downtime rest selected:', restType);
+let downtimeRestType = null;
+let downtimeSelections = [];
+let downtimeActions = [];
 
-  toast(
-    restType === 'short'
-      ? 'Short Rest selected'
-      : 'Long Rest selected',
-    'success'
-  );
+async function chooseDowntimeRest(restType) {
+  downtimeRestType = restType;
+  downtimeSelections = [];
+
+  const content = document.getElementById('downtime-content');
+
+  content.innerHTML = `
+    <div class="loading">
+      Loading downtime moves…
+    </div>
+  `;
+
+  const { data: actions, error } = await sb
+    .from('rest_actions')
+    .select('*')
+    .in('rest_type', [restType, 'both'])
+    .order('display_order');
+
+  if (error) {
+    content.innerHTML = `
+      <div class="empty-state" style="color:var(--ruby)">
+        Could not load downtime moves: ${error.message}
+      </div>
+    `;
+    return;
+  }
+
+  downtimeActions = actions || [];
+
+  renderDowntimeChoices();
+}
+  function renderDowntimeChoices() {
+  const content = document.getElementById('downtime-content');
+
+  const totalSelected = downtimeSelections.length;
+
+  content.innerHTML = `
+    <div style="
+      text-align:center;
+      margin-bottom:1rem;
+    ">
+      <div style="
+        font-family:'Cinzel',serif;
+        color:var(--gold-light);
+        font-size:0.95rem;
+        margin-bottom:0.25rem;
+      ">
+        ${downtimeRestType === 'short' ? 'Short Rest' : 'Long Rest'}
+      </div>
+
+      <div style="
+        color:var(--muted);
+        font-size:0.85rem;
+      ">
+        Select 2 downtime moves. You may choose the same move twice.
+      </div>
+    </div>
+
+    <div style="
+      display:flex;
+      flex-direction:column;
+      gap:0.65rem;
+    ">
+      ${downtimeActions.map(action => {
+        const count = downtimeSelections.filter(
+          id => id === action.id
+        ).length;
+
+        return `
+          <div class="card card-sm" style="margin:0">
+
+            <div style="
+              display:flex;
+              justify-content:space-between;
+              align-items:center;
+              gap:1rem;
+            ">
+
+              <div style="flex:1">
+
+                <div style="
+                  font-family:'Cinzel',serif;
+                  color:var(--gold-light);
+                  font-size:0.88rem;
+                ">
+                  ${action.name}
+                </div>
+
+                <div style="
+                  font-size:0.78rem;
+                  color:var(--muted);
+                  margin-top:0.2rem;
+                  line-height:1.4;
+                ">
+                  ${action.rules_text || ''}
+                </div>
+
+              </div>
+
+              <div style="
+                display:flex;
+                align-items:center;
+                gap:0.45rem;
+                flex-shrink:0;
+              ">
+
+                <button
+                  class="btn btn-ghost btn-sm"
+                  onclick="removeDowntimeChoice(${action.id})"
+                  ${count === 0 ? 'disabled' : ''}>
+                  −
+                </button>
+
+                <span style="
+                  min-width:20px;
+                  text-align:center;
+                  font-family:'Cinzel',serif;
+                  color:var(--gold-light);
+                ">
+                  ${count}
+                </span>
+
+                <button
+                  class="btn btn-gold btn-sm"
+                  onclick="addDowntimeChoice(${action.id})"
+                  ${totalSelected >= 2 ? 'disabled' : ''}>
+                  +
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+        `;
+      }).join('')}
+    </div>
+
+    <div style="
+      margin-top:1rem;
+      padding-top:1rem;
+      border-top:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:1rem;
+    ">
+
+      <button
+        class="btn btn-ghost btn-sm"
+        onclick="resetDowntimeRestChoice()">
+        ← Back
+      </button>
+
+      <div style="
+        font-family:'Cinzel',serif;
+        font-size:0.75rem;
+        color:${totalSelected === 2 ? 'var(--gold-light)' : 'var(--muted)'};
+      ">
+        Selected ${totalSelected} / 2
+      </div>
+
+      <button
+        class="btn btn-gold btn-sm"
+        onclick="continueDowntime()"
+        ${totalSelected !== 2 ? 'disabled' : ''}>
+        Continue
+      </button>
+
+    </div>
+  `;
+}
+  function addDowntimeChoice(actionId) {
+  if (downtimeSelections.length >= 2) return;
+
+  downtimeSelections.push(actionId);
+
+  renderDowntimeChoices();
+}
+
+function removeDowntimeChoice(actionId) {
+  const index = downtimeSelections.lastIndexOf(actionId);
+
+  if (index === -1) return;
+
+  downtimeSelections.splice(index, 1);
+
+  renderDowntimeChoices();
+}
+  function resetDowntimeRestChoice() {
+  downtimeRestType = null;
+  downtimeSelections = [];
+  downtimeActions = [];
+
+  document.getElementById('downtime-content').innerHTML = `
+    <div style="
+      font-family:'Cinzel',serif;
+      font-size:0.78rem;
+      letter-spacing:0.12em;
+      text-transform:uppercase;
+      color:var(--muted);
+      text-align:center;
+      margin-bottom:0.85rem;
+    ">
+      Rest Type
+    </div>
+
+    <div style="
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:0.75rem;
+    ">
+
+      <button
+        class="btn btn-gold"
+        style="justify-content:center;padding:1rem"
+        onclick="chooseDowntimeRest('short')">
+        Short Rest
+      </button>
+
+      <button
+        class="btn btn-sapphire"
+        style="justify-content:center;padding:1rem"
+        onclick="chooseDowntimeRest('long')">
+        Long Rest
+      </button>
+
+    </div>
+  `;
+}
+ function continueDowntime() {
+  if (downtimeSelections.length !== 2) return;
+
+  const selectedActions = downtimeSelections
+    .map(id => downtimeActions.find(action => action.id === id))
+    .filter(Boolean);
+
+  if (selectedActions.length !== 2) return;
+
+  closeModal('modal-downtime');
+
+  clearDowntimeFloatingCards();
+
+  selectedActions.forEach((action, index) => {
+    createDowntimeFloatingCard(action, index);
+  });
+}
+  function clearDowntimeFloatingCards() {
+  document
+    .querySelectorAll('.downtime-floating-card')
+    .forEach(card => card.remove());
+}
+
+
+function createDowntimeFloatingCard(action, index) {
+  const card = document.createElement('div');
+
+  card.className = 'downtime-floating-card';
+
+  card.dataset.actionId = action.id;
+
+  // Put the first and second cards beside each other.
+  card.style.left = `${40 + (index * 300)}px`;
+  card.style.top = '140px';
+
+  card.innerHTML = `
+    <div class="downtime-floating-title">
+      ${action.name}
+    </div>
+
+    <div class="downtime-floating-text">
+      ${action.rules_text || ''}
+    </div>
+
+    ${
+      action.effect_roll
+        ? `
+          <div style="
+            margin-top:0.45rem;
+            color:var(--amethyst);
+            font-family:'Cinzel',serif;
+            font-size:0.72rem;
+          ">
+            ${action.effect_roll}
+          </div>
+        `
+        : ''
+    }
+
+    <div class="downtime-floating-hint">
+      Drag to move
+    </div>
+  `;
+
+  document.body.appendChild(card);
+
+  makeDowntimeCardDraggable(card);
+}
+  function makeDowntimeCardDraggable(card) {
+  let dragging = false;
+
+  let offsetX = 0;
+  let offsetY = 0;
+
+  card.addEventListener('mousedown', event => {
+    dragging = true;
+
+    const rect = card.getBoundingClientRect();
+
+    offsetX = event.clientX - rect.left;
+    offsetY = event.clientY - rect.top;
+
+    card.style.zIndex = '550';
+  });
+
+  document.addEventListener('mousemove', event => {
+    if (!dragging) return;
+
+    let left = event.clientX - offsetX;
+    let top = event.clientY - offsetY;
+
+    const maxLeft =
+      window.innerWidth - card.offsetWidth;
+
+    const maxTop =
+      window.innerHeight - card.offsetHeight;
+
+    left = Math.max(0, Math.min(left, maxLeft));
+    top = Math.max(0, Math.min(top, maxTop));
+
+    card.style.left = `${left}px`;
+    card.style.top = `${top}px`;
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+
+    dragging = false;
+
+    card.style.zIndex = '500';
+  });
 }
 /* ═══════════════════════════════════════════════════════
    CHARACTER SHEET TAB (in campaign)

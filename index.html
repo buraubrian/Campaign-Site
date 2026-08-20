@@ -1498,7 +1498,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
   Character Builder
 </button>
       </div>
-      <button class="btn btn-gold btn-sm" id="char-page-save" onclick="saveSheetInline()" style="margin-left:auto">Save Changes</button>
+      <button class="btn btn-gold btn-sm" id="char-page-save" onclick="saveChangesAndGoHome()" style="margin-left:auto">Save Changes</button>
     </div>
     <div id="char-page-panel-sheet" class="char-page-panel active">
       <div class="main-content" id="char-sheet-content"></div>
@@ -5708,6 +5708,20 @@ function togglePip(kind, idx, max) {
   }
   document.getElementById('s-cur-' + kind).value = container.querySelectorAll('.on').length;
 }
+ async function saveChangesAndGoHome() {
+  const builderOpen =
+    document.getElementById('char-page-panel-builder')?.classList.contains('active');
+
+  if (builderOpen) {
+    const ok = await saveBuilderChanges();
+    if (ok === false) return;
+  } else {
+    const ok = await saveSheetInline();
+    if (ok === false) return;
+  }
+
+  goHome();
+} 
 
 async function saveSheetInline(charId) {
   const sheetId = document.getElementById('s-char-id')?.value;
@@ -5720,65 +5734,109 @@ async function saveSheetInline(charId) {
 
   if (!id) {
     toast('No character ID found. Save cancelled.', 'error');
-    return;
+    return false;
   }
 
-  console.log('Saving character:', {
-    id,
-    name: document.getElementById('s-name')?.value,
-    charPageId,
-    charPageDataId: charPageData?.id,
-    sheetId
-  });
   const updates = {
-    name: v('s-name'), class: v('s-class'), subclass: v('s-subclass'),
-    ancestry: v('s-ancestry'), community: v('s-community'), level: n('s-level'),
-    agility: n('s-agility'), strength: n('s-strength'), finesse: n('s-finesse'),
-    instinct: n('s-instinct'), presence: n('s-presence'), knowledge: n('s-knowledge'),
-    evasion: n('s-evasion'),
-minor_threshold: charPageData?.minor_threshold ?? 0,
-major_threshold: charPageData?.major_threshold ?? 0,
-severe_threshold: charPageData?.severe_threshold ?? 0,
+    name: v('s-name'),
+    class: v('s-class'),
+    subclass: v('s-subclass'),
+    ancestry: v('s-ancestry'),
+    community: v('s-community'),
+
+    level: document.getElementById('s-level')
+      ? n('s-level')
+      : charPageData?.level || 1,
+
+    agility: document.getElementById('s-agility')
+      ? n('s-agility')
+      : charPageData?.agility || 0,
+
+    strength: document.getElementById('s-strength')
+      ? n('s-strength')
+      : charPageData?.strength || 0,
+
+    finesse: document.getElementById('s-finesse')
+      ? n('s-finesse')
+      : charPageData?.finesse || 0,
+
+    instinct: document.getElementById('s-instinct')
+      ? n('s-instinct')
+      : charPageData?.instinct || 0,
+
+    presence: document.getElementById('s-presence')
+      ? n('s-presence')
+      : charPageData?.presence || 0,
+
+    knowledge: document.getElementById('s-knowledge')
+      ? n('s-knowledge')
+      : charPageData?.knowledge || 0,
+
+    evasion: document.getElementById('s-evasion')
+      ? n('s-evasion')
+      : charPageData?.evasion || 10,
+
+    minor_threshold: charPageData?.minor_threshold ?? 0,
+    major_threshold: charPageData?.major_threshold ?? 0,
+    severe_threshold: charPageData?.severe_threshold ?? 0,
+
     max_hp: n('s-max-hp'),
-current_hp: n('s-cur-hp'),
-temp_hp: n('s-temp-hp'),
-    max_stress: n('s-max-stress'), current_stress: n('s-cur-stress'),
-   max_armor: charPageData?.max_armor ?? 0,
-current_armor: n('s-cur-armor'),
-    max_hope: n('s-max-hope'), current_hope: n('s-cur-hope'),
-    experiences: v('s-experiences'), inventory: v('s-inventory'), notes: v('s-notes'),
-    weapon_primary: v('s-wpn1'), weapon_secondary: v('s-wpn2'), features: v('s-features'),
-    armor_name: v('s-armor'), backstory: v('s-backstory'),
+    current_hp: n('s-cur-hp'),
+    temp_hp: n('s-temp-hp'),
+
+    max_stress: n('s-max-stress'),
+    current_stress: n('s-cur-stress'),
+
+    max_armor: charPageData?.max_armor ?? 0,
+    current_armor: n('s-cur-armor'),
+
+    max_hope: n('s-max-hope'),
+    current_hope: n('s-cur-hope'),
+
+    experiences: v('s-experiences'),
+    inventory: v('s-inventory'),
+    notes: v('s-notes'),
+
+    weapon_primary: v('s-wpn1'),
+    weapon_secondary: v('s-wpn2'),
+
+    features: v('s-features'),
+    armor_name: v('s-armor'),
+    backstory: v('s-backstory'),
+
     updated_at: new Date().toISOString()
   };
-const { data: savedCharacter, error } = await sb
-  .from('characters')
-  .update(updates)
-  .eq('id', id)
-  .eq('owner_id', currentUser.id)
-  .select()
-  .single();
 
-if (error) {
-  toast(error.message, 'error');
-  return;
-}
+  const { data: savedCharacter, error } = await sb
+    .from('characters')
+    .update(updates)
+    .eq('id', id)
+    .eq('owner_id', currentUser.id)
+    .select()
+    .single();
 
-charPageId = savedCharacter.id;
-charPageData = savedCharacter;
-editingCharId = savedCharacter.id;
+  if (error) {
+    toast(error.message, 'error');
+    return false;
+  }
 
-const weaponsSaved = await syncCharacterWeaponsToInventory(
-  id,
-  updates.weapon_primary,
-  updates.weapon_secondary
-);
+  charPageId = savedCharacter.id;
+  charPageData = savedCharacter;
+  editingCharId = savedCharacter.id;
 
-if (!weaponsSaved) {
-  return;
-}
+  const weaponsSaved = await syncCharacterWeaponsToInventory(
+    id,
+    updates.weapon_primary,
+    updates.weapon_secondary
+  );
 
-toast('Character saved!', 'success');
+  if (!weaponsSaved) {
+    return false;
+  }
+
+  toast('Character saved!', 'success');
+
+  return true;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -6204,58 +6262,83 @@ async function syncCharacterWeaponsToInventory(characterId, primaryName, seconda
   return true;
 } 
 async function saveBuilderChanges() {
-  if (!charPageId) { toast('No character loaded', 'error'); return; }
+  if (!charPageId) {
+    toast('No character loaded', 'error');
+    return false;
+  }
+
   const payload = {
     name: v('b-name') || charPageData.name,
     pronouns: v('b-pronouns'),
+
     level: n('b-level') || charPageData.level,
-    class: v('b-class'), subclass: v('b-subclass'),
-    ancestry: v('b-ancestry'), community: v('b-community'),
-    weapon_primary: v('b-wpn1'), weapon_secondary: v('b-wpn2'),
-    armor_name: v('b-armor'), inventory: v('b-inventory'),
-    experience_1_name: v('b-exp1-name'), experience_1_bonus: v('b-exp1-bonus')||'+2',
-    experience_2_name: v('b-exp2-name'), experience_2_bonus: v('b-exp2-bonus')||'+2',
-    agility: charPageData.agility||0, strength: charPageData.strength||0,
-    finesse: charPageData.finesse||0, instinct: charPageData.instinct||0,
-    presence: charPageData.presence||0, knowledge: charPageData.knowledge||0,
+
+    class: v('b-class'),
+    subclass: v('b-subclass'),
+    ancestry: v('b-ancestry'),
+    community: v('b-community'),
+
+    weapon_primary: v('b-wpn1'),
+    weapon_secondary: v('b-wpn2'),
+
+    armor_name: v('b-armor'),
+    inventory: v('b-inventory'),
+
+    experience_1_name: v('b-exp1-name'),
+    experience_1_bonus: v('b-exp1-bonus') || '+2',
+
+    experience_2_name: v('b-exp2-name'),
+    experience_2_bonus: v('b-exp2-bonus') || '+2',
+
+    agility: charPageData.agility || 0,
+    strength: charPageData.strength || 0,
+    finesse: charPageData.finesse || 0,
+    instinct: charPageData.instinct || 0,
+    presence: charPageData.presence || 0,
+    knowledge: charPageData.knowledge || 0,
+
     updated_at: new Date().toISOString()
   };
-const { data: savedCharacter, error } = await sb
-  .from('characters')
-  .update(payload)
-  .eq('id', charPageId)
-  .eq('owner_id', currentUser.id)
-  .select()
-  .single();
 
-if (error) {
-  toast(error.message, 'error');
-  return;
+  const { data: savedCharacter, error } = await sb
+    .from('characters')
+    .update(payload)
+    .eq('id', charPageId)
+    .eq('owner_id', currentUser.id)
+    .select()
+    .single();
+
+  if (error) {
+    toast(error.message, 'error');
+    return false;
+  }
+
+  charPageId = savedCharacter.id;
+  charPageData = savedCharacter;
+  editingCharId = savedCharacter.id;
+
+  const weaponsSaved = await syncCharacterWeaponsToInventory(
+    charPageId,
+    payload.weapon_primary,
+    payload.weapon_secondary
+  );
+
+  if (!weaponsSaved) {
+    return false;
+  }
+
+  charPageData = {
+    ...charPageData,
+    ...payload
+  };
+
+  toast('Character updated!', 'success');
+
+  goHome();
+
+  return true;
 }
 
-charPageId = savedCharacter.id;
-charPageData = savedCharacter;
-editingCharId = savedCharacter.id;
-
-// Sync Primary + Secondary into character_items
-const weaponsSaved = await syncCharacterWeaponsToInventory(
-  charPageId,
-  payload.weapon_primary,
-  payload.weapon_secondary
-);
-
-if (!weaponsSaved) {
-  return;
-}
-
-// refresh local data
-charPageData = { ...charPageData, ...payload };
-
-document.getElementById('char-page-name').textContent =
-  payload.name || charPageData.name;
-
-toast('Character updated!', 'success');
-}
 function openCharCreatorForCampaign() { openCharWizard(); }
 
 async function openCharEditor(charId) { openCharPage(charId, 'builder'); }

@@ -549,7 +549,78 @@ select option { background: var(--panel); }
 .weapon-card-display .w-dice { position: absolute; top: 0.65rem; right: 0.85rem; font-family: 'Cinzel', serif; color: var(--gold-light); font-size: 0.95rem; }
 .weapon-card-display input.w-name { background: transparent; border: none; font-family: 'Cinzel', serif; font-size: 0.92rem; color: var(--text); padding: 0; width: 70%; margin-bottom: 0.15rem; }
 .weapon-card-display .w-meta { font-size: 0.7rem; color: var(--muted); }
+/* ── Compact Equipment Layout ── */
+.equipment-section-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.55rem;
+}
 
+.equipped-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-bottom: 1.25rem;
+}
+
+.equipment-compact-row {
+  background: rgba(14,11,20,0.4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.55rem 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 54px;
+}
+
+.equipment-compact-name {
+  font-family: 'Cinzel', serif;
+  font-size: 0.82rem;
+  color: var(--gold-light);
+}
+
+.equipment-compact-meta {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 0.1rem;
+}
+
+.inventory-tab-strip {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.inventory-tab {
+  font-family: 'Cinzel', serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.inventory-tab.active {
+  color: var(--gold-light);
+  border-color: var(--gold);
+  background: rgba(201,149,58,0.08);
+}
+
+@media (max-width:640px) {
+  .equipped-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .duality-quick-panel {
   background: linear-gradient(135deg, rgba(123,79,166,0.08), rgba(46,109,164,0.08));
   border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem;
@@ -2291,6 +2362,7 @@ function showSheetSubPanel(id, btn) {
     loadCharacterEquipment(charPageData.id);
   }
 }
+let currentInventoryTab = 'weapon';
 
 async function loadCharacterEquipment(characterId) {
   const el = document.getElementById('character-equipment-list');
@@ -2313,219 +2385,429 @@ async function loadCharacterEquipment(characterId) {
     return;
   }
 
-  if (!items || items.length === 0) {
-    el.innerHTML = `
-      <div class="empty-state">
-        No equipment in this character's inventory yet.
-      </div>
-    `;
-    return;
-  }
+  const allItems = items || [];
 
-  const weaponItems = items.filter(item => item.item_type === 'weapon');
-
-  const weaponIds = weaponItems.map(item => item.item_id);
+  const weaponItems = allItems.filter(i => i.item_type === 'weapon');
+  const armorItems = allItems.filter(i => i.item_type === 'armor');
+  const consumableItems = allItems.filter(i => i.item_type === 'consumable');
+  const lootItems = allItems.filter(i => i.item_type === 'loot');
 
   let weaponsById = {};
+  let armorById = {};
+  let consumablesById = {};
+  let lootById = {};
 
-  if (weaponIds.length > 0) {
-    const { data: weapons, error: weaponError } = await sb
+  if (weaponItems.length) {
+    const { data: weapons } = await sb
       .from('weapons')
       .select('id,name,category,weapon_type,tier,burden')
-      .in('id', weaponIds);
-
-    if (weaponError) {
-      el.innerHTML = `
-        <div class="empty-state" style="color:var(--ruby)">
-          Could not load weapon details: ${weaponError.message}
-        </div>
-      `;
-      return;
-    }
+      .in('id', weaponItems.map(i => i.item_id));
 
     weaponsById = Object.fromEntries(
       (weapons || []).map(w => [w.id, w])
     );
   }
 
-   // fetch consumable and loot details for non-weapon items
-  const consumableItems = items.filter(i => i.item_type === 'consumable');
-  const lootItems = items.filter(i => i.item_type === 'loot');
-  const armorItems = items.filter(i => i.item_type === 'armor');
+  if (armorItems.length) {
+    const { data: armors } = await sb
+      .from('armor')
+      .select(`
+        id,
+        name,
+        tier,
+        base_score,
+        base_threshold_major,
+        base_threshold_severe
+      `)
+      .in('id', armorItems.map(i => i.item_id));
 
-  let consumablesById = {};
-  let lootById = {};
-  let armorById = {};
+    armorById = Object.fromEntries(
+      (armors || []).map(a => [a.id, a])
+    );
+  }
 
-  if (consumableItems.length > 0) {
-    const { data: consumables } = await sb.from('consumables')
+  if (consumableItems.length) {
+    const { data: consumables } = await sb
+      .from('consumables')
       .select('id,name,effect,category')
       .in('id', consumableItems.map(i => i.item_id));
-    consumablesById = Object.fromEntries((consumables||[]).map(c => [c.id, c]));
-  }
-  if (lootItems.length > 0) {
-    const { data: loots } = await sb.from('loot')
-      .select('id,name,description,tier,category')
-      .in('id', lootItems.map(i => i.item_id));
-    lootById = Object.fromEntries((loots||[]).map(l => [l.id, l]));
-  }
-  if (armorItems.length > 0) {
-    const { data: armors } = await sb.from('armor')
-      .select('id,name,base_score,tier')
-      .in('id', armorItems.map(i => i.item_id));
-    armorById = Object.fromEntries((armors||[]).map(a => [a.id, a]));
+
+    consumablesById = Object.fromEntries(
+      (consumables || []).map(c => [c.id, c])
+    );
   }
 
-  // shared action buttons
-  function itemActions(item) {
+  if (lootItems.length) {
+    const { data: loot } = await sb
+      .from('loot')
+      .select('id,name,description,tier,category')
+      .in('id', lootItems.map(i => i.item_id));
+
+    lootById = Object.fromEntries(
+      (loot || []).map(l => [l.id, l])
+    );
+  }
+
+  const equippedItems = allItems.filter(i => i.is_equipped);
+
+  const primaryItem = equippedItems.find(
+    i => i.item_type === 'weapon' && i.equipment_slot === 'primary'
+  );
+
+  const secondaryItem = equippedItems.find(
+    i => i.item_type === 'weapon' && i.equipment_slot === 'secondary'
+  );
+
+  const equippedArmorItem = equippedItems.find(
+    i => i.item_type === 'armor'
+  );
+
+  function renderEmptyEquipped(label) {
     return `
-      <button class="btn btn-ghost btn-sm" onclick="giveItemToPlayer('${characterId}', ${item.id}, '${item.item_type}')">Give</button>
-      <button class="btn btn-danger btn-sm" onclick="removeItemFromInventory('${characterId}', ${item.id})">Remove</button>
+      <div class="equipment-compact-row" style="opacity:0.6">
+        <div>
+          <div class="equipment-compact-meta">${label}</div>
+          <div class="equipment-compact-name">Nothing Equipped</div>
+        </div>
+      </div>
     `;
   }
 
-  el.innerHTML = items.map(item => {
+  function renderEquippedWeapon(item, label) {
+    if (!item) return renderEmptyEquipped(label);
 
-    // ── WEAPONS ──
+    const weapon = weaponsById[item.item_id];
+    if (!weapon) return renderEmptyEquipped(label);
+
+    const hands = Number(weapon.burden) === 2 ? '✋ ✋' : '✋';
+
+    return `
+      <div class="equipment-compact-row">
+        <div>
+          <div class="equipment-compact-meta">${label}</div>
+          <div class="equipment-compact-name">
+            ${weapon.name} ${hands}
+          </div>
+          <div class="equipment-compact-meta">
+            Tier ${weapon.tier}
+          </div>
+        </div>
+
+        <button
+          class="btn btn-ghost btn-sm"
+          onclick="unequipCharacterWeapon('${characterId}', ${item.id})">
+          Unequip
+        </button>
+      </div>
+    `;
+  }
+
+  function renderEquippedArmor(item) {
+    if (!item) return renderEmptyEquipped('Armor');
+
+    const armor = armorById[item.item_id];
+    if (!armor) return renderEmptyEquipped('Armor');
+
+    return `
+      <div class="equipment-compact-row">
+        <div>
+          <div class="equipment-compact-meta">Armor</div>
+          <div class="equipment-compact-name">
+            ${armor.name}
+          </div>
+          <div class="equipment-compact-meta">
+            Armor ${armor.base_score}
+            · Major ${armor.base_threshold_major}
+            · Severe ${armor.base_threshold_severe}
+          </div>
+        </div>
+
+        <button
+          class="btn btn-ghost btn-sm"
+          onclick="unequipCharacterArmor('${characterId}', ${item.id})">
+          Unequip
+        </button>
+      </div>
+    `;
+  }
+
+  const inventoryItems = allItems.filter(i => !i.is_equipped);
+
+  function renderInventoryItem(item) {
+
     if (item.item_type === 'weapon') {
       const weapon = weaponsById[item.item_id];
-      if (!weapon) return `<div class="weapon-card-display" style="padding:1rem;margin-bottom:0.75rem"><div style="color:var(--ruby)">Missing weapon data for item ${item.item_id}</div></div>`;
+
+      if (!weapon) return '';
+
       const hands = Number(weapon.burden) === 2 ? '✋ ✋' : '✋';
+
       return `
-        <div class="weapon-card-display" style="padding:1rem;margin-bottom:0.75rem">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem">
-            <div>
-              <div style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:0.95rem">${weapon.name} ${hands}</div>
-              <div style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem">${weapon.category} Weapon · ${weapon.weapon_type}</div>
-              <div style="font-size:0.75rem;color:var(--muted)">Tier ${weapon.tier}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">
-              ${item.is_equipped
-                ? `<span class="vault-label loadout">${item.equipment_slot || 'Equipped'}</span>
-                   <button class="btn btn-ghost btn-sm" onclick="unequipCharacterWeapon('${characterId}', ${item.id})">Unequip</button>`
-                : `<button class="btn btn-gold btn-sm" onclick="equipCharacterWeapon('${characterId}', ${item.id})">Equip</button>`}
-              ${itemActions(item)}
-            </div>
-          </div>
-        </div>`;
-    }
-
-    // ── CONSUMABLES ──
-    if (item.item_type === 'consumable') {
-      const c = consumablesById[item.item_id];
-      const name = c ? c.name : `Consumable #${item.item_id}`;
-      const effect = c ? c.effect : '';
-      return `
-        <div class="weapon-card-display" style="padding:1rem;margin-bottom:0.75rem">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem">
-            <div>
-              <div style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:0.95rem">${name}</div>
-              ${effect ? `<div style="font-size:0.82rem;color:var(--muted);margin-top:0.2rem">${effect}</div>` : ''}
-              <div style="font-size:0.75rem;color:var(--muted)">Consumable${item.quantity > 1 ? ` × ${item.quantity}` : ''}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">
-              <button class="btn btn-gold btn-sm" onclick="useConsumable('${characterId}', ${item.id}, ${item.quantity||1})">Use</button>
-              ${itemActions(item)}
-            </div>
-          </div>
-        </div>`;
-    }
-
-    // ── LOOT ──
-    if (item.item_type === 'loot') {
-      const l = lootById[item.item_id];
-      const name = l ? l.name : `Loot #${item.item_id}`;
-      const desc = l ? l.description : '';
-      return `
-        <div class="weapon-card-display" style="padding:1rem;margin-bottom:0.75rem">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem">
-            <div>
-              <div style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:0.95rem">${name}</div>
-              ${desc ? `<div style="font-size:0.82rem;color:var(--muted);margin-top:0.2rem">${desc}</div>` : ''}
-              ${l?.tier ? `<div style="font-size:0.75rem;color:var(--muted)">Tier ${l.tier}</div>` : ''}
-            </div>
-            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">
-              ${itemActions(item)}
-            </div>
-          </div>
-        </div>`;
-    }
-
-   // ── ARMOR ──
-if (item.item_type === 'armor') {
-  const a = armorById[item.item_id];
-  const name = a ? a.name : `Armor #${item.item_id}`;
-
-  return `
-    <div class="weapon-card-display" style="padding:1rem;margin-bottom:0.75rem">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem">
-
-        <div>
-          <div style="
-            font-family:'Cinzel',serif;
-            color:var(--gold-light);
-            font-size:0.95rem;
-          ">
-            ${name}
-          </div>
-
-          ${a ? `
-            <div style="
-              font-size:0.75rem;
-              color:var(--muted);
-              margin-top:0.2rem;
-            ">
-              Armor Score ${a.base_score} · Tier ${a.tier}
-            </div>
-          ` : ''}
-        </div>
-
-        <div style="
-          display:flex;
-          align-items:center;
-          gap:0.4rem;
-          flex-wrap:wrap;
-        ">
-
-          ${item.is_equipped
-            ? `
-              <span class="vault-label loadout">Equipped</span>
-
-              <button
-                class="btn btn-ghost btn-sm"
-                onclick="unequipCharacterArmor('${characterId}', ${item.id})">
-                Unequip
-              </button>
-            `
-            : `
-              <button
-                class="btn btn-gold btn-sm"
-                onclick="equipCharacterArmor('${characterId}', ${item.id})">
-                Equip
-              </button>
-            `
-          }
-
-          ${itemActions(item)}
-
-        </div>
-      </div>
-    </div>`;
-}
-
-    // ── FALLBACK (custom/other items) ──
-    return `
-      <div class="weapon-card-display" style="padding:1rem;margin-bottom:0.75rem">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
+        <div class="equipment-compact-row inventory-item-row"
+             data-inventory-type="weapon">
           <div>
-            <div style="font-family:'Cinzel',serif;color:var(--gold-light)">${item.name || `Item #${item.item_id}`}</div>
-            <div style="font-size:0.75rem;color:var(--muted)">${item.item_type}${item.quantity > 1 ? ` × ${item.quantity}` : ''}</div>
+            <div class="equipment-compact-name">
+              ${weapon.name} ${hands}
+            </div>
+            <div class="equipment-compact-meta">
+              ${weapon.category} · ${weapon.weapon_type} · Tier ${weapon.tier}
+            </div>
           </div>
-          <div style="display:flex;gap:0.4rem">${itemActions(item)}</div>
-        </div>
-      </div>`;
 
-  }).join('');
+          <div style="display:flex;gap:0.35rem;flex-wrap:wrap">
+            <button
+              class="btn btn-gold btn-sm"
+              onclick="equipCharacterWeapon('${characterId}', ${item.id})">
+              Equip
+            </button>
+
+            <button
+              class="btn btn-ghost btn-sm"
+              onclick="giveItemToPlayer('${characterId}', ${item.id}, 'weapon')">
+              Give
+            </button>
+
+            <button
+              class="btn btn-danger btn-sm"
+              onclick="removeItemFromInventory('${characterId}', ${item.id})">
+              Remove
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    if (item.item_type === 'armor') {
+      const armor = armorById[item.item_id];
+
+      if (!armor) return '';
+
+      return `
+        <div class="equipment-compact-row inventory-item-row"
+             data-inventory-type="armor">
+          <div>
+            <div class="equipment-compact-name">
+              ${armor.name}
+            </div>
+            <div class="equipment-compact-meta">
+              Armor ${armor.base_score}
+              · Major ${armor.base_threshold_major}
+              · Severe ${armor.base_threshold_severe}
+            </div>
+          </div>
+
+          <div style="display:flex;gap:0.35rem;flex-wrap:wrap">
+            <button
+              class="btn btn-gold btn-sm"
+              onclick="equipCharacterArmor('${characterId}', ${item.id})">
+              Equip
+            </button>
+
+            <button
+              class="btn btn-ghost btn-sm"
+              onclick="giveItemToPlayer('${characterId}', ${item.id}, 'armor')">
+              Give
+            </button>
+
+            <button
+              class="btn btn-danger btn-sm"
+              onclick="removeItemFromInventory('${characterId}', ${item.id})">
+              Remove
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    if (item.item_type === 'consumable') {
+      const consumable = consumablesById[item.item_id];
+      if (!consumable) return '';
+
+      return `
+        <div class="equipment-compact-row inventory-item-row"
+             data-inventory-type="consumable">
+          <div>
+            <div class="equipment-compact-name">
+              ${consumable.name}
+              ${item.quantity > 1 ? ` × ${item.quantity}` : ''}
+            </div>
+            <div class="equipment-compact-meta">
+              ${consumable.category || 'Consumable'}
+            </div>
+          </div>
+
+          <div style="display:flex;gap:0.35rem;flex-wrap:wrap">
+            <button
+              class="btn btn-gold btn-sm"
+              onclick="useConsumable('${characterId}', ${item.id}, ${item.quantity || 1})">
+              Use
+            </button>
+
+            <button
+              class="btn btn-ghost btn-sm"
+              onclick="giveItemToPlayer('${characterId}', ${item.id}, 'consumable')">
+              Give
+            </button>
+
+            <button
+              class="btn btn-danger btn-sm"
+              onclick="removeItemFromInventory('${characterId}', ${item.id})">
+              Remove
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    if (item.item_type === 'loot') {
+      const loot = lootById[item.item_id];
+      if (!loot) return '';
+
+      return `
+        <div class="equipment-compact-row inventory-item-row"
+             data-inventory-type="loot">
+          <div>
+            <div class="equipment-compact-name">
+              ${loot.name}
+            </div>
+            <div class="equipment-compact-meta">
+              ${[
+                loot.category,
+                loot.tier ? `Tier ${loot.tier}` : null
+              ].filter(Boolean).join(' · ')}
+            </div>
+          </div>
+
+          <div style="display:flex;gap:0.35rem;flex-wrap:wrap">
+            <button
+              class="btn btn-ghost btn-sm"
+              onclick="giveItemToPlayer('${characterId}', ${item.id}, 'loot')">
+              Give
+            </button>
+
+            <button
+              class="btn btn-danger btn-sm"
+              onclick="removeItemFromInventory('${characterId}', ${item.id})">
+              Remove
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    return '';
+  }
+
+  el.innerHTML = `
+    <div class="equipment-section-title">
+      Equipped Items
+    </div>
+
+    <div class="equipped-grid">
+      ${renderEquippedWeapon(primaryItem, 'Primary Weapon')}
+      ${renderEquippedWeapon(secondaryItem, 'Secondary Weapon')}
+      ${renderEquippedArmor(equippedArmorItem)}
+    </div>
+
+    <div class="equipment-section-title">
+      Inventory
+    </div>
+
+    <div class="inventory-tab-strip">
+      <button
+        class="inventory-tab ${currentInventoryTab === 'weapon' ? 'active' : ''}"
+        onclick="showInventoryTab('weapon', this)">
+        Weapons
+      </button>
+
+      <button
+        class="inventory-tab ${currentInventoryTab === 'armor' ? 'active' : ''}"
+        onclick="showInventoryTab('armor', this)">
+        Armor
+      </button>
+
+      <button
+        class="inventory-tab ${currentInventoryTab === 'consumable' ? 'active' : ''}"
+        onclick="showInventoryTab('consumable', this)">
+        Consumables
+      </button>
+
+      <button
+        class="inventory-tab ${currentInventoryTab === 'loot' ? 'active' : ''}"
+        onclick="showInventoryTab('loot', this)">
+        Loot
+      </button>
+    </div>
+
+    <div id="inventory-tab-content">
+      ${
+        inventoryItems.length
+          ? inventoryItems.map(renderInventoryItem).join('')
+          : `<div class="empty-state" style="padding:1rem">
+               No unequipped inventory items.
+             </div>`
+      }
+    </div>
+  `;
+
+  showInventoryTab(currentInventoryTab);
+}
+function showInventoryTab(type, clickedButton = null) {
+  currentInventoryTab = type;
+
+  document.querySelectorAll('.inventory-tab').forEach(btn => {
+    btn.classList.remove('active');
+  });
+
+  if (clickedButton) {
+    clickedButton.classList.add('active');
+  } else {
+    const tabs = [...document.querySelectorAll('.inventory-tab')];
+
+    const indexMap = {
+      weapon: 0,
+      armor: 1,
+      consumable: 2,
+      loot: 3
+    };
+
+    tabs[indexMap[type]]?.classList.add('active');
+  }
+
+  let visibleCount = 0;
+
+  document.querySelectorAll('.inventory-item-row').forEach(row => {
+    const matches = row.dataset.inventoryType === type;
+
+    row.style.display = matches ? 'flex' : 'none';
+
+    if (matches) visibleCount++;
+  });
+
+  const content = document.getElementById('inventory-tab-content');
+
+  let empty = document.getElementById('inventory-tab-empty');
+
+  if (!visibleCount) {
+    if (!empty) {
+      empty = document.createElement('div');
+      empty.id = 'inventory-tab-empty';
+      empty.className = 'empty-state';
+      empty.style.padding = '1rem';
+      content?.appendChild(empty);
+    }
+
+    const labels = {
+      weapon: 'weapons',
+      armor: 'armor',
+      consumable: 'consumables',
+      loot: 'loot'
+    };
+
+    empty.textContent = `No ${labels[type]} in inventory.`;
+  } else {
+    empty?.remove();
+  }
 }
   async function loadActiveWeapons(characterId) {
   const el = document.getElementById('active-weapons-display');

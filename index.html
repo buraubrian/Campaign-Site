@@ -97,6 +97,7 @@ h1,h2,h3,h4 { font-family: 'Cinzel', serif; }
   width: min(760px, 88vw);
   height: auto;
   display: block;
+  transform: translateX(-45px);
 }
 
 .auth-box {
@@ -1608,7 +1609,20 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
     <div id="assign-char-list"></div>
   </div>
 </div>
+<!-- Assign Character to Campaign -->
+<div class="modal-overlay" id="modal-assign-char">
+  ...
+</div>
 
+
+<!-- Downtime -->
+<div class="modal-overlay" id="modal-downtime">
+  ...
+</div>
+
+
+<!-- Handout lightbox -->
+<div class="modal-overlay" id="modal-handout">
 <!-- Handout lightbox -->
 <div class="modal-overlay" id="modal-handout">
   <div class="modal-box" style="max-width:90vw;text-align:center;padding:1rem">
@@ -6470,62 +6484,7 @@ async function unassignCharacter(charId) {
   toast('Character removed from campaign', 'success');
   loadSheetTab();
 }
-<!-- Downtime -->
-<div class="modal-overlay" id="modal-downtime">
-  <div class="modal-box" style="max-width:420px">
 
-    <button
-      class="modal-close"
-      onclick="closeModal('modal-downtime')">
-      ✕
-    </button>
-
-    <h3 style="text-align:center;margin-bottom:1.5rem">
-      Downtime
-    </h3>
-
-    <div id="downtime-content">
-
-      <div
-        style="
-          font-family:'Cinzel',serif;
-          font-size:0.78rem;
-          letter-spacing:0.12em;
-          text-transform:uppercase;
-          color:var(--muted);
-          text-align:center;
-          margin-bottom:0.85rem;
-        ">
-        Rest Type
-      </div>
-
-      <div
-        style="
-          display:grid;
-          grid-template-columns:1fr 1fr;
-          gap:0.75rem;
-        ">
-
-        <button
-          class="btn btn-gold"
-          style="justify-content:center;padding:1rem"
-          onclick="chooseDowntimeRest('short')">
-          Short Rest
-        </button>
-
-        <button
-          class="btn btn-sapphire"
-          style="justify-content:center;padding:1rem"
-          onclick="chooseDowntimeRest('long')">
-          Long Rest
-        </button>
-
-      </div>
-
-    </div>
-
-  </div>
-</div>
 /* ═══════════════════════════════════════════════════════
    PLAYERS TAB (GM)
 ════════════════════════════════════════════════════════ */

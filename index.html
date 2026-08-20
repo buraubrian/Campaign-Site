@@ -1393,98 +1393,21 @@ let rollHistory = [];
 /* ═══════════════════════════════════════════════════════
    INIT
 ════════════════════════════════════════════════════════ */
-const PREVIEW_MODE = new URLSearchParams(window.location.search).get('preview') === 'true';
-
 (async () => {
-  if (PREVIEW_MODE) { initPreviewMode(); return; }
   const { data: { session } } = await sb.auth.getSession();
-  if (session) await initApp(session.user);
+
+  if (session) {
+    await initApp(session.user);
+  }
 
   sb.auth.onAuthStateChange(async (_event, session) => {
-    if (session) await initApp(session.user);
-    else showPage('page-auth');
+    if (session) {
+      await initApp(session.user);
+    } else {
+      showPage('page-auth');
+    }
   });
 })();
-
-function initPreviewMode() {
-  currentUser = { id: 'preview-user', email: 'preview@chronicler.tome' };
-  currentProfile = { id: 'preview-user', username: 'preview', display_name: 'Preview Mode' };
-  document.getElementById('header-username').textContent = '👁 Preview Mode';
-
-  // mock characters
-  const mockChars = [
-    { id:'preview-char-1', owner_id:'preview-user', name:'Ronan Ashcrest', class:'Guardian', subclass:'Stalwart', level:1, ancestry:'Human', community:'Ridgeborne', agility:1, strength:2, finesse:-1, instinct:0, presence:1, knowledge:0, evasion:10, max_hp:6, current_hp:4, max_stress:6, current_stress:1, max_armor:3, current_armor:1, max_hope:6, current_hope:3, minor_threshold:5, major_threshold:10, severe_threshold:15, weapon_primary:'Longsword', weapon_secondary:'Shield', armor_name:'Chain Mail', inventory:'Mentor totem, 10 gold', experience_1_name:'Former Knight', experience_1_bonus:'+2', experience_2_name:'Speaks Elvish', experience_2_bonus:'+1', notes:'A seasoned warrior seeking redemption.', features:'', experiences:'' },
-    { id:'preview-char-2', owner_id:'preview-user', name:'Sylara Nightwhisper', class:'Sorcerer', subclass:'Primal Origin', level:1, ancestry:'Elf', community:'Wanderborne', agility:0, strength:-1, finesse:1, instinct:2, presence:1, knowledge:0, evasion:9, max_hp:5, current_hp:5, max_stress:6, current_stress:0, max_armor:1, current_armor:0, max_hope:6, current_hope:6, minor_threshold:4, major_threshold:9, severe_threshold:14, weapon_primary:'Staff', weapon_secondary:'', armor_name:'Leather Armor', inventory:'Spellbook, components pouch', experience_1_name:'Studied at the Arcane College', experience_1_bonus:'+2', experience_2_name:'Survived the Thornwood', experience_2_bonus:'+1', notes:'A wild magic conduit still learning control.', features:'', experiences:'' },
-  ];
-
-  // mock campaigns
-  const mockCampaigns = [
-    { id:'preview-camp-1', name:'Skyreach Academy', description:'A high-fantasy campaign in a floating city', game_system:'Daggerheart', gm_id:'preview-user', role:'gm' },
-    { id:'preview-camp-2', name:'The Iron Wastes', description:'A survival campaign in a dying world', game_system:'Daggerheart', gm_id:'other-user', role:'player' },
-  ];
-
-  showPage('page-app');
-
-  // override loadMyCharacters to use mock data
-  window.loadMyCharacters = function() {
-    const el = document.getElementById('my-characters');
-    el.innerHTML = mockChars.map(c => {
-      const classLine = [c.class, c.subclass].filter(Boolean).join(' · ') || 'No class set';
-      const heritageLine = `Level ${c.level||1} · ${c.ancestry||'Unknown ancestry'}`;
-      return `
-      <div class="char-mini-card">
-        <h4>${c.name}</h4>
-        <p>${classLine}</p>
-        <p>${heritageLine}</p>
-        <div class="char-card-footer">
-          <button class="btn btn-gold btn-sm" onclick="previewOpenChar('${c.id}','sheet')">View Sheet</button>
-          <button class="btn btn-ghost btn-sm" onclick="previewOpenChar('${c.id}','builder')">Edit</button>
-        </div>
-      </div>`;
-    }).join('');
-  };
-
-  // override loadMyCampaigns to use mock data
-  window.loadMyCampaigns = function() {
-    const el = document.getElementById('my-campaigns');
-    el.innerHTML = mockCampaigns.map(c => `
-      <div class="campaign-card ${c.role==='gm'?'gm-card':''}" onclick="toast('Campaigns open on the live site — this is preview mode','error')">
-        <h3>${c.name}</h3>
-        <p>${c.description}</p>
-        <span class="campaign-role role-${c.role}">${c.role==='gm'?'⚔ Game Master':'🎲 Player'}</span>
-      </div>
-    `).join('');
-  };
-
-  // open a mock character
-  window.previewOpenChar = function(charId, tab) {
-    const c = mockChars.find(ch => ch.id === charId);
-    if (!c) return;
-    charPageId = charId;
-    charPageData = c;
-    editingCharId = charId;
-    document.getElementById('char-page-name').textContent = c.name;
-    showView('view-char-page');
-    switchCharPageTab(tab);
-  };
-
-  // override openCharCreator to show wizard with no saves
-  window.openCharCreator = function() {
-    wizardStep = 0;
-    wizardCharId = null;
-    wizardData = { name:'', pronouns:'', level:1, class:'', subclass:'', agility:0, strength:0, finesse:0, instinct:0, presence:0, knowledge:0, evasion:10, max_hp:6, current_hp:6, max_stress:6, current_stress:0, max_armor:3, current_armor:0, max_hope:6, current_hope:6, minor_threshold:5, major_threshold:10, severe_threshold:15, weapon_primary:'', weapon_secondary:'', armor_name:'', inventory:'', ancestry:'', community:'', experience_1_name:'', experience_1_bonus:'+2', experience_2_name:'', experience_2_bonus:'+2' };
-    showView('view-char-wizard');
-    renderWizardStep();
-  };
-
-  // override saveWizardProgress so it doesn't hit Supabase
-  window.saveWizardProgress = async function() {
-    toast('Preview mode — changes not saved to database', 'error');
-  };
-
-  goHome();
-  toast('Preview mode active — UI only, no data saved', 'success');
-}
 
 async function initApp(user) {
   currentUser = user;
@@ -1987,10 +1910,7 @@ const parts = [];
 const minorParts = [];
 const majorParts = [];
 const severeParts = [];
-const characterLevel =
-  targetInputId.startsWith('w-')
-    ? (wizardData?.level || 1)
-    : (charPageData?.level || 1);
+const characterLevel = Number(charPageData?.level) || 1;
 
   // If armor is equipped, get its base Armor Score and thresholds.
   if (armorItem) {
@@ -6206,7 +6126,7 @@ const armorSaved = await syncCharacterArmorToInventory(
 if (!armorSaved) return;
 
 toast('Progress saved', 'success');
-
+}
 async function finalizeCharacter() {
   await saveWizardProgress();
   toast('Character created! Opening your sheet…', 'success');

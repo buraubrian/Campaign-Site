@@ -589,6 +589,84 @@ select option { background: var(--panel); }
   color: var(--muted);
   margin-top: 0.1rem;
 }
+  .equipment-hover-wrap {
+  position: relative;
+}
+
+.equipment-hover-wrap:hover {
+  border-color: var(--amethyst);
+}
+
+.item-hover-card {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 350px;
+  max-width: min(350px, 85vw);
+
+  background: var(--panel);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-lg);
+
+  padding: 1rem;
+
+  box-shadow: 0 12px 32px rgba(0,0,0,0.55);
+
+  z-index: 250;
+  pointer-events: none;
+
+  text-align: left;
+}
+
+.item-hover-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.95rem;
+  color: var(--gold-light);
+  margin-bottom: 0.2rem;
+}
+
+.item-hover-subtitle {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+.item-hover-stats {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.7rem;
+}
+
+.item-hover-stat {
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+}
+
+.item-hover-section {
+  border-top: 1px solid var(--border);
+  padding-top: 0.65rem;
+  margin-top: 0.65rem;
+}
+
+.item-hover-section-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.25rem;
+}
+
+.item-hover-text {
+  font-size: 0.82rem;
+  color: var(--text);
+  line-height: 1.5;
+}
 
 .inventory-tab-strip {
   display: flex;
@@ -1486,6 +1564,281 @@ function showThresholdHoverBreakdown(anchor, characterId, type) {
 }
 function hideStatHoverBreakdown() {
   document.getElementById('stat-hover-breakdown')?.remove();
+}
+  function hideItemHover() {
+  document.getElementById('item-hover-card')?.remove();
+}
+
+async function showItemHover(anchor, itemType, itemId) {
+  hideItemHover();
+
+  if (!anchor || !itemType || !itemId) return;
+
+  const box = document.createElement('div');
+  box.id = 'item-hover-card';
+  box.className = 'item-hover-card';
+
+  box.innerHTML = `
+    <div class="item-hover-title">Loading…</div>
+  `;
+
+  anchor.appendChild(box);
+
+  try {
+
+    if (itemType === 'weapon') {
+      const { data: weapon, error } = await sb
+        .from('weapons')
+        .select(`
+          id,
+          name,
+          category,
+          weapon_type,
+          tier,
+          burden,
+          weapon_feature_id
+        `)
+        .eq('id', itemId)
+        .single();
+
+      if (error || !weapon) {
+        throw error || new Error('Weapon not found');
+      }
+
+      let feature = null;
+
+      if (weapon.weapon_feature_id) {
+        const { data } = await sb
+          .from('weapon_features')
+          .select('name,rules_text')
+          .eq('id', weapon.weapon_feature_id)
+          .maybeSingle();
+
+        feature = data;
+      }
+
+      const { data: profiles } = await sb
+        .from('weapon_attack_profiles')
+        .select('*')
+        .eq('weapon_id', weapon.id);
+
+      const profile = profiles?.[0] || null;
+
+      box.innerHTML = `
+        <div class="item-hover-title">${weapon.name}</div>
+
+        <div class="item-hover-subtitle">
+          ${weapon.category || 'Weapon'}
+          ${weapon.weapon_type ? ` · ${weapon.weapon_type}` : ''}
+          · Tier ${weapon.tier}
+          · ${Number(weapon.burden) === 2 ? 'Two-Handed' : 'One-Handed'}
+        </div>
+
+        ${
+          profile
+            ? `
+              <div class="item-hover-stats">
+                ${profile.trait ? `<span class="item-hover-stat">${profile.trait}</span>` : ''}
+                ${profile.range ? `<span class="item-hover-stat">${profile.range}</span>` : ''}
+                ${
+                  profile.damage_dice
+                    ? `<span class="item-hover-stat">${profile.damage_dice}</span>`
+                    : ''
+                }
+                ${
+                  profile.damage_type
+                    ? `<span class="item-hover-stat">${profile.damage_type}</span>`
+                    : ''
+                }
+              </div>
+            `
+            : ''
+        }
+
+        ${
+          feature
+            ? `
+              <div class="item-hover-section">
+                <div class="item-hover-section-title">
+                  Feature — ${feature.name}
+                </div>
+                <div class="item-hover-text">
+                  ${feature.rules_text || ''}
+                </div>
+              </div>
+            `
+            : ''
+        }
+      `;
+
+      return;
+    }
+
+    if (itemType === 'armor') {
+      const { data: armor, error } = await sb
+        .from('armor')
+        .select(`
+          id,
+          name,
+          tier,
+          base_score,
+          base_threshold_major,
+          base_threshold_severe,
+          armor_feature_id
+        `)
+        .eq('id', itemId)
+        .single();
+
+      if (error || !armor) {
+        throw error || new Error('Armor not found');
+      }
+
+      let feature = null;
+
+      if (armor.armor_feature_id) {
+        const { data } = await sb
+          .from('armor_features')
+          .select('name,rules_text')
+          .eq('id', armor.armor_feature_id)
+          .maybeSingle();
+
+        feature = data;
+      }
+
+      box.innerHTML = `
+        <div class="item-hover-title">${armor.name}</div>
+
+        <div class="item-hover-subtitle">
+          Armor · Tier ${armor.tier}
+        </div>
+
+        <div class="item-hover-stats">
+          <span class="item-hover-stat">
+            Armor ${armor.base_score}
+          </span>
+
+          <span class="item-hover-stat">
+            Minor ${armor.base_score}
+          </span>
+
+          <span class="item-hover-stat">
+            Major ${armor.base_threshold_major}
+          </span>
+
+          <span class="item-hover-stat">
+            Severe ${armor.base_threshold_severe}
+          </span>
+        </div>
+
+        ${
+          feature
+            ? `
+              <div class="item-hover-section">
+                <div class="item-hover-section-title">
+                  Feature — ${feature.name}
+                </div>
+                <div class="item-hover-text">
+                  ${feature.rules_text || ''}
+                </div>
+              </div>
+            `
+            : ''
+        }
+      `;
+
+      return;
+    }
+
+    if (itemType === 'consumable') {
+      const { data: item, error } = await sb
+        .from('consumables')
+        .select('*')
+        .eq('id', itemId)
+        .single();
+
+      if (error || !item) {
+        throw error || new Error('Consumable not found');
+      }
+
+      box.innerHTML = `
+        <div class="item-hover-title">${item.name}</div>
+
+        <div class="item-hover-subtitle">
+          ${item.category || 'Consumable'}
+        </div>
+
+        ${
+          item.effect
+            ? `
+              <div class="item-hover-section">
+                <div class="item-hover-section-title">
+                  Effect
+                </div>
+
+                <div class="item-hover-text">
+                  ${item.effect}
+                </div>
+              </div>
+            `
+            : ''
+        }
+      `;
+
+      return;
+    }
+
+    if (itemType === 'loot') {
+      const { data: item, error } = await sb
+        .from('loot')
+        .select('*')
+        .eq('id', itemId)
+        .single();
+
+      if (error || !item) {
+        throw error || new Error('Loot not found');
+      }
+
+      box.innerHTML = `
+        <div class="item-hover-title">${item.name}</div>
+
+        <div class="item-hover-subtitle">
+          ${[
+            item.category,
+            item.tier ? `Tier ${item.tier}` : null
+          ].filter(Boolean).join(' · ')}
+        </div>
+
+        ${
+          item.description
+            ? `
+              <div class="item-hover-section">
+                <div class="item-hover-section-title">
+                  Description
+                </div>
+
+                <div class="item-hover-text">
+                  ${item.description}
+                </div>
+              </div>
+            `
+            : ''
+        }
+      `;
+    }
+
+  } catch (err) {
+    console.error('Could not load item hover details:', err);
+
+    box.innerHTML = `
+      <div class="item-hover-title">
+        Item Details
+      </div>
+
+      <div class="item-hover-text" style="color:var(--ruby)">
+        Could not load this item's details.
+      </div>
+    `;
+  }
 }
  async function loadCalculatedArmor(characterId) {
   if (!characterId) return;
@@ -2482,7 +2835,11 @@ async function loadCharacterEquipment(characterId) {
     const hands = Number(weapon.burden) === 2 ? '✋ ✋' : '✋';
 
     return `
-      <div class="equipment-compact-row">
+     <div
+  class="equipment-compact-row equipment-hover-wrap"
+  onmouseenter="showItemHover(this, 'weapon', ${weapon.id})"
+  onmouseleave="hideItemHover()"
+>
         <div>
           <div class="equipment-compact-meta">${label}</div>
           <div class="equipment-compact-name">
@@ -2509,7 +2866,11 @@ async function loadCharacterEquipment(characterId) {
     if (!armor) return renderEmptyEquipped('Armor');
 
     return `
-      <div class="equipment-compact-row">
+      <div
+  class="equipment-compact-row equipment-hover-wrap"
+  onmouseenter="showItemHover(this, 'armor', ${armor.id})"
+  onmouseleave="hideItemHover()"
+>
         <div>
           <div class="equipment-compact-meta">Armor</div>
           <div class="equipment-compact-name">
@@ -2543,8 +2904,12 @@ async function loadCharacterEquipment(characterId) {
       const hands = Number(weapon.burden) === 2 ? '✋ ✋' : '✋';
 
       return `
-        <div class="equipment-compact-row inventory-item-row"
-             data-inventory-type="weapon">
+      <div
+  class="equipment-compact-row inventory-item-row equipment-hover-wrap"
+  data-inventory-type="weapon"
+  onmouseenter="showItemHover(this, 'weapon', ${weapon.id})"
+  onmouseleave="hideItemHover()"
+>
           <div>
             <div class="equipment-compact-name">
               ${weapon.name} ${hands}
@@ -2583,8 +2948,12 @@ async function loadCharacterEquipment(characterId) {
       if (!armor) return '';
 
       return `
-        <div class="equipment-compact-row inventory-item-row"
-             data-inventory-type="armor">
+     <div
+  class="equipment-compact-row inventory-item-row equipment-hover-wrap"
+  data-inventory-type="armor"
+  onmouseenter="showItemHover(this, 'armor', ${armor.id})"
+  onmouseleave="hideItemHover()"
+>
           <div>
             <div class="equipment-compact-name">
               ${armor.name}
@@ -2624,8 +2993,12 @@ async function loadCharacterEquipment(characterId) {
       if (!consumable) return '';
 
       return `
-        <div class="equipment-compact-row inventory-item-row"
-             data-inventory-type="consumable">
+        <div
+  class="equipment-compact-row inventory-item-row equipment-hover-wrap"
+  data-inventory-type="consumable"
+  onmouseenter="showItemHover(this, 'consumable', ${consumable.id})"
+  onmouseleave="hideItemHover()"
+>
           <div>
             <div class="equipment-compact-name">
               ${consumable.name}
@@ -2664,8 +3037,12 @@ async function loadCharacterEquipment(characterId) {
       if (!loot) return '';
 
       return `
-        <div class="equipment-compact-row inventory-item-row"
-             data-inventory-type="loot">
+       <div
+  class="equipment-compact-row inventory-item-row equipment-hover-wrap"
+  data-inventory-type="loot"
+  onmouseenter="showItemHover(this, 'loot', ${loot.id})"
+  onmouseleave="hideItemHover()"
+>
           <div>
             <div class="equipment-compact-name">
               ${loot.name}

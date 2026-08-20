@@ -3026,11 +3026,11 @@ async function chooseDowntimeRest(restType) {
     </div>
   `;
 
-  const { data: actions, error } = await sb
-    .from('rest_actions')
-    .select('*')
-    .in('rest_type', [restType, 'both'])
-    .order('display_order');
+const { data: actions, error } = await sb
+  .from('downtime_moves')
+  .select('*')
+  .in('rest_type', [restType, 'both'])
+  .order('display_order');
 
   if (error) {
     content.innerHTML = `

@@ -3280,33 +3280,51 @@ function createDowntimeFloatingCard(action, index) {
   card.style.top = '140px';
 
   card.innerHTML = `
-    <div class="downtime-floating-title">
-      ${action.name}
-    </div>
+  <button
+    type="button"
+    onclick="this.closest('.downtime-floating-card').remove()"
+    style="
+      position:absolute;
+      top:0.45rem;
+      right:0.55rem;
+      background:transparent;
+      border:none;
+      color:var(--muted);
+      cursor:pointer;
+      font-size:1rem;
+      line-height:1;
+    "
+    title="Close">
+    ✕
+  </button>
 
-    <div class="downtime-floating-text">
-      ${action.rules_text || ''}
-    </div>
+  <div class="downtime-floating-title" style="padding-right:1.5rem">
+    ${action.name}
+  </div>
 
-    ${
-      action.effect_roll
-        ? `
-          <div style="
-            margin-top:0.45rem;
-            color:var(--amethyst);
-            font-family:'Cinzel',serif;
-            font-size:0.72rem;
-          ">
-            ${action.effect_roll}
-          </div>
-        `
-        : ''
-    }
+  <div class="downtime-floating-text">
+    ${action.rules_text || ''}
+  </div>
 
-    <div class="downtime-floating-hint">
-      Drag to move
-    </div>
-  `;
+  ${
+    action.effect_roll
+      ? `
+        <div style="
+          margin-top:0.45rem;
+          color:var(--amethyst);
+          font-family:'Cinzel',serif;
+          font-size:0.72rem;
+        ">
+          ${action.effect_roll}
+        </div>
+      `
+      : ''
+  }
+
+  <div class="downtime-floating-hint">
+    Drag to move
+  </div>
+`;
 
   document.body.appendChild(card);
 
@@ -3398,6 +3416,17 @@ function initSheetDicePreviews() {
 
 function renderSheetHTML(c) {
   const initial = (c.name||'?').trim().charAt(0).toUpperCase() || '?';
+
+  const characterLevel = Number(c.level) || 1;
+
+  const characterTier =
+    characterLevel === 1
+      ? 1
+      : characterLevel <= 4
+        ? 2
+        : characterLevel <= 7
+          ? 3
+          : 4;
   return `
   <div class="section-header">
     <h2>Character Sheet</h2>
@@ -3456,10 +3485,52 @@ function renderSheetHTML(c) {
     </button>
   ` : ''}
 
+  <div style="
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:0.3rem;
+">
+
   <div class="level-badge">
-      ${isSheetLocked() ? `<div style="font-family:'Cinzel Decorative',serif;font-size:1.3rem;color:var(--gold-light)">${c.level||1}</div>` : `<input type="number" id="s-level" value="${c.level||1}" min="1" max="10" />`}
-      <div class="lvl-lbl">Level</div>
+    ${
+      isSheetLocked()
+        ? `
+          <div style="
+            font-family:'Cinzel Decorative',serif;
+            font-size:1.3rem;
+            color:var(--gold-light);
+          ">
+            ${characterLevel}
+          </div>
+        `
+        : `
+          <input
+            type="number"
+            id="s-level"
+            value="${characterLevel}"
+            min="1"
+            max="10"
+          />
+        `
+    }
+
+    <div class="lvl-lbl">
+      Level
     </div>
+  </div>
+
+  <div style="
+    font-family:'Cinzel',serif;
+    font-size:0.65rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--gold-light);
+  ">
+    Tier ${characterTier}
+  </div>
+
+</div>
   </div>
 
   <!-- Evasion / Armor / Armor Slots -->

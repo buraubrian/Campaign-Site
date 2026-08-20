@@ -589,6 +589,19 @@ select option { background: var(--panel); }
   color: var(--muted);
   margin-top: 0.1rem;
 }
+  .character-sheet-footer-logo {
+  margin-top: 4rem;
+  padding: 2rem 1rem 3rem;
+  text-align: center;
+}
+
+.character-sheet-footer-logo img {
+  width: min(680px, 90%);
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  opacity: 0.9;
+}
   .equipment-hover-wrap {
   position: relative;
 }
@@ -2687,7 +2700,12 @@ function renderSheetHTML(c) {
       <textarea id="s-backstory" style="min-height:130px">${c.backstory||''}</textarea>
     </div>
   </div>
-
+<div class="character-sheet-footer-logo">
+  <img
+    src="App Logo 2 Horizontal.png"
+    alt="The Chronicler's Tome"
+  />
+</div>
   <input type="hidden" id="s-char-id" value="${c.id}" />
   <input type="hidden" id="s-cur-hp" value="${c.current_hp||c.max_hp||6}" />
   <input type="hidden" id="s-cur-stress" value="${c.current_stress||0}" />

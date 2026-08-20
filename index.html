@@ -2363,6 +2363,11 @@ async function loadSheetTab() {
     return;
   }
 const c = chars[0];
+
+charPageId = c.id;
+charPageData = c;
+editingCharId = c.id;
+
 el.innerHTML = renderSheetHTML(c);
 renderAllPips(c);
 initSheetDicePreviews();

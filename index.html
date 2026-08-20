@@ -1987,7 +1987,10 @@ const parts = [];
 const minorParts = [];
 const majorParts = [];
 const severeParts = [];
-  const characterLevel = Number(charPageData?.level) || 1;
+const characterLevel =
+  targetInputId.startsWith('w-')
+    ? (wizardData?.level || 1)
+    : (charPageData?.level || 1);
 
   // If armor is equipped, get its base Armor Score and thresholds.
   if (armorItem) {
@@ -5359,6 +5362,102 @@ async function syncCharacterWeaponsToInventory(characterId, primaryName, seconda
 
   return true;
 }
+ async function syncCharacterArmorToInventory(characterId, armorName) {
+  // Remove any currently equipped armor rows for this character
+  const { error: clearError } = await sb
+    .from('character_items')
+    .delete()
+    .eq('character_id', characterId)
+    .eq('item_type', 'armor')
+    .eq('is_equipped', true);
+
+  if (clearError) {
+    toast(
+      'Could not update starting armor: ' + clearError.message,
+      'error'
+    );
+    return false;
+  }
+
+  // No armor selected = character remains unarmored
+  if (!armorName) {
+    return true;
+  }
+
+  // Find the selected armor reference row
+  const { data: armor, error: armorError } = await sb
+    .from('armor')
+    .select('id,name')
+    .eq('name', armorName)
+    .single();
+
+  if (armorError || !armor) {
+    toast(
+      'Could not find selected armor: ' + armorName,
+      'error'
+    );
+    return false;
+  }
+
+  // Check whether this exact armor is already in inventory
+  const { data: existing, error: existingError } = await sb
+    .from('character_items')
+    .select('id')
+    .eq('character_id', characterId)
+    .eq('item_type', 'armor')
+    .eq('item_id', armor.id)
+    .maybeSingle();
+
+  if (existingError) {
+    toast(
+      'Could not check starting armor: ' + existingError.message,
+      'error'
+    );
+    return false;
+  }
+
+  if (existing) {
+    const { error: equipError } = await sb
+      .from('character_items')
+      .update({
+        is_equipped: true,
+        equipment_slot: 'armor'
+      })
+      .eq('id', existing.id);
+
+    if (equipError) {
+      toast(
+        'Could not equip starting armor: ' + equipError.message,
+        'error'
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  // Add selected armor as equipped
+  const { error: insertError } = await sb
+    .from('character_items')
+    .insert({
+      character_id: characterId,
+      item_type: 'armor',
+      item_id: armor.id,
+      quantity: 1,
+      is_equipped: true,
+      equipment_slot: 'armor'
+    });
+
+  if (insertError) {
+    toast(
+      'Starting armor save failed: ' + insertError.message,
+      'error'
+    );
+    return false;
+  }
+
+  return true;
+} 
 async function saveBuilderChanges() {
   if (!charPageId) { toast('No character loaded', 'error'); return; }
   const payload = {
@@ -6091,16 +6190,22 @@ async function saveWizardProgress() {
     }
   }
 
-  const weaponsSaved = await syncCharacterWeaponsToInventory(
-    charId,
-    wizardData.weapon_primary,
-    wizardData.weapon_secondary
-  );
+const weaponsSaved = await syncCharacterWeaponsToInventory(
+  charId,
+  wizardData.weapon_primary,
+  wizardData.weapon_secondary
+);
 
-  if (!weaponsSaved) return;
+if (!weaponsSaved) return;
 
-  toast('Progress saved', 'success');
-}
+const armorSaved = await syncCharacterArmorToInventory(
+  charId,
+  wizardData.armor_name
+);
+
+if (!armorSaved) return;
+
+toast('Progress saved', 'success');
 
 async function finalizeCharacter() {
   await saveWizardProgress();

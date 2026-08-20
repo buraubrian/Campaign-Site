@@ -5710,8 +5710,26 @@ function togglePip(kind, idx, max) {
 }
 
 async function saveSheetInline(charId) {
-  const id = charId || document.getElementById('s-char-id')?.value || charPageId;
-  if (!id) return;
+  const sheetId = document.getElementById('s-char-id')?.value;
+
+  const id =
+    charId ||
+    sheetId ||
+    charPageData?.id ||
+    charPageId;
+
+  if (!id) {
+    toast('No character ID found. Save cancelled.', 'error');
+    return;
+  }
+
+  console.log('Saving character:', {
+    id,
+    name: document.getElementById('s-name')?.value,
+    charPageId,
+    charPageDataId: charPageData?.id,
+    sheetId
+  });
   const updates = {
     name: v('s-name'), class: v('s-class'), subclass: v('s-subclass'),
     ancestry: v('s-ancestry'), community: v('s-community'), level: n('s-level'),
@@ -5733,15 +5751,22 @@ current_armor: n('s-cur-armor'),
     armor_name: v('s-armor'), backstory: v('s-backstory'),
     updated_at: new Date().toISOString()
   };
- const { error } = await sb
+const { data: savedCharacter, error } = await sb
   .from('characters')
   .update(updates)
-  .eq('id', id);
+  .eq('id', id)
+  .eq('owner_id', currentUser.id)
+  .select()
+  .single();
 
 if (error) {
   toast(error.message, 'error');
   return;
 }
+
+charPageId = savedCharacter.id;
+charPageData = savedCharacter;
+editingCharId = savedCharacter.id;
 
 const weaponsSaved = await syncCharacterWeaponsToInventory(
   id,
@@ -6195,15 +6220,22 @@ async function saveBuilderChanges() {
     presence: charPageData.presence||0, knowledge: charPageData.knowledge||0,
     updated_at: new Date().toISOString()
   };
-const { error } = await sb
+const { data: savedCharacter, error } = await sb
   .from('characters')
   .update(payload)
-  .eq('id', charPageId);
+  .eq('id', charPageId)
+  .eq('owner_id', currentUser.id)
+  .select()
+  .single();
 
 if (error) {
   toast(error.message, 'error');
   return;
 }
+
+charPageId = savedCharacter.id;
+charPageData = savedCharacter;
+editingCharId = savedCharacter.id;
 
 // Sync Primary + Secondary into character_items
 const weaponsSaved = await syncCharacterWeaponsToInventory(

@@ -1809,6 +1809,114 @@ const ATTRIBUTE_SKILLS = {
   knowledge: ['Recall', 'Analyze', 'Comprehend'],
 };
 function fmtMod(n) { n = parseInt(n)||0; return (n>=0?'+':'') + n; }
+  // Maps target_stat values from effects tables to character stat keys
+const STAT_MAP = {
+  evasion:              'evasion',
+  agility:              'agility',
+  strength:             'strength',
+  finesse:              'finesse',
+  instinct:             'instinct',
+  presence:             'presence',
+  knowledge:            'knowledge',
+  armor_score:          'max_armor',
+  minor_threshold:      'minor_threshold',
+  major_threshold:      'major_threshold',
+  severe_threshold:     'severe_threshold',
+  spellcast_roll:       'spellcast_roll',
+};
+
+const ALL_TRAITS = ['agility','strength','finesse','instinct','presence','knowledge'];
+
+// Returns { stat: { base, modifiers:[{source,value}], total } }
+async function computeCharacterStats(c) {
+  // base stats from character
+  const base = {
+    evasion:           c.evasion          || 10,
+    agility:           c.agility          || 0,
+    strength:          c.strength         || 0,
+    finesse:           c.finesse          || 0,
+    instinct:          c.instinct         || 0,
+    presence:          c.presence         || 0,
+    knowledge:         c.knowledge        || 0,
+    max_armor:         c.max_armor        || 3,
+    minor_threshold:   c.minor_threshold  || 5,
+    major_threshold:   c.major_threshold  || 10,
+    severe_threshold:  c.severe_threshold || 15,
+    spellcast_roll:    0,
+  };
+
+  // modifiers accumulator: { statKey: [{source, value}] }
+  const mods = {};
+  Object.keys(base).forEach(k => mods[k] = []);
+
+  function applyEffect(sourceName, targetStat, value) {
+    if (targetStat === 'all_traits') {
+      ALL_TRAITS.forEach(t => mods[t]?.push({ source: sourceName, value }));
+    } else {
+      const key = STAT_MAP[targetStat] || targetStat;
+      if (mods[key]) mods[key].push({ source: sourceName, value });
+    }
+  }
+
+  // get equipped items
+  const { data: equippedItems } = await sb.from('character_items')
+    .select('id, item_type, item_id, equipment_slot, is_equipped')
+    .eq('character_id', c.id)
+    .eq('is_equipped', true);
+
+  if (equippedItems && equippedItems.length > 0) {
+    const weaponIds = equippedItems.filter(i => i.item_type === 'weapon').map(i => i.item_id);
+    const armorIds  = equippedItems.filter(i => i.item_type === 'armor').map(i => i.item_id);
+
+    // weapon feature effects
+    if (weaponIds.length > 0) {
+      const { data: weapons } = await sb.from('weapons')
+        .select('id, name, weapon_feature_id')
+        .in('id', weaponIds);
+      const featureIds = (weapons||[]).map(w => w.weapon_feature_id).filter(Boolean);
+      if (featureIds.length > 0) {
+        const { data: effects } = await sb.from('weapon_feature_effects')
+          .select('*, weapon_feature(name)')
+          .in('weapon_feature_id', featureIds)
+          .eq('automation_level', 'automatic')
+          .in('trigger_type', ['equipped', 'always']);
+        (effects||[]).forEach(e => {
+          const weapon = weapons.find(w => w.weapon_feature_id === e.weapon_feature_id);
+          applyEffect(weapon?.name || 'Weapon', e.target_stat, e.effect_value);
+        });
+      }
+    }
+
+    // armor feature effects
+    if (armorIds.length > 0) {
+      const { data: armors } = await sb.from('armor')
+        .select('id, name, armor_feature_id')
+        .in('id', armorIds);
+      const featureIds = (armors||[]).map(a => a.armor_feature_id).filter(Boolean);
+      if (featureIds.length > 0) {
+        const { data: effects } = await sb.from('armor_feature_effects')
+          .select('*, armor_feature(name)')
+          .in('armor_feature_id', featureIds)
+          .eq('automation_level', 'automatic')
+          .in('trigger_type', ['equipped', 'always']);
+        (effects||[]).forEach(e => {
+          const armor = armors.find(a => a.armor_feature_id === e.armor_feature_id);
+          applyEffect(armor?.name || 'Armor', e.target_stat, e.effect_value);
+        });
+      }
+    }
+  }
+
+  // build final computed stats
+  const computed = {};
+  Object.entries(base).forEach(([key, baseVal]) => {
+    const modList = mods[key] || [];
+    const total = baseVal + modList.reduce((sum, m) => sum + (m.value||0), 0);
+    computed[key] = { base: baseVal, modifiers: modList, total };
+  });
+
+  return computed;
+}
 function showStatBreakdown(title, total, parts = []) {
   const lines = parts.map(part => `
     <div style="
@@ -2326,11 +2434,53 @@ const characterLevel = Number(charPageData?.level) || 1;
         value: baseMajor
       });
 
-      severeParts.push({
+           severeParts.push({
         label: armor.name,
         value: baseSevere
       });
+
+      // Apply armor feature effects
+      if (armor.armor_feature_id) {
+        const { data: effects } = await sb
+          .from('armor_feature_effects')
+          .select('target_stat, effect_value, armor_features(name)')
+          .eq('armor_feature_id', armor.armor_feature_id)
+          .eq('automation_level', 'automatic')
+          .in('trigger_type', ['always', 'equipped']);
+
+        (effects || []).forEach(e => {
+          const val = Number(e.effect_value) || 0;
+          const src = e.armor_features?.name || armor.name;
+          const stat = e.target_stat;
+
+          if (stat === 'armor_score') {
+            total += val;
+            parts.push({ label: src, value: val });
+          } else if (stat === 'minor_threshold') {
+            minorThreshold += val;
+            minorParts.push({ label: src, value: val });
+          } else if (stat === 'major_threshold') {
+            majorThreshold += val;
+            majorParts.push({ label: src, value: val });
+          } else if (stat === 'severe_threshold') {
+            severeThreshold += val;
+            severeParts.push({ label: src, value: val });
+          } else if (stat === 'evasion') {
+            // store for evasion update
+            if (!window._armorEvasionMods) window._armorEvasionMods = [];
+            window._armorEvasionMods.push({ label: src, value: val });
+          } else if (stat === 'all_traits') {
+            if (!window._armorTraitMods) window._armorTraitMods = [];
+            window._armorTraitMods.push({ label: src, value: val, stat: 'all' });
+          } else {
+            // individual trait (agility, strength, etc.)
+            if (!window._armorTraitMods) window._armorTraitMods = [];
+            window._armorTraitMods.push({ label: src, value: val, stat });
+          }
+        });
+      }
     }
+  }
   } else {
     // Daggerheart unarmored values:
     // Armor Score 0, Minor 0, Major = level, Severe = level x 2.
@@ -2427,9 +2577,45 @@ if (severeDisplay) {
     armorMarkedInput.value = marked;
   }
 
-  // Rebuild shields using calculated Armor Score
+   // Rebuild shields using calculated Armor Score
   buildArmorPips(total, marked);
-} 
+
+  // Apply evasion modifiers from armor features
+  if (window._armorEvasionMods?.length > 0 && charPageData?.id === characterId) {
+    const baseEvasion = charPageData.evasion || 10;
+    const evasionTotal = baseEvasion + window._armorEvasionMods.reduce((s, m) => s + m.value, 0);
+    const evasionDisplay = document.getElementById('sheet-evasion-score');
+    if (evasionDisplay) evasionDisplay.textContent = evasionTotal;
+    // store for hover
+    armorBreakdowns[characterId].evasion = {
+      total: evasionTotal,
+      parts: [{ label: 'Base', value: baseEvasion }, ...window._armorEvasionMods]
+    };
+    window._armorEvasionMods = [];
+  }
+
+  // Apply trait modifiers from armor features
+  if (window._armorTraitMods?.length > 0 && charPageData?.id === characterId) {
+    const traits = ['agility','strength','finesse','instinct','presence','knowledge'];
+    window._armorTraitMods.forEach(mod => {
+      const targets = mod.stat === 'all' ? traits : [mod.stat];
+      targets.forEach(t => {
+        const base = charPageData[t] || 0;
+        const el = document.getElementById(`s-${t}`);
+        const display = document.getElementById(`sheet-${t}-score`);
+        const newVal = base + mod.value;
+        if (el) el.value = newVal;
+        if (display) display.textContent = newVal >= 0 ? `+${newVal}` : `${newVal}`;
+        if (!armorBreakdowns[characterId][t]) {
+          armorBreakdowns[characterId][t] = { total: base, parts: [{ label: 'Base', value: base }] };
+        }
+        armorBreakdowns[characterId][t].total += mod.value;
+        armorBreakdowns[characterId][t].parts.push({ label: mod.label, value: mod.value });
+      });
+    });
+    window._armorTraitMods = [];
+  }
+}
 function togglePassword(inputId, iconId) {
   const input = document.getElementById(inputId);
   const icon = document.getElementById(iconId);

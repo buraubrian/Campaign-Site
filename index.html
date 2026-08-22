@@ -3049,11 +3049,19 @@ async function completePasswordReset() {
     return;
   }
 
-  // Password reset is complete.
+    // Password reset is complete.
   passwordRecoveryMode = false;
+  passwordResetEmailSent = false;
 
   // Sign out of the temporary recovery session.
   await sb.auth.signOut();
+
+  // Remove ?mode=reset from the URL
+  window.history.replaceState(
+    {},
+    document.title,
+    window.location.origin + window.location.pathname
+  );
 
   // Return to the normal sign-in screen.
   showNormalLogin();

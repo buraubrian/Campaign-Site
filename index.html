@@ -1975,10 +1975,10 @@ function showStatHoverBreakdown(anchor, characterId, statKey, label) {
   let breakdown = null;
 
   // Use the generic computed stats first.
-  if (
-    charPageData?.id === characterId &&
-    charPageData?._computed?.[statKey]
-  ) {
+if (
+  String(charPageData?.id) === String(characterId) &&
+  charPageData?._computed?.[statKey]
+) {
     const computed = charPageData._computed[statKey];
 
     breakdown = {
@@ -3859,7 +3859,8 @@ function renderSheetHTML(c) {
     </div>
 
     <div
-      onmouseenter="showStatHoverBreakdown(
+  class="stat-hover-wrap"
+  onmouseenter="showStatHoverBreakdown(
         this,
         '${c.id}',
         '${key}',

@@ -1825,6 +1825,7 @@ let combatTurn = 0;
 let combatRound = 1;
 let fearTokens = 0;
 let rollHistory = [];
+let passwordRecoveryMode = false;
 
 /* ═══════════════════════════════════════════════════════
    INIT
@@ -1833,27 +1834,41 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
   console.log('Auth event:', event);
 
-  // Password reset email link
+  // User arrived through password recovery email.
   if (event === 'PASSWORD_RECOVERY') {
+    passwordRecoveryMode = true;
     showPasswordReset();
     return;
   }
 
-  // Normal signed-in session
-  if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+  // While resetting a password, DO NOT open the normal app.
+  if (passwordRecoveryMode) {
+    return;
+  }
 
+  // Initial normal session check.
+  if (event === 'INITIAL_SESSION') {
     if (session) {
       await initApp(session.user);
     } else {
-      showPage('page-auth');
+      showNormalLogin();
     }
 
     return;
   }
 
-  // Signed out
+  // Normal login.
+  if (event === 'SIGNED_IN') {
+    if (session) {
+      await initApp(session.user);
+    }
+
+    return;
+  }
+
+  // Normal logout.
   if (event === 'SIGNED_OUT') {
-    showPage('page-auth');
+    showNormalLogin();
   }
 
 });
@@ -2820,6 +2835,23 @@ async function forgotPassword() {
   msg.textContent =
     'If an account exists for that email, a password reset link has been sent.';
 }
+  function showNormalLogin() {
+  passwordRecoveryMode = false;
+
+  showPage('page-auth');
+
+  document.getElementById('auth-reset').style.display = 'none';
+  document.getElementById('auth-login').style.display = 'block';
+  document.getElementById('auth-signup').style.display = 'none';
+
+  const tabs = document.querySelector('.auth-tabs');
+
+  if (tabs) {
+    tabs.style.display = 'flex';
+  }
+
+  authTab('login');
+}
   function showPasswordReset() {
   showPage('page-auth');
 
@@ -2832,7 +2864,7 @@ async function forgotPassword() {
     tabs.style.display = 'none';
   }
 }
-  async function completePasswordReset() {
+async function completePasswordReset() {
   const password =
     document.getElementById('reset-password').value;
 
@@ -2843,6 +2875,7 @@ async function forgotPassword() {
     document.getElementById('reset-msg');
 
   msg.style.color = 'var(--ruby)';
+  msg.textContent = '';
 
   if (!password || !confirm) {
     msg.textContent =
@@ -2871,17 +2904,14 @@ async function forgotPassword() {
     return;
   }
 
-  // Sign out of the temporary recovery session
+  // Password reset is complete.
+  passwordRecoveryMode = false;
+
+  // Sign out of the temporary recovery session.
   await sb.auth.signOut();
 
-  document.getElementById('auth-reset').style.display = 'none';
-
-  const tabs = document.querySelector('.auth-tabs');
-  if (tabs) {
-    tabs.style.display = 'flex';
-  }
-
-  authTab('login');
+  // Return to the normal sign-in screen.
+  showNormalLogin();
 
   const authMsg =
     document.getElementById('auth-msg');
@@ -2903,10 +2933,13 @@ async function doSignup() {
 
 async function doLogout() {
   await sb.auth.signOut();
-  currentUser = null; currentProfile = null; currentCampaign = null;
-  showPage('page-auth');
-}
 
+  currentUser = null;
+  currentProfile = null;
+  currentCampaign = null;
+
+  showNormalLogin();
+}
 /* ═══════════════════════════════════════════════════════
    NAVIGATION
 ════════════════════════════════════════════════════════ */

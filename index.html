@@ -7976,57 +7976,37 @@ async function searchPlayers(query) {
   `;
 
   playerSearchTimeout = setTimeout(async () => {
+
     const q = query.trim();
 
-    // Search profiles by display name.
-    const {
-      data: profileMatches,
-      error: profileError
-    } = await sb
-      .from('profiles')
-      .select('id, display_name')
-      .ilike('display_name', `%${q}%`)
-      .neq('id', currentUser.id)
-      .limit(20);
-    console.log('SEARCH TEXT:', q);
-console.log('PROFILE MATCHES:', profileMatches);
-console.log('PROFILE ERROR:', profileError);
-
-    if (profileError) {
-      console.error('Profile search error:', profileError);
-    }
-
-    // Search characters by character name.
-    const {
-      data: characterMatches,
-      error: characterError
-    } = await sb
-      .from('characters')
-      .select('id, name, owner_id')
-      .ilike('name', `%${q}%`)
-      .neq('owner_id', currentUser.id)
-      .limit(20);
-    console.log('CHARACTER MATCHES:', characterMatches);
-console.log('CHARACTER ERROR:', characterError);
-
-    if (characterError) {
-      console.error('Character search error:', characterError);
-    }
-
-    // Collect all matching owner IDs.
-    const ownerIds = new Set();
-
-    (profileMatches || []).forEach(profile => {
-      ownerIds.add(profile.id);
-    });
-
-    (characterMatches || []).forEach(character => {
-      if (character.owner_id) {
-        ownerIds.add(character.owner_id);
+    const { data, error } = await sb.rpc(
+      'search_campaign_players',
+      {
+        p_search: q,
+        p_current_user: currentUser.id,
+        p_campaign_id: currentCampaign.id
       }
-    });
+    );
 
-    if (ownerIds.size === 0) {
+    console.log('PLAYER SEARCH:', data);
+    console.log('PLAYER SEARCH ERROR:', error);
+
+    if (error) {
+      results.innerHTML = `
+        <div style="
+          color:var(--ruby);
+          font-size:0.85rem;
+          padding:0.5rem;
+        ">
+          Could not search players.
+        </div>
+      `;
+
+      console.error(error);
+      return;
+    }
+
+    if (!data || data.length === 0) {
       results.innerHTML = `
         <div style="
           color:var(--muted);
@@ -8039,108 +8019,23 @@ console.log('CHARACTER ERROR:', characterError);
       return;
     }
 
-    // Get profiles for everybody we found.
-    const {
-      data: profiles,
-      error: profilesError
-    } = await sb
-      .from('profiles')
-      .select('id, display_name')
-      .in('id', [...ownerIds]);
-
-    if (profilesError) {
-      console.error('Profile lookup error:', profilesError);
-
-      results.innerHTML = `
-        <div style="
-          color:var(--ruby);
-          font-size:0.85rem;
-          padding:0.5rem;
-        ">
-          Could not search players.
-        </div>
-      `;
-      return;
-    }
-
-    // Get characters belonging to the matching players.
-    const {
-      data: characters,
-      error: charactersError
-    } = await sb
-      .from('characters')
-      .select('id, name, owner_id')
-      .in('owner_id', [...ownerIds]);
-
-    if (charactersError) {
-      console.error('Character lookup error:', charactersError);
-    }
-
-    // Filter out players already in campaign.
-    const {
-      data: existing,
-      error: existingError
-    } = await sb
-      .from('campaign_members')
-      .select('player_id')
-      .eq('campaign_id', currentCampaign.id);
-
-    if (existingError) {
-      console.error(
-        'Campaign member lookup error:',
-        existingError
-      );
-    }
-
-    const existingIds = new Set(
-      (existing || []).map(member => member.player_id)
-    );
-
-    const available = (profiles || []).filter(profile =>
-      !existingIds.has(profile.id)
-    );
-
-    if (available.length === 0) {
-      results.innerHTML = `
-        <div style="
-          color:var(--muted);
-          font-size:0.85rem;
-          padding:0.5rem;
-        ">
-          All matching players are already in this campaign.
-        </div>
-      `;
-      return;
-    }
-
-    results.innerHTML = available.map(profile => {
-      const playerCharacters =
-        (characters || []).filter(
-          character =>
-            character.owner_id === profile.id
-        );
-
-      const characterNames =
-        playerCharacters.length > 0
-          ? playerCharacters
-              .map(character => character.name)
-              .join(', ')
-          : 'No characters';
+    results.innerHTML = data.map(player => {
 
       const safeDisplayName =
-        (profile.display_name || 'Player')
+        (player.display_name || 'Player')
           .replace(/'/g, "\\'");
 
-      const safeCharacterNames =
-        characterNames.replace(/'/g, "\\'");
+      const safeCharacters =
+        (player.character_names || 'No characters')
+          .replace(/'/g, "\\'");
 
       return `
         <div
           onclick="
             selectPlayer(
-              '${profile.id}',
+              '${player.player_id}',
               '${safeDisplayName}',
-              '${safeCharacterNames}'
+              '${safeCharacters}'
             )
           "
           style="
@@ -8178,10 +8073,9 @@ console.log('CHARACTER ERROR:', characterError);
             display:flex;
             align-items:center;
             justify-content:center;
-            font-size:1rem;
             flex-shrink:0;
           ">
-            ${(profile.display_name || '?')
+            ${(player.display_name || '?')
               .charAt(0)
               .toUpperCase()}
           </div>
@@ -8192,19 +8086,20 @@ console.log('CHARACTER ERROR:', characterError);
               color:var(--text);
               font-size:0.9rem;
             ">
-              ${profile.display_name || 'Player'}
+              ${player.display_name || 'Player'}
             </div>
 
             <div style="
               font-size:0.78rem;
               color:var(--muted);
             ">
-              ${characterNames}
+              ${player.character_names || 'No characters'}
             </div>
           </div>
 
         </div>
       `;
+
     }).join('');
 
   }, 300);

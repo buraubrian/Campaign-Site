@@ -3629,7 +3629,7 @@ function switchCampaignTab(id) {
   if (id === 'wiki') loadWikiTab();
   if (id === 'handouts') loadHandoutsTab();
   if (id === 'dice') loadDiceTab();
-  if (id === 'players') loadPlayersTab();
+  if (id === 'players') Tab();
   if (id === 'npcs') loadNPCsTab();
   if (id === 'encounters') loadEncountersTab();
   if (id === 'gm-notes') loadGMNotesTab();
@@ -7907,17 +7907,18 @@ async function unassignCharacter(charId) {
 async function loadPlayersTab() {
   const el = document.getElementById('tab-players');
 
-  // 1. Get campaign members
-  const {
-    data: members,
-    error: membersError
-  } = await sb
-    .from('campaign_members')
-    .select('player_id, role')
-    .eq('campaign_id', currentCampaign.id);
+  const { data, error } = await sb.rpc(
+    'get_campaign_players',
+    {
+      p_campaign_id: currentCampaign.id
+    }
+  );
 
-  if (membersError) {
-    console.error('LOAD PLAYERS - MEMBERS ERROR:', membersError);
+  console.log('CAMPAIGN PLAYER RPC:', data);
+  console.log('CAMPAIGN PLAYER RPC ERROR:', error);
+
+  if (error) {
+    console.error(error);
 
     el.innerHTML = `
       <div class="section-header">
@@ -7941,8 +7942,7 @@ async function loadPlayersTab() {
     return;
   }
 
-  // No members yet
-  if (!members || members.length === 0) {
+  if (!data || data.length === 0) {
     el.innerHTML = `
       <div class="section-header">
         <h2>Players</h2>
@@ -7965,51 +7965,30 @@ async function loadPlayersTab() {
     return;
   }
 
-  const playerIds = members.map(m => m.player_id);
+  // Group rows by player because a player may have more than one character.
+  const groupedPlayers = {};
 
-  // 2. Get display names separately
-  const {
-    data: profiles,
-    error: profilesError
-  } = await sb
-    .from('profiles')
-    .select('id, display_name')
-    .in('id', playerIds);
+  data.forEach(row => {
+    if (!groupedPlayers[row.player_id]) {
+      groupedPlayers[row.player_id] = {
+        player_id: row.player_id,
+        display_name: row.display_name,
+        characters: []
+      };
+    }
 
-  if (profilesError) {
-    console.error(
-      'LOAD PLAYERS - PROFILES ERROR:',
-      profilesError
-    );
-  }
+    if (row.character_id) {
+      groupedPlayers[row.player_id].characters.push({
+        id: row.character_id,
+        name: row.character_name,
+        class: row.character_class,
+        level: row.character_level,
+        sheet_locked: row.sheet_locked
+      });
+    }
+  });
 
-  // 3. Get characters assigned to this campaign
-  const {
-    data: chars,
-    error: charsError
-  } = await sb
-    .from('characters')
-    .select(`
-      id,
-      name,
-      owner_id,
-      class,
-      level,
-      sheet_locked
-    `)
-    .eq('campaign_id', currentCampaign.id)
-    .in('owner_id', playerIds);
-
-  if (charsError) {
-    console.error(
-      'LOAD PLAYERS - CHARACTERS ERROR:',
-      charsError
-    );
-  }
-
-  console.log('CAMPAIGN MEMBERS:', members);
-  console.log('CAMPAIGN PROFILES:', profiles);
-  console.log('CAMPAIGN CHARACTERS:', chars);
+  const players = Object.values(groupedPlayers);
 
   el.innerHTML = `
     <div class="section-header">
@@ -8025,24 +8004,11 @@ async function loadPlayersTab() {
       </div>
     </div>
 
-    ${members.map(member => {
-
-      const profile =
-        (profiles || []).find(
-          p => p.id === member.player_id
-        );
-
-      const playerChars =
-        (chars || []).filter(
-          c => c.owner_id === member.player_id
-        );
-
-      const displayName =
-        profile?.display_name || 'Unknown Player';
+    ${players.map(player => {
 
       const charactersHtml =
-        playerChars.length > 0
-          ? playerChars.map(char => `
+        player.characters.length > 0
+          ? player.characters.map(char => `
               <div style="
                 margin-top:0.5rem;
                 font-size:0.9rem;
@@ -8066,12 +8032,12 @@ async function loadPlayersTab() {
             `;
 
       const lockButtons =
-        playerChars.map(char => `
+        player.characters.map(char => `
           <button
             class="btn btn-ghost btn-sm"
             onclick="
               toggleSheetLock(
-                '${member.player_id}',
+                '${player.player_id}',
                 '${char.id}',
                 ${!!char.sheet_locked}
               )
@@ -8102,7 +8068,7 @@ async function loadPlayersTab() {
                 color:var(--gold-light);
                 font-size:1rem;
               ">
-                ${displayName}
+                ${player.display_name}
               </div>
 
               ${charactersHtml}
@@ -8120,7 +8086,7 @@ async function loadPlayersTab() {
 
               <button
                 class="btn btn-danger btn-sm"
-                onclick="removePlayer('${member.player_id}')"
+                onclick="removePlayer('${player.player_id}')"
               >
                 Remove
               </button>

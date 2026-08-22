@@ -1686,7 +1686,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
     <button class="modal-close" onclick="closeModal('modal-add-player')">✕</button>
     <h3>Add Player to Campaign</h3>
     <div class="field">
-      <label>Search by username or display name</label>
+      <label>Search by character name or display name</label>
       <input type="text" id="ap-search" placeholder="Start typing a name…" oninput="searchPlayers(this.value)" autocomplete="off" />
     </div>
     <div id="ap-results" style="margin-top:0.5rem;max-height:280px;overflow-y:auto"></div>
@@ -7948,56 +7948,294 @@ function openAddPlayerModal() {
 
 async function searchPlayers(query) {
   clearTimeout(playerSearchTimeout);
-  const results = document.getElementById('ap-results');
+
+  const results =
+    document.getElementById('ap-results');
+
   if (!query || query.trim().length < 2) {
-    results.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:0.5rem">Type at least 2 characters to search…</div>';
+    results.innerHTML = `
+      <div style="
+        color:var(--muted);
+        font-size:0.85rem;
+        padding:0.5rem;
+      ">
+        Type at least 2 characters to search…
+      </div>
+    `;
     return;
   }
-  results.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:0.5rem">Searching…</div>';
+
+  results.innerHTML = `
+    <div style="
+      color:var(--muted);
+      font-size:0.85rem;
+      padding:0.5rem;
+    ">
+      Searching…
+    </div>
+  `;
+
   playerSearchTimeout = setTimeout(async () => {
-    const q = query.trim().toLowerCase();
-    const { data: profiles, error } = await sb.from('profiles').select('*')
-      .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
+    const q = query.trim();
+
+    // Search profiles by display name.
+    const {
+      data: profileMatches,
+      error: profileError
+    } = await sb
+      .from('profiles')
+      .select('id, display_name')
+      .ilike('display_name', `%${q}%`)
       .neq('id', currentUser.id)
-      .limit(10);
-    if (error || !profiles || profiles.length === 0) {
-      results.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:0.5rem">No users found matching that name.</div>';
+      .limit(20);
+
+    if (profileError) {
+      console.error('Profile search error:', profileError);
+    }
+
+    // Search characters by character name.
+    const {
+      data: characterMatches,
+      error: characterError
+    } = await sb
+      .from('characters')
+      .select('id, name, owner_id')
+      .ilike('name', `%${q}%`)
+      .neq('owner_id', currentUser.id)
+      .limit(20);
+
+    if (characterError) {
+      console.error('Character search error:', characterError);
+    }
+
+    // Collect all matching owner IDs.
+    const ownerIds = new Set();
+
+    (profileMatches || []).forEach(profile => {
+      ownerIds.add(profile.id);
+    });
+
+    (characterMatches || []).forEach(character => {
+      if (character.owner_id) {
+        ownerIds.add(character.owner_id);
+      }
+    });
+
+    if (ownerIds.size === 0) {
+      results.innerHTML = `
+        <div style="
+          color:var(--muted);
+          font-size:0.85rem;
+          padding:0.5rem;
+        ">
+          No players found matching that name.
+        </div>
+      `;
       return;
     }
-    // filter out people already in the campaign
-    const { data: existing } = await sb.from('campaign_members').select('player_id').eq('campaign_id', currentCampaign.id);
-    const existingIds = new Set((existing||[]).map(m => m.player_id));
-    const available = profiles.filter(p => !existingIds.has(p.id));
+
+    // Get profiles for everybody we found.
+    const {
+      data: profiles,
+      error: profilesError
+    } = await sb
+      .from('profiles')
+      .select('id, display_name')
+      .in('id', [...ownerIds]);
+
+    if (profilesError) {
+      console.error('Profile lookup error:', profilesError);
+
+      results.innerHTML = `
+        <div style="
+          color:var(--ruby);
+          font-size:0.85rem;
+          padding:0.5rem;
+        ">
+          Could not search players.
+        </div>
+      `;
+      return;
+    }
+
+    // Get characters belonging to the matching players.
+    const {
+      data: characters,
+      error: charactersError
+    } = await sb
+      .from('characters')
+      .select('id, name, owner_id')
+      .in('owner_id', [...ownerIds]);
+
+    if (charactersError) {
+      console.error('Character lookup error:', charactersError);
+    }
+
+    // Filter out players already in campaign.
+    const {
+      data: existing,
+      error: existingError
+    } = await sb
+      .from('campaign_members')
+      .select('player_id')
+      .eq('campaign_id', currentCampaign.id);
+
+    if (existingError) {
+      console.error(
+        'Campaign member lookup error:',
+        existingError
+      );
+    }
+
+    const existingIds = new Set(
+      (existing || []).map(member => member.player_id)
+    );
+
+    const available = (profiles || []).filter(profile =>
+      !existingIds.has(profile.id)
+    );
+
     if (available.length === 0) {
-      results.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:0.5rem">All matching users are already in this campaign.</div>';
+      results.innerHTML = `
+        <div style="
+          color:var(--muted);
+          font-size:0.85rem;
+          padding:0.5rem;
+        ">
+          All matching players are already in this campaign.
+        </div>
+      `;
       return;
     }
-    results.innerHTML = available.map(p => `
-      <div onclick="selectPlayer('${p.id}','${(p.display_name||p.username||'').replace(/'/g,"\\'")}','${(p.username||'').replace(/'/g,"\\'")}' )"
-        style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.75rem;border-radius:var(--radius);cursor:pointer;border:1px solid transparent;transition:all 0.15s;margin-bottom:0.3rem;background:rgba(14,11,20,0.4)"
-        onmouseover="this.style.borderColor='var(--amethyst)';this.style.background='rgba(123,79,166,0.1)'"
-        onmouseout="this.style.borderColor='transparent';this.style.background='rgba(14,11,20,0.4)'">
-        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--amethyst),var(--sapphire));display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">
-          ${(p.display_name||p.username||'?').charAt(0).toUpperCase()}
+
+    results.innerHTML = available.map(profile => {
+      const playerCharacters =
+        (characters || []).filter(
+          character =>
+            character.owner_id === profile.id
+        );
+
+      const characterNames =
+        playerCharacters.length > 0
+          ? playerCharacters
+              .map(character => character.name)
+              .join(', ')
+          : 'No characters';
+
+      const safeDisplayName =
+        (profile.display_name || 'Player')
+          .replace(/'/g, "\\'");
+
+      const safeCharacterNames =
+        characterNames.replace(/'/g, "\\'");
+
+      return `
+        <div
+          onclick="
+            selectPlayer(
+              '${profile.id}',
+              '${safeDisplayName}',
+              '${safeCharacterNames}'
+            )
+          "
+          style="
+            display:flex;
+            align-items:center;
+            gap:0.75rem;
+            padding:0.65rem 0.75rem;
+            border-radius:var(--radius);
+            cursor:pointer;
+            border:1px solid transparent;
+            transition:all 0.15s;
+            margin-bottom:0.3rem;
+            background:rgba(14,11,20,0.4);
+          "
+          onmouseover="
+            this.style.borderColor='var(--amethyst)';
+            this.style.background='rgba(123,79,166,0.1)';
+          "
+          onmouseout="
+            this.style.borderColor='transparent';
+            this.style.background='rgba(14,11,20,0.4)';
+          "
+        >
+
+          <div style="
+            width:36px;
+            height:36px;
+            border-radius:50%;
+            background:
+              linear-gradient(
+                135deg,
+                var(--amethyst),
+                var(--sapphire)
+              );
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:1rem;
+            flex-shrink:0;
+          ">
+            ${(profile.display_name || '?')
+              .charAt(0)
+              .toUpperCase()}
+          </div>
+
+          <div>
+            <div style="
+              font-family:'Cinzel',serif;
+              color:var(--text);
+              font-size:0.9rem;
+            ">
+              ${profile.display_name || 'Player'}
+            </div>
+
+            <div style="
+              font-size:0.78rem;
+              color:var(--muted);
+            ">
+              ${characterNames}
+            </div>
+          </div>
+
         </div>
-        <div>
-          <div style="font-family:'Cinzel',serif;color:var(--text);font-size:0.9rem">${p.display_name||p.username}</div>
-          <div style="font-size:0.78rem;color:var(--muted)">@${p.username}</div>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
+
   }, 300);
 }
-
-function selectPlayer(id, displayName, username) {
+function selectPlayer(
+  id,
+  displayName,
+  characterNames
+) {
   selectedPlayerId = id;
-  document.getElementById('ap-selected-name').textContent = displayName;
-  document.getElementById('ap-selected-user').textContent = '@' + username;
-  document.getElementById('ap-selected').style.display = 'block';
-  document.getElementById('ap-results').innerHTML = '';
-  document.getElementById('ap-search').value = '';
-  const btn = document.getElementById('ap-add-btn');
-  btn.disabled = false; btn.style.opacity = '1';
+
+  document.getElementById(
+    'ap-selected-name'
+  ).textContent = displayName;
+
+  document.getElementById(
+    'ap-selected-user'
+  ).textContent = characterNames;
+
+  document.getElementById(
+    'ap-selected'
+  ).style.display = 'block';
+
+  document.getElementById(
+    'ap-results'
+  ).innerHTML = '';
+
+  document.getElementById(
+    'ap-search'
+  ).value = '';
+
+  const btn =
+    document.getElementById('ap-add-btn');
+
+  btn.disabled = false;
+  btn.style.opacity = '1';
 }
 
 function clearPlayerSelection() {
@@ -8010,11 +8248,34 @@ function clearPlayerSelection() {
 }
 
 async function addPlayerToCampaign() {
-  if (!selectedPlayerId) { toast('Please select a player first', 'error'); return; }
-  const { error } = await sb.from('campaign_members').insert({ campaign_id: currentCampaign.id, player_id: selectedPlayerId, role: 'player' });
-  if (error) { toast(error.message, 'error'); return; }
+  if (!selectedPlayerId) {
+    toast(
+      'Please select a player first',
+      'error'
+    );
+    return;
+  }
+
+  const { error } = await sb
+    .from('campaign_members')
+    .insert({
+      campaign_id: currentCampaign.id,
+      player_id: selectedPlayerId,
+      role: 'player'
+    });
+
+  if (error) {
+    toast(error.message, 'error');
+    return;
+  }
+
   closeModal('modal-add-player');
-  toast(`${profile.display_name || username} added!`, 'success');
+
+  toast(
+    'Player added to campaign!',
+    'success'
+  );
+
   loadPlayersTab();
 }
 

@@ -2489,7 +2489,11 @@ const characterLevel = Number(charPageData?.level) || 1;
 
         (effects || []).forEach(e => {
           const val = Number(e.effect_value) || 0;
-          const src = e.armor_features?.name || armor.name;
+         const featureName = e.armor_features?.name;
+
+        const src = featureName
+         ? `${armor.name} (${featureName})`
+         : armor.name;
 
           if (e.target_stat === 'armor_score') {
             total += val;
@@ -4542,7 +4546,41 @@ function showInventoryTab(type, clickedButton = null) {
     display.style.display = 'block';
   }
 }
+async function refreshCalculatedStats(characterId) {
+  if (!charPageData || charPageData.id !== characterId) return;
 
+  charPageData._computed = await computeCharacterStats(charPageData);
+
+  const computed = charPageData._computed;
+
+  // Evasion
+  const evasionDisplay = document.getElementById('sheet-evasion-score');
+  if (evasionDisplay && computed?.evasion) {
+    evasionDisplay.textContent = computed.evasion.total;
+  }
+
+  // Traits
+  const traits = [
+    'agility',
+    'strength',
+    'finesse',
+    'instinct',
+    'presence',
+    'knowledge'
+  ];
+
+  traits.forEach(stat => {
+    const display = document.getElementById(`sheet-${stat}-score`);
+    if (!display || !computed?.[stat]) return;
+
+    const total = computed[stat].total;
+
+    display.textContent =
+      total >= 0 ? `+${total}` : `${total}`;
+
+    display.style.display = 'block';
+  });
+}
   async function loadActiveWeapons(characterId) {
   const el = document.getElementById('active-weapons-display');
   if (!el) return;
@@ -5296,6 +5334,7 @@ await loadCharacterEquipment(characterId);
 
 await loadCharacterEquipment(characterId);
 await loadCalculatedArmor(characterId);
+await refreshCalculatedStats(characterId);
 } 
   async function unequipCharacterArmor(characterId, characterItemId) {
 
@@ -5363,6 +5402,7 @@ await loadCalculatedArmor(characterId);
 
   await loadCharacterEquipment(characterId);
 await loadCalculatedArmor(characterId);
+await refreshCalculatedStats(characterId);
 }
  async function equipCharacterWeapon(characterId, characterItemId) {
   // Get the inventory row
@@ -5550,6 +5590,7 @@ toast(`${weapon.name} equipped!`, 'success');
 
 await loadCharacterEquipment(characterId);
 await loadActiveWeapons(characterId);
+await refreshCalculatedStats(characterId);
 }
   async function unequipCharacterWeapon(characterId, characterItemId) {
   const { data: item, error: itemError } = await sb
@@ -5630,6 +5671,7 @@ await loadActiveWeapons(characterId);
 
 await loadCharacterEquipment(characterId);
 await loadActiveWeapons(characterId);
+await refreshCalculatedStats(characterId);
 }
 async function loadSheetFeatures(c) {
   const el = document.getElementById('features-card-content');

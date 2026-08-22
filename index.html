@@ -4662,7 +4662,7 @@ function applyStatMod(characterId, statKey, label, val) {
   }
 }
 async function refreshCalculatedStats(characterId) {
-  if (!charPageData || charPageData.id !== characterId) return;
+  if (!charPageData || String(charPageData.id) !== String(characterId)) return;
 
   charPageData._computed = await computeCharacterStats(charPageData);
 
@@ -5449,6 +5449,7 @@ await loadCharacterEquipment(characterId);
 
 await loadCharacterEquipment(characterId);
 await loadCalculatedArmor(characterId);
+await loadActiveWeapons(characterId);
 await refreshCalculatedStats(characterId);
 } 
   async function unequipCharacterArmor(characterId, characterItemId) {
@@ -5515,8 +5516,9 @@ await refreshCalculatedStats(characterId);
     'success'
   );
 
-  await loadCharacterEquipment(characterId);
+await loadCharacterEquipment(characterId);
 await loadCalculatedArmor(characterId);
+await loadActiveWeapons(characterId);
 await refreshCalculatedStats(characterId);
 }
  async function equipCharacterWeapon(characterId, characterItemId) {
@@ -5704,6 +5706,7 @@ await refreshCalculatedStats(characterId);
 toast(`${weapon.name} equipped!`, 'success');
 
 await loadCharacterEquipment(characterId);
+await loadCalculatedArmor(characterId);
 await loadActiveWeapons(characterId);
 await refreshCalculatedStats(characterId);
 }
@@ -5785,6 +5788,7 @@ await refreshCalculatedStats(characterId);
   toast(`${weapon?.name || 'Weapon'} unequipped`, 'success');
 
 await loadCharacterEquipment(characterId);
+await loadCalculatedArmor(characterId);
 await loadActiveWeapons(characterId);
 await refreshCalculatedStats(characterId);
 }
@@ -6216,34 +6220,6 @@ async function saveSheetInline(charId) {
     level: document.getElementById('s-level')
       ? n('s-level')
       : charPageData?.level || 1,
-
-    agility: document.getElementById('s-agility')
-      ? n('s-agility')
-      : charPageData?.agility || 0,
-
-    strength: document.getElementById('s-strength')
-      ? n('s-strength')
-      : charPageData?.strength || 0,
-
-    finesse: document.getElementById('s-finesse')
-      ? n('s-finesse')
-      : charPageData?.finesse || 0,
-
-    instinct: document.getElementById('s-instinct')
-      ? n('s-instinct')
-      : charPageData?.instinct || 0,
-
-    presence: document.getElementById('s-presence')
-      ? n('s-presence')
-      : charPageData?.presence || 0,
-
-    knowledge: document.getElementById('s-knowledge')
-      ? n('s-knowledge')
-      : charPageData?.knowledge || 0,
-
-    evasion: document.getElementById('s-evasion')
-      ? n('s-evasion')
-      : charPageData?.evasion || 10,
 
     minor_threshold: charPageData?.minor_threshold ?? 0,
     major_threshold: charPageData?.major_threshold ?? 0,

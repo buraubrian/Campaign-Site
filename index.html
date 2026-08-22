@@ -1892,6 +1892,7 @@ let combatRound = 1;
 let fearTokens = 0;
 let rollHistory = [];
 let passwordRecoveryMode = false;
+let passwordResetEmailSent = false;
 
 /* ═══════════════════════════════════════════════════════
    INIT
@@ -1904,10 +1905,8 @@ sb.auth.onAuthStateChange(async (event, session) => {
     new URLSearchParams(window.location.search)
       .get('mode') === 'reset';
 
-  // Only the tab opened from the reset email
-  // is allowed to enter password recovery mode.
+  // The reset-email tab.
   if (event === 'PASSWORD_RECOVERY') {
-
     if (isResetPage) {
       passwordRecoveryMode = true;
       showPasswordReset();
@@ -1916,9 +1915,8 @@ sb.auth.onAuthStateChange(async (event, session) => {
     return;
   }
 
-  // Reset tab must never enter the normal app.
+  // Never open the normal app on the actual reset page.
   if (isResetPage) {
-
     if (session) {
       passwordRecoveryMode = true;
       showPasswordReset();
@@ -1927,9 +1925,15 @@ sb.auth.onAuthStateChange(async (event, session) => {
     return;
   }
 
-  // Normal tab
-  if (event === 'INITIAL_SESSION') {
+  // Original tab is waiting for user to open their email.
+  // Ignore the temporary recovery session that Supabase
+  // synchronizes back to this tab.
+  if (passwordResetEmailSent) {
+    return;
+  }
 
+  // Normal app startup.
+  if (event === 'INITIAL_SESSION') {
     if (session) {
       await initApp(session.user);
     } else {
@@ -1939,8 +1943,8 @@ sb.auth.onAuthStateChange(async (event, session) => {
     return;
   }
 
+  // Normal login.
   if (event === 'SIGNED_IN') {
-
     if (session) {
       await initApp(session.user);
     }
@@ -1948,13 +1952,12 @@ sb.auth.onAuthStateChange(async (event, session) => {
     return;
   }
 
+  // Normal logout.
   if (event === 'SIGNED_OUT') {
     showNormalLogin();
   }
 
 });
-
-
 async function initApp(user) {
 
   // Never enter the normal app during password recovery.
@@ -2954,6 +2957,7 @@ async function forgotPassword() {
     msg.textContent = error.message;
     return;
   }
+  passwordResetEmailSent = true;
 
   // Hide normal auth screens
   document.getElementById('auth-login').style.display = 'none';
@@ -2976,7 +2980,7 @@ async function forgotPassword() {
 }
 function showNormalLogin() {
   passwordRecoveryMode = false;
-
+  passwordResetEmailSent = false;
   showPage('page-auth');
 
   document.getElementById('auth-reset').style.display = 'none';

@@ -1217,7 +1217,25 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
           onclick="doLogin()">
           Enter the Tome
         </button>
-
+        <button
+  type="button"
+  onclick="forgotPassword()"
+  style="
+    display:block;
+    margin:0.75rem auto 0;
+    padding:0;
+    border:none;
+    background:none;
+    color:var(--muted);
+    font-family:'Cinzel',serif;
+    font-size:0.68rem;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    cursor:pointer;
+  "
+>
+  Forgot Password?
+</button>
       </div>
 
       <!-- Signup -->
@@ -2710,7 +2728,35 @@ async function doLogin() {
   const { error } = await sb.auth.signInWithPassword({ email, password: pass });
   if (error) document.getElementById('auth-msg').textContent = error.message;
 }
+async function forgotPassword() {
+  const email =
+    document.getElementById('login-email').value.trim();
 
+  const msg =
+    document.getElementById('auth-msg');
+
+  if (!email) {
+    msg.style.color = 'var(--ruby)';
+    msg.textContent =
+      'Enter your email address first.';
+    return;
+  }
+
+  const { error } =
+    await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    });
+
+  if (error) {
+    msg.style.color = 'var(--ruby)';
+    msg.textContent = error.message;
+    return;
+  }
+
+  msg.style.color = '#5ecb8a';
+  msg.textContent =
+    'If an account exists for that email, a password reset link has been sent.';
+}
 async function doSignup() {
   const name = document.getElementById('signup-name').value.trim();
   const username = document.getElementById('signup-user').value.trim().toLowerCase().replace(/\s+/g,'_');

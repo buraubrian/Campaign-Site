@@ -7988,6 +7988,9 @@ async function searchPlayers(query) {
       .ilike('display_name', `%${q}%`)
       .neq('id', currentUser.id)
       .limit(20);
+    console.log('SEARCH TEXT:', q);
+console.log('PROFILE MATCHES:', profileMatches);
+console.log('PROFILE ERROR:', profileError);
 
     if (profileError) {
       console.error('Profile search error:', profileError);
@@ -8003,6 +8006,8 @@ async function searchPlayers(query) {
       .ilike('name', `%${q}%`)
       .neq('owner_id', currentUser.id)
       .limit(20);
+    console.log('CHARACTER MATCHES:', characterMatches);
+console.log('CHARACTER ERROR:', characterError);
 
     if (characterError) {
       console.error('Character search error:', characterError);

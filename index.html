@@ -1237,7 +1237,56 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
   Forgot Password?
 </button>
       </div>
+<!-- Reset Password -->
+<div id="auth-reset" style="display:none">
 
+  <div style="
+    font-family:'Cinzel',serif;
+    font-size:0.85rem;
+    color:var(--gold-light);
+    margin-bottom:1.25rem;
+    text-align:center;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+  ">
+    Choose a New Password
+  </div>
+
+  <div class="field">
+    <label>New Password</label>
+    <input
+      type="password"
+      id="reset-password"
+      placeholder="New password"
+    />
+  </div>
+
+  <div class="field">
+    <label>Confirm Password</label>
+    <input
+      type="password"
+      id="reset-password-confirm"
+      placeholder="Confirm new password"
+    />
+  </div>
+
+  <button
+    class="btn btn-gold btn-full auth-main-btn"
+    onclick="completePasswordReset()">
+    Change Password
+  </button>
+
+  <div
+    id="reset-msg"
+    style="
+      margin-top:1rem;
+      font-size:0.9rem;
+      text-align:center;
+      color:var(--ruby);
+    ">
+  </div>
+
+</div>
       <!-- Signup -->
       <div id="auth-signup" style="display:none">
 
@@ -1787,13 +1836,21 @@ let rollHistory = [];
     await initApp(session.user);
   }
 
-  sb.auth.onAuthStateChange(async (_event, session) => {
-    if (session) {
-      await initApp(session.user);
-    } else {
-      showPage('page-auth');
-    }
-  });
+sb.auth.onAuthStateChange(async (event, session) => {
+
+  // User returned from the Forgot Password email
+  if (event === 'PASSWORD_RECOVERY') {
+    showPasswordReset();
+    return;
+  }
+
+  if (session) {
+    await initApp(session.user);
+  } else {
+    showPage('page-auth');
+  }
+
+});
 })();
 
 async function initApp(user) {
@@ -2756,6 +2813,76 @@ async function forgotPassword() {
   msg.style.color = '#5ecb8a';
   msg.textContent =
     'If an account exists for that email, a password reset link has been sent.';
+}
+  function showPasswordReset() {
+  showPage('page-auth');
+
+  document.getElementById('auth-login').style.display = 'none';
+  document.getElementById('auth-signup').style.display = 'none';
+  document.getElementById('auth-reset').style.display = 'block';
+
+  const tabs = document.querySelector('.auth-tabs');
+  if (tabs) {
+    tabs.style.display = 'none';
+  }
+}
+  async function completePasswordReset() {
+  const password =
+    document.getElementById('reset-password').value;
+
+  const confirm =
+    document.getElementById('reset-password-confirm').value;
+
+  const msg =
+    document.getElementById('reset-msg');
+
+  msg.style.color = 'var(--ruby)';
+
+  if (!password || !confirm) {
+    msg.textContent =
+      'Please enter and confirm your new password.';
+    return;
+  }
+
+  if (password.length < 6) {
+    msg.textContent =
+      'Password must be at least 6 characters.';
+    return;
+  }
+
+  if (password !== confirm) {
+    msg.textContent =
+      'Passwords do not match.';
+    return;
+  }
+
+  const { error } = await sb.auth.updateUser({
+    password: password
+  });
+
+  if (error) {
+    msg.textContent = error.message;
+    return;
+  }
+
+  // Sign out of the temporary recovery session
+  await sb.auth.signOut();
+
+  document.getElementById('auth-reset').style.display = 'none';
+
+  const tabs = document.querySelector('.auth-tabs');
+  if (tabs) {
+    tabs.style.display = 'flex';
+  }
+
+  authTab('login');
+
+  const authMsg =
+    document.getElementById('auth-msg');
+
+  authMsg.style.color = '#5ecb8a';
+  authMsg.textContent =
+    'Password changed successfully. Sign in with your new password.';
 }
 async function doSignup() {
   const name = document.getElementById('signup-name').value.trim();

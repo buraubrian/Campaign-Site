@@ -1237,6 +1237,72 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
   Forgot Password?
 </button>
       </div>
+      <!-- Password Reset Email Sent -->
+<div id="auth-reset-sent" style="display:none">
+
+  <div style="
+    font-family:'Cinzel',serif;
+    font-size:0.85rem;
+    color:var(--gold-light);
+    margin-bottom:1rem;
+    text-align:center;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+  ">
+    Check Your Email
+  </div>
+
+  <div style="
+    color:var(--muted);
+    text-align:center;
+    font-size:0.95rem;
+    line-height:1.6;
+  ">
+    We sent a password reset link to
+  </div>
+
+  <div
+    id="reset-sent-email"
+    style="
+      color:var(--gold-light);
+      text-align:center;
+      margin:0.5rem 0 1rem;
+      font-family:'Cinzel',serif;
+      font-size:0.85rem;
+    ">
+  </div>
+
+  <div style="
+    color:var(--muted);
+    text-align:center;
+    font-size:0.9rem;
+    line-height:1.5;
+    margin-bottom:1.25rem;
+  ">
+    Open the link in that email to choose a new password.
+  </div>
+
+  <button
+    type="button"
+    onclick="showNormalLogin()"
+    style="
+      display:block;
+      margin:0 auto;
+      padding:0;
+      border:none;
+      background:none;
+      color:var(--muted);
+      font-family:'Cinzel',serif;
+      font-size:0.68rem;
+      letter-spacing:0.1em;
+      text-transform:uppercase;
+      cursor:pointer;
+    "
+  >
+    Return to Sign In
+  </button>
+
+</div>
 <!-- Reset Password -->
 <div id="auth-reset" style="display:none">
 
@@ -1834,20 +1900,36 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
   console.log('Auth event:', event);
 
-  // User arrived through password recovery email.
+  const isResetPage =
+    new URLSearchParams(window.location.search)
+      .get('mode') === 'reset';
+
+  // Only the tab opened from the reset email
+  // is allowed to enter password recovery mode.
   if (event === 'PASSWORD_RECOVERY') {
-    passwordRecoveryMode = true;
-    showPasswordReset();
+
+    if (isResetPage) {
+      passwordRecoveryMode = true;
+      showPasswordReset();
+    }
+
     return;
   }
 
-  // While resetting a password, DO NOT open the normal app.
-  if (passwordRecoveryMode) {
+  // Reset tab must never enter the normal app.
+  if (isResetPage) {
+
+    if (session) {
+      passwordRecoveryMode = true;
+      showPasswordReset();
+    }
+
     return;
   }
 
-  // Initial normal session check.
+  // Normal tab
   if (event === 'INITIAL_SESSION') {
+
     if (session) {
       await initApp(session.user);
     } else {
@@ -1857,8 +1939,8 @@ sb.auth.onAuthStateChange(async (event, session) => {
     return;
   }
 
-  // Normal login.
   if (event === 'SIGNED_IN') {
+
     if (session) {
       await initApp(session.user);
     }
@@ -1866,7 +1948,6 @@ sb.auth.onAuthStateChange(async (event, session) => {
     return;
   }
 
-  // Normal logout.
   if (event === 'SIGNED_OUT') {
     showNormalLogin();
   }
@@ -2858,9 +2939,14 @@ async function forgotPassword() {
     return;
   }
 
+  const redirectUrl =
+    window.location.origin +
+    window.location.pathname +
+    '?mode=reset';
+
   const { error } =
     await sb.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + window.location.pathname + '?mode=reset'
+      redirectTo: redirectUrl
     });
 
   if (error) {
@@ -2869,16 +2955,33 @@ async function forgotPassword() {
     return;
   }
 
-  msg.style.color = '#5ecb8a';
-  msg.textContent =
-    'If an account exists for that email, a password reset link has been sent.';
+  // Hide normal auth screens
+  document.getElementById('auth-login').style.display = 'none';
+  document.getElementById('auth-signup').style.display = 'none';
+  document.getElementById('auth-reset').style.display = 'none';
+
+  // Show email-sent screen
+  document.getElementById('auth-reset-sent').style.display = 'block';
+
+  const tabs = document.querySelector('.auth-tabs');
+
+  if (tabs) {
+    tabs.style.display = 'none';
+  }
+
+  document.getElementById('auth-msg').textContent = '';
+
+  document.getElementById('reset-sent-email').textContent =
+    maskEmail(email);
 }
-  function showNormalLogin() {
+function showNormalLogin() {
   passwordRecoveryMode = false;
 
   showPage('page-auth');
 
   document.getElementById('auth-reset').style.display = 'none';
+  document.getElementById('auth-reset-sent').style.display = 'none';
+
   document.getElementById('auth-login').style.display = 'block';
   document.getElementById('auth-signup').style.display = 'none';
 

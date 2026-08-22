@@ -8101,6 +8101,10 @@ async function loadPlayersTab() {
     }).join('')}
   `;
 }
+  
+let selectedPlayerId = null;
+let playerSearchTimeout = null;
+  
 function openAddPlayerModal() {
   // reset state every time the modal opens
   selectedPlayerId = null;

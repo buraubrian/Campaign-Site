@@ -1829,29 +1829,35 @@ let rollHistory = [];
 /* ═══════════════════════════════════════════════════════
    INIT
 ════════════════════════════════════════════════════════ */
-(async () => {
-  const { data: { session } } = await sb.auth.getSession();
-
-  if (session) {
-    await initApp(session.user);
-  }
-
 sb.auth.onAuthStateChange(async (event, session) => {
 
-  // User returned from the Forgot Password email
+  console.log('Auth event:', event);
+
+  // Password reset email link
   if (event === 'PASSWORD_RECOVERY') {
     showPasswordReset();
     return;
   }
 
-  if (session) {
-    await initApp(session.user);
-  } else {
+  // Normal signed-in session
+  if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+
+    if (session) {
+      await initApp(session.user);
+    } else {
+      showPage('page-auth');
+    }
+
+    return;
+  }
+
+  // Signed out
+  if (event === 'SIGNED_OUT') {
     showPage('page-auth');
   }
 
 });
-})();
+
 
 async function initApp(user) {
   currentUser = user;

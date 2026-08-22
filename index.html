@@ -1971,37 +1971,88 @@ function showStatBreakdown(title, total, parts = []) {
   const armorBreakdowns = {};
 function showStatHoverBreakdown(anchor, characterId, statKey, label) {
   hideStatHoverBreakdown();
-  const breakdown = armorBreakdowns[characterId]?.[statKey];
+
+  let breakdown = null;
+
+  // Use the generic computed stats first.
+  if (
+    charPageData?.id === characterId &&
+    charPageData?._computed?.[statKey]
+  ) {
+    const computed = charPageData._computed[statKey];
+
+    breakdown = {
+      total: computed.total,
+      parts: [
+        {
+          label: 'Base Score',
+          value: computed.base
+        },
+        ...(computed.modifiers || []).map(mod => ({
+          label: mod.source,
+          value: mod.value
+        }))
+      ]
+    };
+  }
+
+  // Fallback only if computed stats are unavailable.
+  if (!breakdown) {
+    breakdown = armorBreakdowns[characterId]?.[statKey];
+  }
+
   const box = document.createElement('div');
   box.id = 'stat-hover-breakdown';
   box.className = 'stat-hover-breakdown';
 
-  if (!breakdown || breakdown.parts.length <= 1) {
+  if (!breakdown) {
     box.innerHTML = `
       <div class="stat-hover-title">${label}</div>
-      <div style="color:var(--muted);font-size:0.85rem">No active modifiers.</div>
+      <div style="color:var(--muted);font-size:0.85rem">
+        No active modifiers.
+      </div>
     `;
+
     anchor.appendChild(box);
     return;
   }
 
   const rows = breakdown.parts.map(part => `
     <div class="stat-hover-row">
+
       <span>${part.label}</span>
-      <strong style="color:${part.value >= 0 ? 'var(--gold-light)' : 'var(--ruby)'}">
-        ${part.value >= 0 ? '+' : ''}${part.value}
+
+      <strong style="
+        color:${
+          Number(part.value) < 0
+            ? 'var(--ruby)'
+            : 'var(--gold-light)'
+        }
+      ">
+        ${
+          part.label === 'Base Score'
+            ? part.value
+            : `${Number(part.value) >= 0 ? '+' : ''}${part.value}`
+        }
       </strong>
+
     </div>
   `).join('');
 
   box.innerHTML = `
     <div class="stat-hover-title">${label}</div>
+
     ${rows}
+
     <div class="stat-hover-total">
       <span>Total</span>
-      <strong style="color:var(--gold-light)">${breakdown.total >= 0 ? '+' : ''}${breakdown.total}</strong>
+
+      <strong style="color:var(--gold-light)">
+        ${breakdown.total >= 0 ? '+' : ''}${breakdown.total}
+      </strong>
     </div>
   `;
+
   anchor.appendChild(box);
 }
 function showArmorHoverBreakdown(anchor, characterId) {

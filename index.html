@@ -2473,7 +2473,12 @@ const characterLevel = Number(charPageData?.level) || 1;
         value: baseSevere
       });
 
-      // Apply armor feature effects
+          severeParts.push({
+        label: armor.name,
+        value: baseSevere
+      });
+
+      // Apply armor feature effects automatically
       if (armor.armor_feature_id) {
         const { data: effects } = await sb
           .from('armor_feature_effects')
@@ -2485,31 +2490,30 @@ const characterLevel = Number(charPageData?.level) || 1;
         (effects || []).forEach(e => {
           const val = Number(e.effect_value) || 0;
           const src = e.armor_features?.name || armor.name;
-          const stat = e.target_stat;
 
-          if (stat === 'armor_score') {
+          if (e.target_stat === 'armor_score') {
             total += val;
             parts.push({ label: src, value: val });
-          } else if (stat === 'minor_threshold') {
+          } else if (e.target_stat === 'minor_threshold') {
             minorThreshold += val;
             minorParts.push({ label: src, value: val });
-          } else if (stat === 'major_threshold') {
+          } else if (e.target_stat === 'major_threshold') {
             majorThreshold += val;
             majorParts.push({ label: src, value: val });
-          } else if (stat === 'severe_threshold') {
+          } else if (e.target_stat === 'severe_threshold') {
             severeThreshold += val;
             severeParts.push({ label: src, value: val });
-          } else if (stat === 'evasion') {
-            // store for evasion update
-            if (!window._armorEvasionMods) window._armorEvasionMods = [];
-            window._armorEvasionMods.push({ label: src, value: val });
-          } else if (stat === 'all_traits') {
-            if (!window._armorTraitMods) window._armorTraitMods = [];
-            window._armorTraitMods.push({ label: src, value: val, stat: 'all' });
+          } else if (e.target_stat === 'evasion') {
+            if (!window._pendingEvasionMods) window._pendingEvasionMods = [];
+            window._pendingEvasionMods.push({ label: src, value: val });
+          } else if (e.target_stat === 'all_traits') {
+            ['agility','strength','finesse','instinct','presence','knowledge'].forEach(t => {
+              if (!window._pendingTraitMods) window._pendingTraitMods = [];
+              window._pendingTraitMods.push({ label: src, value: val, stat: t });
+            });
           } else {
-            // individual trait (agility, strength, etc.)
-            if (!window._armorTraitMods) window._armorTraitMods = [];
-            window._armorTraitMods.push({ label: src, value: val, stat });
+            if (!window._pendingTraitMods) window._pendingTraitMods = [];
+            window._pendingTraitMods.push({ label: src, value: val, stat: e.target_stat });
           }
         });
       }
@@ -2613,40 +2617,26 @@ if (severeDisplay) {
    // Rebuild shields using calculated Armor Score
   buildArmorPips(total, marked);
 
-  // Apply evasion modifiers from armor features
-  if (window._armorEvasionMods?.length > 0 && charPageData?.id === characterId) {
-    const baseEvasion = charPageData.evasion || 10;
-    const evasionTotal = baseEvasion + window._armorEvasionMods.reduce((s, m) => s + m.value, 0);
-    const evasionDisplay = document.getElementById('sheet-evasion-score');
-    if (evasionDisplay) evasionDisplay.textContent = evasionTotal;
-    // store for hover
+  // Apply pending evasion mods from armor features
+  if (window._pendingEvasionMods?.length > 0 && charPageData?.id === characterId) {
+    const base = charPageData.evasion || 10;
+    const evasionTotal = base + window._pendingEvasionMods.reduce((s, m) => s + m.value, 0);
+    if (!armorBreakdowns[characterId]) armorBreakdowns[characterId] = {};
     armorBreakdowns[characterId].evasion = {
       total: evasionTotal,
-      parts: [{ label: 'Base', value: baseEvasion }, ...window._armorEvasionMods]
+      parts: [{ label: 'Base', value: base }, ...window._pendingEvasionMods]
     };
-    window._armorEvasionMods = [];
+    const display = document.getElementById('sheet-evasion-score');
+    if (display) { display.textContent = evasionTotal; display.style.display = 'block'; }
+    window._pendingEvasionMods = [];
   }
 
-  // Apply trait modifiers from armor features
-  if (window._armorTraitMods?.length > 0 && charPageData?.id === characterId) {
-    const traits = ['agility','strength','finesse','instinct','presence','knowledge'];
-    window._armorTraitMods.forEach(mod => {
-      const targets = mod.stat === 'all' ? traits : [mod.stat];
-      targets.forEach(t => {
-        const base = charPageData[t] || 0;
-        const el = document.getElementById(`s-${t}`);
-        const display = document.getElementById(`sheet-${t}-score`);
-        const newVal = base + mod.value;
-        if (el) el.value = newVal;
-        if (display) display.textContent = newVal >= 0 ? `+${newVal}` : `${newVal}`;
-        if (!armorBreakdowns[characterId][t]) {
-          armorBreakdowns[characterId][t] = { total: base, parts: [{ label: 'Base', value: base }] };
-        }
-        armorBreakdowns[characterId][t].total += mod.value;
-        armorBreakdowns[characterId][t].parts.push({ label: mod.label, value: mod.value });
-      });
+  // Apply pending trait mods from armor features
+  if (window._pendingTraitMods?.length > 0 && charPageData?.id === characterId) {
+    window._pendingTraitMods.forEach(mod => {
+      applyStatMod(characterId, mod.stat, mod.label, mod.value);
     });
-    window._armorTraitMods = [];
+    window._pendingTraitMods = [];
   }
 }
 function togglePassword(inputId, iconId) {
@@ -4515,22 +4505,25 @@ function showInventoryTab(type, clickedButton = null) {
     empty?.remove();
   }
 }
-  function applyWeaponTraitMod(characterId, traitKey, label, val) {
+  function applyStatMod(characterId, statKey, label, val) {
   if (!charPageData || charPageData.id !== characterId) return;
-  const base = charPageData[traitKey] || 0;
+  const base = charPageData[statKey] || 0;
   if (!armorBreakdowns[characterId]) armorBreakdowns[characterId] = {};
-  if (!armorBreakdowns[characterId][traitKey]) {
-    armorBreakdowns[characterId][traitKey] = { total: base, parts: [{ label: 'Base', value: base }] };
+  if (!armorBreakdowns[characterId][statKey]) {
+    armorBreakdowns[characterId][statKey] = { total: base, parts: [{ label: 'Base', value: base }] };
   }
-  armorBreakdowns[characterId][traitKey].total += val;
-  armorBreakdowns[characterId][traitKey].parts.push({ label, value: val });
-  // update displayed value
-  const input = document.getElementById(`s-${traitKey}`);
-  const display = document.getElementById(`sheet-${traitKey}-score`);
-  const newTotal = armorBreakdowns[characterId][traitKey].total;
+  armorBreakdowns[characterId][statKey].total += val;
+  armorBreakdowns[characterId][statKey].parts.push({ label, value: val });
+  const newTotal = armorBreakdowns[characterId][statKey].total;
+  const input = document.getElementById(`s-${statKey}`);
+  const display = document.getElementById(`sheet-${statKey}-score`);
   if (input) input.value = newTotal;
-  if (display) display.textContent = newTotal >= 0 ? `+${newTotal}` : `${newTotal}`;
+  if (display) {
+    display.textContent = statKey === 'evasion' ? newTotal : (newTotal >= 0 ? `+${newTotal}` : `${newTotal}`);
+    display.style.display = 'block';
+  }
 }
+
   async function loadActiveWeapons(characterId) {
   const el = document.getElementById('active-weapons-display');
   if (!el) return;
@@ -6184,8 +6177,8 @@ async function renderCharSheet() {
   renderAllPips(c);
   initSheetDicePreviews();
   if (c) loadSheetFeatures(c);
+   if (c) loadCalculatedArmor(c.id);
   if (c) loadActiveWeapons(c.id);
-  if (c) loadCalculatedArmor(c.id);
 }
 
 function renderCharBuilder() {

@@ -3800,17 +3800,52 @@ function renderSheetHTML(c) {
 
   <!-- Attributes -->
   <div class="attrs-grid">
-    ${Object.entries(ATTRIBUTE_SKILLS).map(([key,skills]) => `
-      <div class="attr-card">
-        <div class="attr-name">${key}</div>
-                <div onmouseenter="showStatHoverBreakdown(this,'${c.id}','${key}','${key.charAt(0).toUpperCase()+key.slice(1)}')" onmouseleave="hideStatHoverBreakdown()">
-          ${isSheetLocked()
-            ? `<div id="sheet-${key}-score" style="font-family:'Cinzel',serif;font-size:1.3rem;font-weight:600;color:var(--gold-light);padding:0.2rem 0">${fmtMod(c[key]||0)}</div>`
-            : `<input type="number" id="s-${key}" value="${c[key]||0}" /><div id="sheet-${key}-score" style="display:none"></div>`}
-        </div>
-        <div class="attr-skills">${skills.join('<br>')}</div>
+  ${Object.entries(ATTRIBUTE_SKILLS).map(([key,skills]) => `
+  <div class="attr-card">
+
+    <div class="attr-name">
+      ${key}
+    </div>
+
+    <div
+      onmouseenter="showStatHoverBreakdown(
+        this,
+        '${c.id}',
+        '${key}',
+        '${key.charAt(0).toUpperCase()+key.slice(1)}'
+      )"
+      onmouseleave="hideStatHoverBreakdown()"
+    >
+
+      <!-- Hidden base value used for saving -->
+      <input
+        type="hidden"
+        id="s-${key}"
+        value="${c[key] ?? 0}"
+      />
+
+      <!-- Visible calculated value -->
+      <div
+        id="sheet-${key}-score"
+        style="
+          font-family:'Cinzel',serif;
+          font-size:1.3rem;
+          font-weight:600;
+          color:var(--gold-light);
+          padding:0.2rem 0;
+        "
+      >
+        ${fmtMod(c._computed?.[key]?.total ?? c[key] ?? 0)}
       </div>
-    `).join('')}
+
+    </div>
+
+    <div class="attr-skills">
+      ${skills.join('<br>')}
+    </div>
+
+  </div>
+`).join('')}
   </div>
 
   <!-- Damage Thresholds -->

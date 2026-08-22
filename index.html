@@ -7906,35 +7906,235 @@ async function unassignCharacter(charId) {
 ════════════════════════════════════════════════════════ */
 async function loadPlayersTab() {
   const el = document.getElementById('tab-players');
-  const { data: members } = await sb.from('campaign_members').select('*, profiles(*)').eq('campaign_id', currentCampaign.id);
-  const { data: chars } = await sb.from('characters').select('*').eq('campaign_id', currentCampaign.id);
+
+  // 1. Get campaign members
+  const {
+    data: members,
+    error: membersError
+  } = await sb
+    .from('campaign_members')
+    .select('player_id, role')
+    .eq('campaign_id', currentCampaign.id);
+
+  if (membersError) {
+    console.error('LOAD PLAYERS - MEMBERS ERROR:', membersError);
+
+    el.innerHTML = `
+      <div class="section-header">
+        <h2>Players</h2>
+
+        <div class="section-actions">
+          <button
+            class="btn btn-gold btn-sm"
+            onclick="openAddPlayerModal()"
+          >
+            + Add Player
+          </button>
+        </div>
+      </div>
+
+      <div class="empty-state" style="color:var(--ruby)">
+        Could not load campaign players.
+      </div>
+    `;
+
+    return;
+  }
+
+  // No members yet
+  if (!members || members.length === 0) {
+    el.innerHTML = `
+      <div class="section-header">
+        <h2>Players</h2>
+
+        <div class="section-actions">
+          <button
+            class="btn btn-gold btn-sm"
+            onclick="openAddPlayerModal()"
+          >
+            + Add Player
+          </button>
+        </div>
+      </div>
+
+      <div class="empty-state">
+        No players added yet.
+      </div>
+    `;
+
+    return;
+  }
+
+  const playerIds = members.map(m => m.player_id);
+
+  // 2. Get display names separately
+  const {
+    data: profiles,
+    error: profilesError
+  } = await sb
+    .from('profiles')
+    .select('id, display_name')
+    .in('id', playerIds);
+
+  if (profilesError) {
+    console.error(
+      'LOAD PLAYERS - PROFILES ERROR:',
+      profilesError
+    );
+  }
+
+  // 3. Get characters assigned to this campaign
+  const {
+    data: chars,
+    error: charsError
+  } = await sb
+    .from('characters')
+    .select(`
+      id,
+      name,
+      owner_id,
+      class,
+      level,
+      sheet_locked
+    `)
+    .eq('campaign_id', currentCampaign.id)
+    .in('owner_id', playerIds);
+
+  if (charsError) {
+    console.error(
+      'LOAD PLAYERS - CHARACTERS ERROR:',
+      charsError
+    );
+  }
+
+  console.log('CAMPAIGN MEMBERS:', members);
+  console.log('CAMPAIGN PROFILES:', profiles);
+  console.log('CAMPAIGN CHARACTERS:', chars);
+
   el.innerHTML = `
-    <div class="section-header"><h2>Players</h2>
-      <div class="section-actions"><button class="btn btn-gold btn-sm" onclick="openAddPlayerModal()">+ Add Player</button></div>
+    <div class="section-header">
+      <h2>Players</h2>
+
+      <div class="section-actions">
+        <button
+          class="btn btn-gold btn-sm"
+          onclick="openAddPlayerModal()"
+        >
+          + Add Player
+        </button>
+      </div>
     </div>
-    ${(!members || members.length===0) ? '<div class="empty-state">No players added yet.</div>' :
-      members.map(m => {
-        const pChar = (chars||[]).find(c => c.owner_id === m.player_id);
-        return `
+
+    ${members.map(member => {
+
+      const profile =
+        (profiles || []).find(
+          p => p.id === member.player_id
+        );
+
+      const playerChars =
+        (chars || []).filter(
+          c => c.owner_id === member.player_id
+        );
+
+      const displayName =
+        profile?.display_name || 'Unknown Player';
+
+      const charactersHtml =
+        playerChars.length > 0
+          ? playerChars.map(char => `
+              <div style="
+                margin-top:0.5rem;
+                font-size:0.9rem;
+              ">
+                <strong style="color:var(--gold)">
+                  ${char.name}
+                </strong>
+
+                — ${char.class || 'No class'}
+                Lv.${char.level || 1}
+              </div>
+            `).join('')
+          : `
+              <div style="
+                margin-top:0.5rem;
+                font-size:0.85rem;
+                color:var(--muted);
+              ">
+                No character assigned
+              </div>
+            `;
+
+      const lockButtons =
+        playerChars.map(char => `
+          <button
+            class="btn btn-ghost btn-sm"
+            onclick="
+              toggleSheetLock(
+                '${member.player_id}',
+                '${char.id}',
+                ${!!char.sheet_locked}
+              )
+            "
+          >
+            ${
+              char.sheet_locked
+                ? '🔓 Unlock ' + char.name
+                : '🔒 Lock ' + char.name
+            }
+          </button>
+        `).join('');
+
+      return `
         <div class="card card-sm">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start">
-            <div>
-              <div style="font-family:'Cinzel',serif;color:var(--gold-light)">${m.profiles?.display_name || m.profiles?.username || 'Unknown'}</div>
-              <div style="font-size:0.85rem;color:var(--muted)">@${m.profiles?.username || ''}</div>
-              ${pChar ? `<div style="margin-top:0.5rem;font-size:0.9rem"><strong style="color:var(--gold)">${pChar.name}</strong> — ${pChar.class||'No class'} Lv.${pChar.level||1}</div>` : '<div style="margin-top:0.5rem;font-size:0.85rem;color:var(--muted)">No character assigned</div>'}
+
+          <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            gap:1rem;
+          ">
+
+            <div style="flex:1">
+
+              <div style="
+                font-family:'Cinzel',serif;
+                color:var(--gold-light);
+                font-size:1rem;
+              ">
+                ${displayName}
+              </div>
+
+              ${charactersHtml}
+
             </div>
-            <button class="btn btn-ghost btn-sm" onclick="toggleSheetLock('${m.player_id}','${pChar?.id}',${pChar?.sheet_locked})">${pChar?.sheet_locked ? '🔓 Unlock Sheet' : '🔒 Lock Sheet'}</button>
-            <button class="btn btn-danger btn-sm" onclick="removePlayer('${m.player_id}')">Remove</button>
+
+            <div style="
+              display:flex;
+              gap:0.5rem;
+              flex-wrap:wrap;
+              justify-content:flex-end;
+            ">
+
+              ${lockButtons}
+
+              <button
+                class="btn btn-danger btn-sm"
+                onclick="removePlayer('${member.player_id}')"
+              >
+                Remove
+              </button>
+
+            </div>
+
           </div>
-        </div>`;
-      }).join('')
-    }
+
+        </div>
+      `;
+
+    }).join('')}
   `;
 }
-
-let selectedPlayerId = null;
-let playerSearchTimeout = null;
-
 function openAddPlayerModal() {
   // reset state every time the modal opens
   selectedPlayerId = null;

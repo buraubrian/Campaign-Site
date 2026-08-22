@@ -1875,8 +1875,8 @@ async function computeCharacterStats(c) {
         .in('id', weaponIds);
       const featureIds = (weapons||[]).map(w => w.weapon_feature_id).filter(Boolean);
       if (featureIds.length > 0) {
-        const { data: effects } = await sb.from('weapon_feature_effects')
-          .select('*, weapon_feature(name)')
+           const { data: effects } = await sb.from('weapon_feature_effects')
+          .select('*, weapon_features(name)')
           .in('weapon_feature_id', featureIds)
           .eq('automation_level', 'automatic')
           .in('trigger_type', ['equipped', 'always']);
@@ -1894,8 +1894,8 @@ async function computeCharacterStats(c) {
         .in('id', armorIds);
       const featureIds = (armors||[]).map(a => a.armor_feature_id).filter(Boolean);
       if (featureIds.length > 0) {
-        const { data: effects } = await sb.from('armor_feature_effects')
-          .select('*, armor_feature(name)')
+          const { data: effects } = await sb.from('armor_feature_effects')
+          .select('*, armor_features(name)')
           .in('armor_feature_id', featureIds)
           .eq('automation_level', 'automatic')
           .in('trigger_type', ['equipped', 'always']);
@@ -1969,7 +1969,41 @@ function showStatBreakdown(title, total, parts = []) {
   document.body.insertAdjacentHTML('beforeend', html);
 }
   const armorBreakdowns = {};
+function showStatHoverBreakdown(anchor, characterId, statKey, label) {
+  hideStatHoverBreakdown();
+  const breakdown = armorBreakdowns[characterId]?.[statKey];
+  const box = document.createElement('div');
+  box.id = 'stat-hover-breakdown';
+  box.className = 'stat-hover-breakdown';
 
+  if (!breakdown || breakdown.parts.length <= 1) {
+    box.innerHTML = `
+      <div class="stat-hover-title">${label}</div>
+      <div style="color:var(--muted);font-size:0.85rem">No active modifiers.</div>
+    `;
+    anchor.appendChild(box);
+    return;
+  }
+
+  const rows = breakdown.parts.map(part => `
+    <div class="stat-hover-row">
+      <span>${part.label}</span>
+      <strong style="color:${part.value >= 0 ? 'var(--gold-light)' : 'var(--ruby)'}">
+        ${part.value >= 0 ? '+' : ''}${part.value}
+      </strong>
+    </div>
+  `).join('');
+
+  box.innerHTML = `
+    <div class="stat-hover-title">${label}</div>
+    ${rows}
+    <div class="stat-hover-total">
+      <span>Total</span>
+      <strong style="color:var(--gold-light)">${breakdown.total >= 0 ? '+' : ''}${breakdown.total}</strong>
+    </div>
+  `;
+  anchor.appendChild(box);
+}
 function showArmorHoverBreakdown(anchor, characterId) {
   hideStatHoverBreakdown();
 
@@ -3721,7 +3755,12 @@ function renderSheetHTML(c) {
 
   <!-- Evasion / Armor / Armor Slots -->
   <div class="shield-row">
-    <div class="shield-badge">${isSheetLocked() ? `<div style="font-family:'Cinzel',serif;font-size:1.5rem;font-weight:600;color:var(--gold-light)">${c.evasion||10}</div>` : `<input type="number" id="s-evasion" value="${c.evasion||10}" />`}<div class="shield-lbl">Evasion</div></div>
+     <div class="shield-badge stat-hover-wrap" onmouseenter="showStatHoverBreakdown(this,'${c.id}','evasion','Evasion')" onmouseleave="hideStatHoverBreakdown()">
+      ${isSheetLocked()
+        ? `<div id="sheet-evasion-score" style="font-family:'Cinzel',serif;font-size:1.5rem;font-weight:600;color:var(--gold-light)">${c.evasion||10}</div>`
+        : `<input type="number" id="s-evasion" value="${c.evasion||10}" /><div id="sheet-evasion-score" style="display:none"></div>`}
+      <div class="shield-lbl">Evasion</div>
+    </div>
 <div
   class="shield-badge stat-hover-wrap"
   onmouseenter="showArmorHoverBreakdown(this, '${c.id}')"
@@ -3752,9 +3791,11 @@ function renderSheetHTML(c) {
     ${Object.entries(ATTRIBUTE_SKILLS).map(([key,skills]) => `
       <div class="attr-card">
         <div class="attr-name">${key}</div>
-        ${isSheetLocked()
-          ? `<div style="font-family:'Cinzel',serif;font-size:1.3rem;font-weight:600;color:var(--gold-light);padding:0.2rem 0">${fmtMod(c[key]||0)}</div>`
-          : `<input type="number" id="s-${key}" value="${c[key]||0}" />`}
+                <div onmouseenter="showStatHoverBreakdown(this,'${c.id}','${key}','${key.charAt(0).toUpperCase()+key.slice(1)}')" onmouseleave="hideStatHoverBreakdown()">
+          ${isSheetLocked()
+            ? `<div id="sheet-${key}-score" style="font-family:'Cinzel',serif;font-size:1.3rem;font-weight:600;color:var(--gold-light);padding:0.2rem 0">${fmtMod(c[key]||0)}</div>`
+            : `<input type="number" id="s-${key}" value="${c[key]||0}" /><div id="sheet-${key}-score" style="display:none"></div>`}
+        </div>
         <div class="attr-skills">${skills.join('<br>')}</div>
       </div>
     `).join('')}
@@ -4475,6 +4516,22 @@ function showInventoryTab(type, clickedButton = null) {
     empty?.remove();
   }
 }
+  function applyWeaponTraitMod(characterId, traitKey, label, val) {
+  if (!charPageData || charPageData.id !== characterId) return;
+  const base = charPageData[traitKey] || 0;
+  if (!armorBreakdowns[characterId]) armorBreakdowns[characterId] = {};
+  if (!armorBreakdowns[characterId][traitKey]) {
+    armorBreakdowns[characterId][traitKey] = { total: base, parts: [{ label: 'Base', value: base }] };
+  }
+  armorBreakdowns[characterId][traitKey].total += val;
+  armorBreakdowns[characterId][traitKey].parts.push({ label, value: val });
+  // update displayed value
+  const input = document.getElementById(`s-${traitKey}`);
+  const display = document.getElementById(`sheet-${traitKey}-score`);
+  const newTotal = armorBreakdowns[characterId][traitKey].total;
+  if (input) input.value = newTotal;
+  if (display) display.textContent = newTotal >= 0 ? `+${newTotal}` : `${newTotal}`;
+}
   async function loadActiveWeapons(characterId) {
   const el = document.getElementById('active-weapons-display');
   if (!el) return;
@@ -4562,6 +4619,64 @@ function showInventoryTab(type, clickedButton = null) {
 
     return 0;
   });
+  // Apply weapon feature effects to stats (evasion, traits)
+  if (featureIds.length > 0) {
+    const { data: weaponEffects } = await sb
+      .from('weapon_feature_effects')
+      .select('weapon_feature_id, target_stat, effect_value, weapon_features(name)')
+      .in('weapon_feature_id', featureIds)
+      .eq('automation_level', 'automatic')
+      .in('trigger_type', ['always', 'equipped']);
+
+    if (weaponEffects && weaponEffects.length > 0 && charPageData?.id === characterId) {
+      const traits = ['agility','strength','finesse','instinct','presence','knowledge'];
+
+      weaponEffects.forEach(e => {
+        const val = Number(e.effect_value) || 0;
+        const src = e.weapon_features?.name || 'Weapon Feature';
+        const stat = e.target_stat;
+        const weaponName = weapons.find(w => w.weapon_feature_id === e.weapon_feature_id)?.name || src;
+        const label = `${weaponName} (${src})`;
+
+        if (stat === 'evasion') {
+          const base = charPageData.evasion || 10;
+          if (!armorBreakdowns[characterId]) armorBreakdowns[characterId] = {};
+          if (!armorBreakdowns[characterId].evasion) {
+            armorBreakdowns[characterId].evasion = { total: base, parts: [{ label: 'Base', value: base }] };
+          }
+          armorBreakdowns[characterId].evasion.total += val;
+          armorBreakdowns[characterId].evasion.parts.push({ label, value: val });
+          const display = document.getElementById('sheet-evasion-score');
+          if (display) display.textContent = armorBreakdowns[characterId].evasion.total;
+        } else if (stat === 'all_traits') {
+          traits.forEach(t => applyWeaponTraitMod(characterId, t, label, val));
+        } else if (traits.includes(stat)) {
+          applyWeaponTraitMod(characterId, stat, label, val);
+        } else if (stat === 'minor_threshold') {
+          if (armorBreakdowns[characterId]?.minor) {
+            armorBreakdowns[characterId].minor.total += val;
+            armorBreakdowns[characterId].minor.parts.push({ label, value: val });
+            const el = document.getElementById('sheet-minor-threshold');
+            if (el) el.textContent = armorBreakdowns[characterId].minor.total;
+          }
+        } else if (stat === 'major_threshold') {
+          if (armorBreakdowns[characterId]?.major) {
+            armorBreakdowns[characterId].major.total += val;
+            armorBreakdowns[characterId].major.parts.push({ label, value: val });
+            const el = document.getElementById('sheet-major-threshold');
+            if (el) el.textContent = armorBreakdowns[characterId].major.total;
+          }
+        } else if (stat === 'severe_threshold') {
+          if (armorBreakdowns[characterId]?.severe) {
+            armorBreakdowns[characterId].severe.total += val;
+            armorBreakdowns[characterId].severe.parts.push({ label, value: val });
+            const el = document.getElementById('sheet-severe-threshold');
+            if (el) el.textContent = armorBreakdowns[characterId].severe.total;
+          }
+        }
+      });
+    }
+  }
 
   el.innerHTML = sortedWeapons.map(weapon => {
     const item = itemsByWeaponId[weapon.id];
@@ -6062,17 +6177,16 @@ function switchCharPageTab(tab) {
   if (tab === 'builder') renderCharBuilder();
 }
 
-function renderCharSheet() {
+async function renderCharSheet() {
   const c = charPageData;
   const el = document.getElementById('char-sheet-content');
+  charPageData._computed = await computeCharacterStats(c);
   el.innerHTML = renderSheetHTML(c);
-renderAllPips(c);
-initSheetDicePreviews();
-
-// auto-load features tab
-if (c) loadSheetFeatures(c);
-if (c) loadActiveWeapons(c.id);
-if (c) loadCalculatedArmor(c.id);
+  renderAllPips(c);
+  initSheetDicePreviews();
+  if (c) loadSheetFeatures(c);
+  if (c) loadActiveWeapons(c.id);
+  if (c) loadCalculatedArmor(c.id);
 }
 
 function renderCharBuilder() {

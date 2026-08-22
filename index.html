@@ -4563,21 +4563,50 @@ function showInventoryTab(type, clickedButton = null) {
     empty?.remove();
   }
 }
-  function applyStatMod(characterId, statKey, label, val) {
+function applyStatMod(characterId, statKey, label, val) {
   if (!charPageData || charPageData.id !== characterId) return;
-  const base = charPageData[statKey] || 0;
-  if (!armorBreakdowns[characterId]) armorBreakdowns[characterId] = {};
-  if (!armorBreakdowns[characterId][statKey]) {
-    armorBreakdowns[characterId][statKey] = { total: base, parts: [{ label: 'Base', value: base }] };
+
+  // Always start from the character's true BASE stat.
+  const base = charPageData[statKey] ?? 0;
+
+  if (!armorBreakdowns[characterId]) {
+    armorBreakdowns[characterId] = {};
   }
+
+  if (!armorBreakdowns[characterId][statKey]) {
+    armorBreakdowns[characterId][statKey] = {
+      total: base,
+      parts: [
+        {
+          label: 'Base Score',
+          value: base
+        }
+      ]
+    };
+  }
+
+  // Add modifier only to the calculated total.
   armorBreakdowns[characterId][statKey].total += val;
-  armorBreakdowns[characterId][statKey].parts.push({ label, value: val });
-  const newTotal = armorBreakdowns[characterId][statKey].total;
-  const input = document.getElementById(`s-${statKey}`);
-  const display = document.getElementById(`sheet-${statKey}-score`);
-  if (input) input.value = newTotal;
+
+  armorBreakdowns[characterId][statKey].parts.push({
+    label,
+    value: val
+  });
+
+  const newTotal =
+    armorBreakdowns[characterId][statKey].total;
+
+  // ONLY update the visible calculated number.
+  // Never change s-agility, s-strength, etc.
+  const display =
+    document.getElementById(`sheet-${statKey}-score`);
+
   if (display) {
-    display.textContent = statKey === 'evasion' ? newTotal : (newTotal >= 0 ? `+${newTotal}` : `${newTotal}`);
+    display.textContent =
+      newTotal >= 0
+        ? `+${newTotal}`
+        : `${newTotal}`;
+
     display.style.display = 'block';
   }
 }

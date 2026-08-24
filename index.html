@@ -4486,10 +4486,17 @@ function renderSheetHTML(c) {
 }
 
 function showSheetSubPanel(id, btn) {
-  document.querySelectorAll('.sheet-sub-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.sheet-tab-chip').forEach(b => b.classList.remove('active'));
+  document
+    .querySelectorAll('.sheet-sub-panel')
+    .forEach(p => p.classList.remove('active'));
 
-  document.getElementById('sheet-sub-' + id).classList.add('active');
+  document
+    .querySelectorAll('.sheet-tab-chip')
+    .forEach(b => b.classList.remove('active'));
+
+  document
+    .getElementById('sheet-sub-' + id)
+    .classList.add('active');
 
   if (btn) {
     btn.classList.add('active');
@@ -4501,15 +4508,20 @@ function showSheetSubPanel(id, btn) {
     if (active) active.classList.add('active');
   }
 
+  // Features
   if (id === 'features' && charPageData) {
-    loadSheetFeatures(charPageData);
+    if (gmCharacterView) {
+      loadGMSheetFeatures(charPageData);
+    } else {
+      loadSheetFeatures(charPageData);
+    }
   }
 
+  // Equipment
   if (id === 'inventory' && charPageData) {
     loadCharacterEquipment(charPageData.id);
   }
 }
-let currentInventoryTab = 'weapon';
 
 async function loadCharacterEquipment(characterId) {
   const el = document.getElementById('character-equipment-list');
@@ -6881,8 +6893,10 @@ async function saveSheetInline(charId) {
 ════════════════════════════════════════════════════════ */
 let charPageId = null;
 let charPageData = null;
+let gmCharacterView = false;
 
 async function openCharPage(charId, tab='sheet') {
+  gmCharacterView = false;
   const { data: c } = await sb.from('characters').select('*').eq('id', charId).single();
   if (!c) { toast('Character not found', 'error'); return; }
   charPageId = charId;
@@ -6910,6 +6924,7 @@ function switchCharPageTab(tab) {
   if (tab === 'builder') renderCharBuilder();
 }
 async function openGMCharacterSheet(charId) {
+  gmCharacterView = true;
   const { data, error } = await sb.rpc(
     'get_gm_campaign_character',
     {
@@ -6966,6 +6981,7 @@ async function openGMCharacterSheet(charId) {
  await renderGMCharSheet();
 }
 async function renderCharSheet() {
+  console.log('NORMAL SHEET RENDER');
   const c = charPageData;
   const el = document.getElementById('char-sheet-content');
   charPageData._computed = await computeCharacterStats(c);
@@ -6977,6 +6993,7 @@ async function renderCharSheet() {
   if (c) loadActiveWeapons(c.id);
 }
 async function renderGMCharSheet() {
+  console.log('GM SHEET RENDER');
   const c = charPageData;
   const el = document.getElementById('char-sheet-content');
 

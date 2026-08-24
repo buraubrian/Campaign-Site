@@ -6233,7 +6233,230 @@ async function loadSheetFeatures(c) {
 let domainAdderCharId = null;
 let domainAdderLevel = 1;
 let domainAdderExisting = [];
+async function loadGMSheetFeatures(c) {
+  const el = document.getElementById('features-card-content');
+  if (!el) return;
 
+  el.innerHTML = '<div class="loading">Loading features…</div>';
+
+  try {
+    // Find numeric class ID from character's class name
+    let classId = null;
+
+    if (c.class) {
+      const { data: classRow, error } = await sb
+        .from('classes')
+        .select('id')
+        .ilike('name', c.class)
+        .maybeSingle();
+
+      if (error) {
+        console.error('GM CLASS LOOKUP ERROR:', error);
+      }
+
+      classId = classRow?.id ?? null;
+    }
+
+    // Find numeric subclass ID from character's subclass name
+    let subclassId = null;
+
+    if (c.subclass) {
+      let query = sb
+        .from('subclasses')
+        .select('id')
+        .ilike('name', c.subclass);
+
+      if (classId) {
+        query = query.eq('class_id', classId);
+      }
+
+      const { data: subclassRow, error } =
+        await query.maybeSingle();
+
+      if (error) {
+        console.error('GM SUBCLASS LOOKUP ERROR:', error);
+      }
+
+      subclassId = subclassRow?.id ?? null;
+    }
+
+    // Class features
+    let cf = [];
+
+    if (classId) {
+      const { data, error } = await sb
+        .from('class_features')
+        .select('*')
+        .eq('class_id', classId);
+
+      if (error) {
+        console.error('GM CLASS FEATURES ERROR:', error);
+      } else {
+        cf = data || [];
+      }
+    }
+
+    // Subclass features
+    let sf = [];
+
+    if (subclassId) {
+      const { data, error } = await sb
+        .from('subclass_features')
+        .select('*')
+        .eq('subclass_id', subclassId);
+
+      if (error) {
+        console.error('GM SUBCLASS FEATURES ERROR:', error);
+      } else {
+        sf = data || [];
+      }
+    }
+
+    // Character's domain cards
+    const { data: domainCards, error: domainError } = await sb
+      .from('character_domain_cards')
+      .select('*, domain_cards(*)')
+      .eq('character_id', c.id);
+
+    if (domainError) {
+      console.error('GM DOMAIN CARD ERROR:', domainError);
+    }
+
+    const dc = domainCards || [];
+    const loadout = dc.filter(r => r.location === 'loadout');
+    const vault = dc.filter(r => r.location === 'vault');
+
+    let html = '';
+
+    // Domain Cards
+    html += `
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem">
+
+        <div class="vault-toggle-strip">
+          <button
+            class="vault-toggle-btn active"
+            id="btn-loadout"
+            onclick="switchVaultView('loadout')">
+            Loadout (${loadout.length}/5)
+          </button>
+
+          <button
+            class="vault-toggle-btn"
+            id="btn-vault"
+            onclick="switchVaultView('vault')">
+            Vault (${vault.length})
+          </button>
+        </div>
+
+      </div>
+
+      <div id="dc-loadout-view">
+        ${
+          loadout.length === 0
+            ? '<div class="empty-state" style="margin-bottom:0.75rem">No cards in loadout.</div>'
+            : loadout
+                .map(r => renderDomainCardSheet(r, 'loadout', c.id))
+                .join('')
+        }
+      </div>
+
+      <div id="dc-vault-view" style="display:none">
+        ${
+          vault.length === 0
+            ? '<div class="empty-state" style="margin-bottom:0.75rem">No cards in vault.</div>'
+            : vault
+                .map(r => renderDomainCardSheet(r, 'vault', c.id))
+                .join('')
+        }
+      </div>
+    `;
+
+    if (cf.length > 0 || sf.length > 0) {
+      html += '<hr style="margin:1.25rem 0">';
+    }
+
+    // Class Features
+    if (cf.length > 0) {
+      html += `
+        <div class="dc-section-label">
+          Class Features — ${c.class}
+        </div>
+      `;
+
+      html += cf.map(f => `
+        <div class="feature-card">
+          <div class="feature-card-header">
+            <span class="feature-card-title">
+              ${f.feature_name}
+            </span>
+          </div>
+
+          ${
+            f.feature_text
+              ? `<div class="feature-card-body">${f.feature_text}</div>`
+              : ''
+          }
+        </div>
+      `).join('');
+    }
+
+    // Subclass Features
+    if (sf.length > 0) {
+      html += `
+        <div class="dc-section-label">
+          Subclass Features — ${c.subclass}
+        </div>
+      `;
+
+      html += sf.map(f => `
+        <div class="feature-card">
+          <div class="feature-card-header">
+            <span class="feature-card-title">
+              ${f.feature_name}
+            </span>
+
+            ${
+              f.tier
+                ? `<span class="feature-card-type">${f.tier}</span>`
+                : ''
+            }
+          </div>
+
+          ${
+            f.feature_text
+              ? `<div class="feature-card-body">${f.feature_text}</div>`
+              : ''
+          }
+        </div>
+      `).join('');
+    }
+
+    if (!cf.length && !sf.length && !dc.length) {
+      html += `
+        <div class="empty-state" style="padding:1rem">
+          No features loaded yet.
+        </div>
+      `;
+    }
+
+    el.innerHTML = html;
+
+    console.log('GM CLASS ID:', classId);
+    console.log('GM SUBCLASS ID:', subclassId);
+    console.log('GM CLASS FEATURES:', cf);
+    console.log('GM SUBCLASS FEATURES:', sf);
+    console.log('GM DOMAIN CARDS:', dc);
+
+  } catch (err) {
+    console.error('GM FEATURE LOAD ERROR:', err);
+
+    el.innerHTML = `
+      <div class="empty-state" style="color:var(--ruby)">
+        Could not load character features.
+      </div>
+    `;
+  }
+}
 async function openDomainCardAdder(charId, className, level) {
   domainAdderCharId = charId;
   domainAdderLevel = level;
@@ -6740,7 +6963,7 @@ async function openGMCharacterSheet(charId) {
     .getElementById('char-page-panel-sheet')
     ?.classList.add('active');
 
-  await renderCharSheet();
+ await renderGMCharSheet();
 }
 async function renderCharSheet() {
   const c = charPageData;
@@ -6753,7 +6976,24 @@ async function renderCharSheet() {
    if (c) loadCalculatedArmor(c.id);
   if (c) loadActiveWeapons(c.id);
 }
+async function renderGMCharSheet() {
+  const c = charPageData;
+  const el = document.getElementById('char-sheet-content');
 
+  charPageData._computed =
+    await computeCharacterStats(c);
+
+  el.innerHTML = renderSheetHTML(c);
+
+  renderAllPips(c);
+  initSheetDicePreviews();
+
+  if (c) {
+    loadGMSheetFeatures(c);
+    loadCalculatedArmor(c.id);
+    loadActiveWeapons(c.id);
+  }
+}
 function renderCharBuilder() {
   const c = charPageData;
   document.getElementById('char-builder-content').innerHTML = builderHTML(c);

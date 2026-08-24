@@ -6686,7 +6686,62 @@ function switchCharPageTab(tab) {
   if (tab === 'sheet') renderCharSheet();
   if (tab === 'builder') renderCharBuilder();
 }
+async function openGMCharacterSheet(charId) {
+  const { data, error } = await sb.rpc(
+    'get_gm_campaign_character',
+    {
+      p_character_id: charId,
+      p_campaign_id: currentCampaign.id
+    }
+  );
 
+  if (error) {
+    console.error('GM CHARACTER LOAD ERROR:', error);
+    toast('Could not load character sheet', 'error');
+    return;
+  }
+
+  const c = data?.[0];
+
+  if (!c) {
+    toast('Character not found', 'error');
+    return;
+  }
+
+  charPageId = c.id;
+  charPageData = c;
+  editingCharId = c.id;
+
+  document.getElementById('char-page-name').textContent =
+    c.name || 'Unnamed Hero';
+
+  const builderTab =
+    document.getElementById('char-tab-builder');
+
+  if (builderTab) {
+    builderTab.style.display = 'none';
+  }
+
+  showView('view-char-page');
+
+  document
+    .querySelectorAll('.char-page-tab')
+    .forEach(b => b.classList.remove('active'));
+
+  document
+    .getElementById('char-tab-sheet')
+    ?.classList.add('active');
+
+  document
+    .querySelectorAll('.char-page-panel')
+    .forEach(p => p.classList.remove('active'));
+
+  document
+    .getElementById('char-page-panel-sheet')
+    ?.classList.add('active');
+
+  await renderCharSheet();
+}
 async function renderCharSheet() {
   const c = charPageData;
   const el = document.getElementById('char-sheet-content');
@@ -8006,21 +8061,38 @@ async function loadPlayersTab() {
 
     ${players.map(player => {
 
-      const charactersHtml =
-        player.characters.length > 0
-          ? player.characters.map(char => `
-              <div style="
-                margin-top:0.5rem;
-                font-size:0.9rem;
-              ">
-                <strong style="color:var(--gold)">
-                  ${char.name}
-                </strong>
+    const charactersHtml =
+  player.characters.length > 0
+    ? player.characters.map(char => `
+        <div style="
+          margin-top:0.6rem;
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:1rem;
+          flex-wrap:wrap;
+        ">
 
-                — ${char.class || 'No class'}
-                Lv.${char.level || 1}
-              </div>
-            `).join('')
+          <div style="
+            font-size:0.9rem;
+          ">
+            <strong style="color:var(--gold)">
+              ${char.name}
+            </strong>
+
+            — ${char.class || 'No class'}
+            Lv.${char.level || 1}
+          </div>
+
+          <button
+            class="btn btn-gold btn-sm"
+            onclick="openGMCharacterSheet('${char.id}')"
+          >
+            View Sheet
+          </button>
+
+        </div>
+      `).join('')
           : `
               <div style="
                 margin-top:0.5rem;
@@ -8031,27 +8103,7 @@ async function loadPlayersTab() {
               </div>
             `;
 
-      const lockButtons =
-        player.characters.map(char => `
-          <button
-            class="btn btn-ghost btn-sm"
-            onclick="
-              toggleSheetLock(
-                '${player.player_id}',
-                '${char.id}',
-                ${!!char.sheet_locked}
-              )
-            "
-          >
-            ${
-              char.sheet_locked
-                ? '🔓 Unlock ' + char.name
-                : '🔒 Lock ' + char.name
-            }
-          </button>
-        `).join('');
-
-      return `
+       return `
         <div class="card card-sm">
 
           <div style="
@@ -8075,21 +8127,21 @@ async function loadPlayersTab() {
 
             </div>
 
-            <div style="
-              display:flex;
-              gap:0.5rem;
-              flex-wrap:wrap;
-              justify-content:flex-end;
-            ">
+           <div style="
+  display:flex;
+  gap:0.5rem;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+">
 
-              ${lockButtons}
+  <button
+    class="btn btn-danger btn-sm"
+    onclick="removePlayer('${player.player_id}')"
+  >
+    Remove
+  </button>
 
-              <button
-                class="btn btn-danger btn-sm"
-                onclick="removePlayer('${player.player_id}')"
-              >
-                Remove
-              </button>
+</div>
 
             </div>
 

@@ -4637,7 +4637,6 @@ function showSheetSubPanel(id, btn) {
     loadCharacterEquipment(charPageData.id);
   }
 }
-
 async function loadCharacterEquipment(characterId) {
   const el = document.getElementById('character-equipment-list');
   if (!el) return;
@@ -4756,16 +4755,18 @@ async function loadCharacterEquipment(characterId) {
     const hands = Number(weapon.burden) === 2 ? '✋ ✋' : '✋';
 
     return `
-     <div
-  class="equipment-compact-row equipment-hover-wrap"
-  onmouseenter="showItemHover(this, 'weapon', ${weapon.id})"
-  onmouseleave="hideItemHover()"
->
+      <div
+        class="equipment-compact-row equipment-hover-wrap"
+        onmouseenter="showItemHover(this, 'weapon', ${weapon.id})"
+        onmouseleave="hideItemHover()"
+      >
         <div>
           <div class="equipment-compact-meta">${label}</div>
+
           <div class="equipment-compact-name">
             ${weapon.name} ${hands}
           </div>
+
           <div class="equipment-compact-meta">
             Tier ${weapon.tier}
           </div>
@@ -4788,15 +4789,17 @@ async function loadCharacterEquipment(characterId) {
 
     return `
       <div
-  class="equipment-compact-row equipment-hover-wrap"
-  onmouseenter="showItemHover(this, 'armor', ${armor.id})"
-  onmouseleave="hideItemHover()"
->
+        class="equipment-compact-row equipment-hover-wrap"
+        onmouseenter="showItemHover(this, 'armor', ${armor.id})"
+        onmouseleave="hideItemHover()"
+      >
         <div>
           <div class="equipment-compact-meta">Armor</div>
+
           <div class="equipment-compact-name">
             ${armor.name}
           </div>
+
           <div class="equipment-compact-meta">
             Armor ${armor.base_score}
             · Major ${armor.base_threshold_major}
@@ -4816,25 +4819,24 @@ async function loadCharacterEquipment(characterId) {
   const inventoryItems = allItems.filter(i => !i.is_equipped);
 
   function renderInventoryItem(item) {
-
     if (item.item_type === 'weapon') {
       const weapon = weaponsById[item.item_id];
-
       if (!weapon) return '';
 
       const hands = Number(weapon.burden) === 2 ? '✋ ✋' : '✋';
 
       return `
-      <div
-  class="equipment-compact-row inventory-item-row equipment-hover-wrap"
-  data-inventory-type="weapon"
-  onmouseenter="showItemHover(this, 'weapon', ${weapon.id})"
-  onmouseleave="hideItemHover()"
->
+        <div
+          class="equipment-compact-row inventory-item-row equipment-hover-wrap"
+          data-inventory-type="weapon"
+          onmouseenter="showItemHover(this, 'weapon', ${weapon.id})"
+          onmouseleave="hideItemHover()"
+        >
           <div>
             <div class="equipment-compact-name">
               ${weapon.name} ${hands}
             </div>
+
             <div class="equipment-compact-meta">
               ${weapon.category} · ${weapon.weapon_type} · Tier ${weapon.tier}
             </div>
@@ -4865,20 +4867,20 @@ async function loadCharacterEquipment(characterId) {
 
     if (item.item_type === 'armor') {
       const armor = armorById[item.item_id];
-
       if (!armor) return '';
 
       return `
-     <div
-  class="equipment-compact-row inventory-item-row equipment-hover-wrap"
-  data-inventory-type="armor"
-  onmouseenter="showItemHover(this, 'armor', ${armor.id})"
-  onmouseleave="hideItemHover()"
->
+        <div
+          class="equipment-compact-row inventory-item-row equipment-hover-wrap"
+          data-inventory-type="armor"
+          onmouseenter="showItemHover(this, 'armor', ${armor.id})"
+          onmouseleave="hideItemHover()"
+        >
           <div>
             <div class="equipment-compact-name">
               ${armor.name}
             </div>
+
             <div class="equipment-compact-meta">
               Armor ${armor.base_score}
               · Major ${armor.base_threshold_major}
@@ -4915,16 +4917,17 @@ async function loadCharacterEquipment(characterId) {
 
       return `
         <div
-  class="equipment-compact-row inventory-item-row equipment-hover-wrap"
-  data-inventory-type="consumable"
-  onmouseenter="showItemHover(this, 'consumable', ${consumable.id})"
-  onmouseleave="hideItemHover()"
->
+          class="equipment-compact-row inventory-item-row equipment-hover-wrap"
+          data-inventory-type="consumable"
+          onmouseenter="showItemHover(this, 'consumable', ${consumable.id})"
+          onmouseleave="hideItemHover()"
+        >
           <div>
             <div class="equipment-compact-name">
               ${consumable.name}
               ${item.quantity > 1 ? ` × ${item.quantity}` : ''}
             </div>
+
             <div class="equipment-compact-meta">
               ${consumable.category || 'Consumable'}
             </div>
@@ -4958,16 +4961,17 @@ async function loadCharacterEquipment(characterId) {
       if (!loot) return '';
 
       return `
-       <div
-  class="equipment-compact-row inventory-item-row equipment-hover-wrap"
-  data-inventory-type="loot"
-  onmouseenter="showItemHover(this, 'loot', ${loot.id})"
-  onmouseleave="hideItemHover()"
->
+        <div
+          class="equipment-compact-row inventory-item-row equipment-hover-wrap"
+          data-inventory-type="loot"
+          onmouseenter="showItemHover(this, 'loot', ${loot.id})"
+          onmouseleave="hideItemHover()"
+        >
           <div>
             <div class="equipment-compact-name">
               ${loot.name}
             </div>
+
             <div class="equipment-compact-meta">
               ${[
                 loot.category,
@@ -4997,29 +5001,10 @@ async function loadCharacterEquipment(characterId) {
   }
 
   el.innerHTML = `
-  
-  <div class="equipped-grid">
-  ${renderEquippedWeapon(primaryItem, 'Primary Weapon')}
-  ${renderEquippedWeapon(secondaryItem, 'Secondary Weapon')}
-  ${renderEquippedArmor(equippedArmorItem)}
-</div>
     <div class="equipment-section-title">
       Equipped Items
     </div>
-<div class="gold-handful-card">
 
-  <div
-    class="gold-sack-grid"
-    id="gold-sack-grid">
-  </div>
-
-  <div
-    id="gold-handful-count"
-    class="gold-handful-count">
-    ${Number(charPageData?.gold_handfuls) || 0} / 14
-  </div>
-
-</div>
     <div class="equipped-grid">
       ${renderEquippedWeapon(primaryItem, 'Primary Weapon')}
       ${renderEquippedWeapon(secondaryItem, 'Secondary Weapon')}
@@ -5027,10 +5012,60 @@ async function loadCharacterEquipment(characterId) {
     </div>
 
     <div class="equipment-section-title">
+      Gold
+    </div>
+
+    <div class="gold-tracker-card">
+
+      <div class="gold-denomination">
+        <div class="gold-denomination-label">
+          Handfuls
+        </div>
+
+        <div
+          class="gold-slot-row"
+          id="gold-handful-grid">
+        </div>
+      </div>
+
+      <div class="gold-conversion-arrow">
+        10 → 1
+      </div>
+
+      <div class="gold-denomination">
+        <div class="gold-denomination-label">
+          Bags
+        </div>
+
+        <div
+          class="gold-slot-row"
+          id="gold-bag-grid">
+        </div>
+      </div>
+
+      <div class="gold-conversion-arrow">
+        10 → 1
+      </div>
+
+      <div class="gold-denomination gold-chest-section">
+        <div class="gold-denomination-label">
+          Chest
+        </div>
+
+        <div
+          class="gold-slot-row"
+          id="gold-chest-grid">
+        </div>
+      </div>
+
+    </div>
+
+    <div class="equipment-section-title">
       Inventory
     </div>
 
     <div class="inventory-tab-strip">
+
       <button
         class="inventory-tab ${currentInventoryTab === 'weapon' ? 'active' : ''}"
         onclick="showInventoryTab('weapon', this)">
@@ -5054,22 +5089,26 @@ async function loadCharacterEquipment(characterId) {
         onclick="showInventoryTab('loot', this)">
         Loot
       </button>
+
     </div>
 
     <div id="inventory-tab-content">
       ${
         inventoryItems.length
           ? inventoryItems.map(renderInventoryItem).join('')
-          : `<div class="empty-state" style="padding:1rem">
-               No unequipped inventory items.
-             </div>`
+          : `
+            <div class="empty-state" style="padding:1rem">
+              No unequipped inventory items.
+            </div>
+          `
       }
     </div>
   `;
 
   showInventoryTab(currentInventoryTab);
-  renderGoldHandfuls(characterId);
+  renderGoldTracker(characterId);
 }
+
 function showInventoryTab(type, clickedButton = null) {
   currentInventoryTab = type;
 
@@ -7615,61 +7654,158 @@ function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseIn
     container.appendChild(pip);
   }
 }
-  function renderGoldHandfuls(characterId) {
-  const container = document.getElementById('gold-sack-grid');
-  const countEl = document.getElementById('gold-handful-count');
+  function renderGoldTracker(characterId) {
+  const handfulGrid =
+    document.getElementById('gold-handful-grid');
 
-  if (!container) return;
+  const bagGrid =
+    document.getElementById('gold-bag-grid');
 
-  const max = 14;
+  const chestGrid =
+    document.getElementById('gold-chest-grid');
 
-  let current =
-    Number(charPageData?.gold_handfuls) || 0;
+  if (!handfulGrid || !bagGrid || !chestGrid) return;
 
-  current = Math.max(0, Math.min(current, max));
+  const handfuls =
+    Math.max(
+      0,
+      Math.min(
+        Number(charPageData?.gold_handfuls) || 0,
+        9
+      )
+    );
 
-  container.innerHTML = '';
+  const bags =
+    Math.max(
+      0,
+      Math.min(
+        Number(charPageData?.gold_bags) || 0,
+        9
+      )
+    );
 
-  for (let i = 0; i < max; i++) {
-    const sack = document.createElement('button');
+  const chests =
+    Math.max(
+      0,
+      Math.min(
+        Number(charPageData?.gold_chests) || 0,
+        1
+      )
+    );
 
-    sack.type = 'button';
+  handfulGrid.innerHTML = '';
 
-    sack.className =
-      `gold-sack${i < current ? ' on' : ''}`;
+  for (let i = 0; i < 9; i++) {
+    const slot = document.createElement('button');
 
-    sack.textContent = '💰';
+    slot.type = 'button';
 
-    sack.title =
+    slot.className =
+      `gold-slot${i < handfuls ? ' on' : ''}`;
+
+    slot.textContent = '🪙';
+
+    slot.title =
       `${i + 1} Handful${i === 0 ? '' : 's'} of Gold`;
 
-    sack.onclick = () =>
-      setGoldHandfuls(characterId, i + 1);
+    slot.onclick = () =>
+      setGoldDenomination(
+        characterId,
+        'handful',
+        i + 1
+      );
 
-    container.appendChild(sack);
+    handfulGrid.appendChild(slot);
   }
 
-  if (countEl) {
-    countEl.textContent = `${current} / ${max}`;
+  bagGrid.innerHTML = '';
+
+  for (let i = 0; i < 9; i++) {
+    const slot = document.createElement('button');
+
+    slot.type = 'button';
+
+    slot.className =
+      `gold-slot${i < bags ? ' on' : ''}`;
+
+    slot.textContent = '💰';
+
+    slot.title =
+      `${i + 1} Bag${i === 0 ? '' : 's'} of Gold`;
+
+    slot.onclick = () =>
+      setGoldDenomination(
+        characterId,
+        'bag',
+        i + 1
+      );
+
+    bagGrid.appendChild(slot);
   }
+
+  chestGrid.innerHTML = '';
+
+  const chest = document.createElement('button');
+
+  chest.type = 'button';
+
+  chest.className =
+    `gold-slot${chests ? ' on' : ''}`;
+
+  chest.textContent = '🧰';
+  chest.title = 'Chest of Gold';
+
+  chest.onclick = () =>
+    setGoldDenomination(
+      characterId,
+      'chest',
+      1
+    );
+
+  chestGrid.appendChild(chest);
 }
-  async function setGoldHandfuls(characterId, clickedAmount) {
-  const current =
+  async function setGoldDenomination(
+  characterId,
+  denomination,
+  clickedAmount
+) {
+  let handfuls =
     Number(charPageData?.gold_handfuls) || 0;
 
-  // Clicking the currently filled last sack removes it.
-  const newAmount =
-    current === clickedAmount
-      ? clickedAmount - 1
-      : clickedAmount;
+  let bags =
+    Number(charPageData?.gold_bags) || 0;
 
-  const gold =
-    Math.max(0, Math.min(newAmount, 14));
+  let chests =
+    Number(charPageData?.gold_chests) || 0;
+
+  if (denomination === 'handful') {
+    handfuls =
+      handfuls === clickedAmount
+        ? clickedAmount - 1
+        : clickedAmount;
+  }
+
+  if (denomination === 'bag') {
+    bags =
+      bags === clickedAmount
+        ? clickedAmount - 1
+        : clickedAmount;
+  }
+
+  if (denomination === 'chest') {
+    chests = chests === 1 ? 0 : 1;
+  }
+
+  handfuls = Math.max(0, Math.min(handfuls, 9));
+  bags = Math.max(0, Math.min(bags, 9));
+  chests = Math.max(0, Math.min(chests, 1));
 
   const { error } = await sb
     .from('characters')
     .update({
-      gold_handfuls: gold,
+      gold_handfuls: handfuls,
+      gold_bags: bags,
+      gold_chests: chests,
       updated_at: new Date().toISOString()
     })
     .eq('id', characterId);
@@ -7687,12 +7823,13 @@ function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseIn
     charPageData &&
     String(charPageData.id) === String(characterId)
   ) {
-    charPageData.gold_handfuls = gold;
+    charPageData.gold_handfuls = handfuls;
+    charPageData.gold_bags = bags;
+    charPageData.gold_chests = chests;
   }
 
-  renderGoldHandfuls(characterId);
+  renderGoldTracker(characterId);
 }
-
 function toggleArmorSlot(index, max) {
   const hidden = document.getElementById('s-cur-armor');
   if (!hidden) return;

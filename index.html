@@ -6173,78 +6173,294 @@ await refreshCalculatedStats(characterId);
 async function loadSheetFeatures(c) {
   const el = document.getElementById('features-card-content');
   if (!el) return;
+
   el.innerHTML = '<div class="loading">Loading features…</div>';
 
-  const [classFeats, subFeats, domainCards] = await Promise.all([
-    c.class ? sb.from('class_features').select('*').ilike('class_id', c.class) : { data: [] },
-    c.subclass ? sb.from('subclass_features').select('*').ilike('subclass_id', c.subclass) : { data: [] },
-    sb.from('character_domain_cards').select('*, domain_cards(*)').eq('character_id', c.id)
-  ]);
+  try {
+    let classId = null;
 
-  const cf = classFeats.data || [];
-  const sf = subFeats.data || [];
-  const dc = domainCards.data || [];
-  const loadout = dc.filter(r => r.location === 'loadout');
-  const vault = dc.filter(r => r.location === 'vault');
+    if (c.class) {
+      const { data: classRow, error } = await sb
+        .from('classes')
+        .select('id')
+        .ilike('name', c.class)
+        .maybeSingle();
 
-  let html = '';
+      if (error) {
+        console.error('CLASS LOOKUP ERROR:', error);
+      }
 
-  // Domain Cards section — always shown
-  html += `
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem">
-    <div class="vault-toggle-strip">
-      <button class="vault-toggle-btn active" id="btn-loadout" onclick="switchVaultView('loadout')">Loadout (${loadout.length}/5)</button>
-      <button class="vault-toggle-btn" id="btn-vault" onclick="switchVaultView('vault')">Vault (${vault.length})</button>
-    </div>
-    <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
-      <span style="font-size:0.78rem;color:var(--muted)">Max 5 in loadout · Swap costs Recall Cost in Stress</span>
-      <button class="btn btn-gold btn-sm" onclick="openDomainCardAdder('${c.id}','${c.class||''}',${c.level||1})">+ Add Card</button>
-    </div>
-  </div>
-  <div id="dc-loadout-view">
-    ${loadout.length === 0 ? '<div class="empty-state" style="margin-bottom:0.75rem">No cards in loadout yet — click + Add Card to browse your class domains.</div>' : loadout.map(r => renderDomainCardSheet(r, 'loadout', c.id)).join('')}
-  </div>
-  <div id="dc-vault-view" style="display:none">
-    ${vault.length === 0 ? '<div class="empty-state" style="margin-bottom:0.75rem">No cards in vault</div>' : vault.map(r => renderDomainCardSheet(r, 'vault', c.id)).join('')}
-  </div>`;
+      classId = classRow?.id ?? null;
+    }
 
-  if (cf.length > 0 || sf.length > 0) html += '<hr style="margin:1.25rem 0">';
+    let subclassId = null;
 
-  // Class Features
-  if (cf.length > 0) {
-    html += `<div class="dc-section-label">Class Features — ${c.class}</div>`;
-    html += cf.map(f => `
-      <div class="feature-card">
-        <div class="feature-card-header">
-          <span class="feature-card-title">${f.name}</span>
-          ${f.feature_type ? `<span class="feature-card-type">${f.feature_type}</span>` : ''}
+    if (c.subclass) {
+      let query = sb
+        .from('subclasses')
+        .select('id')
+        .ilike('name', c.subclass);
+
+      if (classId) {
+        query = query.eq('class_id', classId);
+      }
+
+      const { data: subclassRow, error } =
+        await query.maybeSingle();
+
+      if (error) {
+        console.error('SUBCLASS LOOKUP ERROR:', error);
+      }
+
+      subclassId = subclassRow?.id ?? null;
+    }
+
+    let cf = [];
+
+    if (classId) {
+      const { data, error } = await sb
+        .from('class_features')
+        .select('*')
+        .eq('class_id', classId);
+
+      if (error) {
+        console.error('CLASS FEATURES ERROR:', error);
+      } else {
+        cf = data || [];
+      }
+    }
+
+    let sf = [];
+
+    if (subclassId) {
+      const { data, error } = await sb
+        .from('subclass_features')
+        .select('*')
+        .eq('subclass_id', subclassId);
+
+      if (error) {
+        console.error('SUBCLASS FEATURES ERROR:', error);
+      } else {
+        sf = data || [];
+      }
+    }
+
+    const { data: domainCards, error: domainError } = await sb
+      .from('character_domain_cards')
+      .select('*, domain_cards(*)')
+      .eq('character_id', c.id);
+
+    if (domainError) {
+      console.error('DOMAIN CARD ERROR:', domainError);
+    }
+
+    const dc = domainCards || [];
+    const loadout = dc.filter(r => r.location === 'loadout');
+    const vault = dc.filter(r => r.location === 'vault');
+
+    let html = '';
+
+    html += `
+      <div style="
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        flex-wrap:wrap;
+        gap:0.5rem;
+        margin-bottom:0.75rem;
+      ">
+
+        <div class="vault-toggle-strip">
+
+          <button
+            class="vault-toggle-btn active"
+            id="btn-loadout"
+            onclick="switchVaultView('loadout')"
+          >
+            Loadout (${loadout.length}/5)
+          </button>
+
+          <button
+            class="vault-toggle-btn"
+            id="btn-vault"
+            onclick="switchVaultView('vault')"
+          >
+            Vault (${vault.length})
+          </button>
+
         </div>
-        ${f.feature_text ? `<div class="feature-card-body">${f.feature_text}</div>` : ''}
-      </div>`).join('');
-  }
 
-  // Subclass Features
-  if (sf.length > 0) {
-    html += `<div class="dc-section-label">Subclass Features — ${c.subclass}</div>`;
-    html += sf.map(f => `
-      <div class="feature-card">
-        <div class="feature-card-header">
-          <span class="feature-card-title">${f.name}</span>
-          ${f.tier ? `<span class="feature-card-type">${f.tier}</span>` : ''}
+        <div style="
+          display:flex;
+          align-items:center;
+          gap:0.5rem;
+          flex-wrap:wrap;
+        ">
+
+          <span style="
+            font-size:0.78rem;
+            color:var(--muted);
+          ">
+            Max 5 in loadout · Swap costs Recall Cost in Stress
+          </span>
+
+          <button
+            class="btn btn-gold btn-sm"
+            onclick="openDomainCardAdder(
+              '${c.id}',
+              '${c.class || ''}',
+              ${c.level || 1}
+            )"
+          >
+            + Add Card
+          </button>
+
         </div>
-        ${f.feature_text ? `<div class="feature-card-body">${f.feature_text}</div>` : ''}
-      </div>`).join('');
-  }
 
-  if (!cf.length && !sf.length && !dc.length) {
-    html += `<div class="empty-state" style="padding:1rem">No features loaded yet — make sure your class and subclass are set and reference tables have data imported.</div>`;
-  }
+      </div>
 
-  el.innerHTML = html;
+      <div id="dc-loadout-view">
+
+        ${
+          loadout.length === 0
+            ? `
+              <div class="empty-state" style="margin-bottom:0.75rem">
+                No cards in loadout yet — click + Add Card to browse your class domains.
+              </div>
+            `
+            : loadout
+                .map(r => renderDomainCardSheet(r, 'loadout', c.id))
+                .join('')
+        }
+
+      </div>
+
+      <div
+        id="dc-vault-view"
+        style="display:none"
+      >
+
+        ${
+          vault.length === 0
+            ? `
+              <div class="empty-state" style="margin-bottom:0.75rem">
+                No cards in vault
+              </div>
+            `
+            : vault
+                .map(r => renderDomainCardSheet(r, 'vault', c.id))
+                .join('')
+        }
+
+      </div>
+    `;
+
+    if (cf.length > 0 || sf.length > 0) {
+      html += '<hr style="margin:1.25rem 0">';
+    }
+
+    // Class Features
+    if (cf.length > 0) {
+
+      html += `
+        <div class="dc-section-label">
+          Class Features — ${c.class}
+        </div>
+      `;
+
+      html += cf.map(f => `
+        <div class="feature-card">
+
+          <div class="feature-card-header">
+
+            <span class="feature-card-title">
+              ${f.feature_name}
+            </span>
+
+          </div>
+
+          ${
+            f.feature_text
+              ? `
+                <div class="feature-card-body">
+                  ${f.feature_text}
+                </div>
+              `
+              : ''
+          }
+
+        </div>
+      `).join('');
+    }
+
+    // Subclass Features
+    if (sf.length > 0) {
+
+      html += `
+        <div class="dc-section-label">
+          Subclass Features — ${c.subclass}
+        </div>
+      `;
+
+      html += sf.map(f => `
+        <div class="feature-card">
+
+          <div class="feature-card-header">
+
+            <span class="feature-card-title">
+              ${f.feature_name}
+            </span>
+
+            ${
+              f.tier
+                ? `
+                  <span class="feature-card-type">
+                    ${f.tier}
+                  </span>
+                `
+                : ''
+            }
+
+          </div>
+
+          ${
+            f.feature_text
+              ? `
+                <div class="feature-card-body">
+                  ${f.feature_text}
+                </div>
+              `
+              : ''
+          }
+
+        </div>
+      `).join('');
+    }
+
+    if (!cf.length && !sf.length && !dc.length) {
+      html += `
+        <div class="empty-state" style="padding:1rem">
+          No features loaded yet.
+        </div>
+      `;
+    }
+
+    el.innerHTML = html;
+
+  } catch (err) {
+    console.error('LOAD SHEET FEATURES ERROR:', err);
+
+    el.innerHTML = `
+      <div class="empty-state" style="color:var(--ruby)">
+        Could not load character features.
+      </div>
+    `;
+  }
 }
 let domainAdderCharId = null;
 let domainAdderLevel = 1;
 let domainAdderExisting = [];
+  
 async function loadGMSheetFeatures(c) {
   const el = document.getElementById('features-card-content');
   if (!el) return;
@@ -6894,7 +7110,8 @@ async function saveSheetInline(charId) {
 let charPageId = null;
 let charPageData = null;
 let gmCharacterView = false;
-
+let currentInventoryTab = 'weapon';
+  
 async function openCharPage(charId, tab='sheet') {
   gmCharacterView = false;
   const { data: c } = await sb.from('characters').select('*').eq('id', charId).single();

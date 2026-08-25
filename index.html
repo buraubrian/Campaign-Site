@@ -876,6 +876,66 @@ select option { background: var(--panel); }
   color: var(--text);
   line-height: 1.5;
 }
+  .gold-handful-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  margin-bottom: 1.25rem;
+  padding: 0.7rem 0.85rem;
+
+  background: rgba(14,11,20,0.35);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.gold-sack-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 28px);
+  gap: 6px;
+}
+
+.gold-sack {
+  width: 28px;
+  height: 28px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+  border: none;
+  background: transparent;
+
+  cursor: pointer;
+
+  font-size: 22px;
+  line-height: 1;
+
+  opacity: 0.28;
+  filter: grayscale(1);
+
+  transition:
+    opacity 0.15s,
+    filter 0.15s,
+    transform 0.15s;
+}
+
+.gold-sack.on {
+  opacity: 1;
+  filter: none;
+}
+
+.gold-sack:hover {
+  transform: translateY(-2px);
+}
+
+.gold-handful-count {
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  color: var(--gold-light);
+  white-space: nowrap;
+}
 
 .inventory-tab-strip {
   display: flex;
@@ -4937,10 +4997,29 @@ async function loadCharacterEquipment(characterId) {
   }
 
   el.innerHTML = `
+  
+  <div class="equipped-grid">
+  ${renderEquippedWeapon(primaryItem, 'Primary Weapon')}
+  ${renderEquippedWeapon(secondaryItem, 'Secondary Weapon')}
+  ${renderEquippedArmor(equippedArmorItem)}
+</div>
     <div class="equipment-section-title">
       Equipped Items
     </div>
+<div class="gold-handful-card">
 
+  <div
+    class="gold-sack-grid"
+    id="gold-sack-grid">
+  </div>
+
+  <div
+    id="gold-handful-count"
+    class="gold-handful-count">
+    ${Number(charPageData?.gold_handfuls) || 0} / 14
+  </div>
+
+</div>
     <div class="equipped-grid">
       ${renderEquippedWeapon(primaryItem, 'Primary Weapon')}
       ${renderEquippedWeapon(secondaryItem, 'Secondary Weapon')}
@@ -4989,6 +5068,7 @@ async function loadCharacterEquipment(characterId) {
   `;
 
   showInventoryTab(currentInventoryTab);
+  renderGoldHandfuls(characterId);
 }
 function showInventoryTab(type, clickedButton = null) {
   currentInventoryTab = type;
@@ -7250,7 +7330,7 @@ if (ancestryFeatures.length > 0) {
 
     console.log('GM CLASS ID:', classId);
     console.log('GM SUBCLASS ID:', subclassId);
-    console.log('GM ANCESTRY:', ancestryRow);
+    console.log('GM ANCESTRY FEATURES:', ancestryFeatures);
     console.log('GM COMMUNITY:', communityRow);
     console.log('GM CLASS FEATURES:', cf);
     console.log('GM SUBCLASS FEATURES:', sf);
@@ -7534,6 +7614,83 @@ function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseIn
 
     container.appendChild(pip);
   }
+}
+  function renderGoldHandfuls(characterId) {
+  const container = document.getElementById('gold-sack-grid');
+  const countEl = document.getElementById('gold-handful-count');
+
+  if (!container) return;
+
+  const max = 14;
+
+  let current =
+    Number(charPageData?.gold_handfuls) || 0;
+
+  current = Math.max(0, Math.min(current, max));
+
+  container.innerHTML = '';
+
+  for (let i = 0; i < max; i++) {
+    const sack = document.createElement('button');
+
+    sack.type = 'button';
+
+    sack.className =
+      `gold-sack${i < current ? ' on' : ''}`;
+
+    sack.textContent = '💰';
+
+    sack.title =
+      `${i + 1} Handful${i === 0 ? '' : 's'} of Gold`;
+
+    sack.onclick = () =>
+      setGoldHandfuls(characterId, i + 1);
+
+    container.appendChild(sack);
+  }
+
+  if (countEl) {
+    countEl.textContent = `${current} / ${max}`;
+  }
+}
+  async function setGoldHandfuls(characterId, clickedAmount) {
+  const current =
+    Number(charPageData?.gold_handfuls) || 0;
+
+  // Clicking the currently filled last sack removes it.
+  const newAmount =
+    current === clickedAmount
+      ? clickedAmount - 1
+      : clickedAmount;
+
+  const gold =
+    Math.max(0, Math.min(newAmount, 14));
+
+  const { error } = await sb
+    .from('characters')
+    .update({
+      gold_handfuls: gold,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', characterId);
+
+  if (error) {
+    toast(
+      'Could not update gold: ' + error.message,
+      'error'
+    );
+
+    return;
+  }
+
+  if (
+    charPageData &&
+    String(charPageData.id) === String(characterId)
+  ) {
+    charPageData.gold_handfuls = gold;
+  }
+
+  renderGoldHandfuls(characterId);
 }
 
 function toggleArmorSlot(index, max) {

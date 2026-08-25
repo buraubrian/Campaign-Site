@@ -4082,29 +4082,89 @@ function renderSheetHTML(c) {
       <div class="sheet-subline" style="flex-wrap:wrap;gap:0.5rem;align-items:flex-start;margin-top:0.4rem">
         <div style="display:flex;flex-direction:column;gap:0.2rem">
           <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Ancestry</span>
-          ${isSheetLocked() ? lockedPicker(c.ancestry) : `<button class="picker-trigger${c.ancestry?' has-value':''}" style="min-width:100px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('ancestries','s-ancestry','Ancestry')"><span>${c.ancestry||'Choose…'}</span><span class="pt-arrow">▼</span></button><div class="ls-info-panel" id="ancestry-info" style="display:none;max-width:200px"></div>`}
+          <div style="
+  min-width:100px;
+  font-family:'Cinzel',serif;
+  font-size:0.82rem;
+  color:var(--amethyst);
+">
+  ${c.ancestry || '—'}
+</div>
           <input type="hidden" id="s-ancestry" value="${c.ancestry||''}" />
         </div>
         <span class="sep" style="margin-top:1.4rem">·</span>
         <div style="display:flex;flex-direction:column;gap:0.2rem">
           <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Class</span>
-          ${isSheetLocked() ? lockedPicker(c.class) : `<button class="picker-trigger${c.class?' has-value':''}" style="min-width:100px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('classes','s-class','Class')"><span>${c.class||'Choose…'}</span><span class="pt-arrow">▼</span></button><div class="ls-info-panel" id="class-info" style="display:none;max-width:200px"></div>`}
-          <input type="hidden" id="s-class" value="${c.class||''}" />
-        </div>
-        <div style="display:flex;flex-direction:column;gap:0.2rem">
-          <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Subclass</span>
-          ${isSheetLocked() ? lockedPicker(c.subclass) : `<button class="picker-trigger${c.subclass?' has-value':''}" style="min-width:110px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('subclasses','s-subclass','Subclass')"><span>${c.subclass||'Choose…'}</span><span class="pt-arrow">▼</span></button>`}
-          <input type="hidden" id="s-subclass" value="${c.subclass||''}" />
-        </div>
-        <span class="sep" style="margin-top:1.4rem">·</span>
-        <div style="display:flex;flex-direction:column;gap:0.2rem">
-          <span style="font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Community</span>
-          ${isSheetLocked() ? lockedPicker(c.community) : `<button class="picker-trigger${c.community?' has-value':''}" style="min-width:110px;font-size:0.82rem;padding:0.3rem 0.6rem" onclick="openPicker('communities','s-community','Community')"><span>${c.community||'Choose…'}</span><span class="pt-arrow">▼</span></button><div class="ls-info-panel" id="community-info" style="display:none;max-width:200px"></div>`}
-          <input type="hidden" id="s-community" value="${c.community||''}" />
-        </div>
-         </div>
+          <div style="
+  min-width:100px;
+  font-family:'Cinzel',serif;
+  font-size:0.82rem;
+  color:var(--amethyst);
+">
+  ${c.class || '—'}
+</div>
+        <input type="hidden" id="s-class" value="${c.class||''}" />
+</div>
+
+<span class="sep" style="margin-top:1.4rem">·</span>
+
+<div style="display:flex;flex-direction:column;gap:0.2rem">
+  <span style="
+    font-family:'Cinzel',serif;
+    font-size:0.6rem;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--muted)
+  ">
+    Subclass
+  </span>
+
+  <div style="
+    min-width:110px;
+    font-family:'Cinzel',serif;
+    font-size:0.82rem;
+    color:var(--amethyst);
+  ">
+    ${c.subclass || '—'}
   </div>
 
+  <input
+    type="hidden"
+    id="s-subclass"
+    value="${c.subclass||''}"
+  />
+</div>
+
+<span class="sep" style="margin-top:1.4rem">·</span>
+
+<div style="display:flex;flex-direction:column;gap:0.2rem">
+  <span style="
+    font-family:'Cinzel',serif;
+    font-size:0.6rem;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--muted)
+  ">
+    Community
+  </span>
+
+  <div style="
+    min-width:110px;
+    font-family:'Cinzel',serif;
+    font-size:0.82rem;
+    color:var(--amethyst);
+  ">
+    ${c.community || '—'}
+  </div>
+
+  <input
+    type="hidden"
+    id="s-community"
+    value="${c.community||''}"
+  />
+</div>
+</div>
+</div>
   ${currentCampaign && c.campaign_id === currentCampaign.id ? `
     <button
       class="btn btn-gold btn-sm"

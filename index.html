@@ -6925,6 +6925,14 @@ function switchCharPageTab(tab) {
 }
 async function openGMCharacterSheet(charId) {
   gmCharacterView = true;
+  // Remove the hidden campaign character sheet so its duplicate
+  // element IDs cannot steal GM sheet rendering.
+  const campaignSheet =
+  document.getElementById('tab-my-sheet');
+
+if (campaignSheet) {
+  campaignSheet.innerHTML = '';
+}
   const { data, error } = await sb.rpc(
     'get_gm_campaign_character',
     {

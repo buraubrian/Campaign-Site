@@ -6321,12 +6321,20 @@ async function loadSheetFeatures(c) {
   el.innerHTML = '<div class="loading">Loading features…</div>';
 
   try {
+    // -----------------------------------------
+    // CLASS
+    // -----------------------------------------
     let classId = null;
+    let classRow = null;
 
     if (c.class) {
-      const { data: classRow, error } = await sb
+      const { data, error } = await sb
         .from('classes')
-        .select('id')
+        .select(`
+          id,
+          hope_feature_name,
+          hope_feature_text
+        `)
         .ilike('name', c.class)
         .maybeSingle();
 
@@ -6334,9 +6342,14 @@ async function loadSheetFeatures(c) {
         console.error('CLASS LOOKUP ERROR:', error);
       }
 
+      classRow = data || null;
       classId = classRow?.id ?? null;
     }
 
+
+    // -----------------------------------------
+    // SUBCLASS
+    // -----------------------------------------
     let subclassId = null;
 
     if (c.subclass) {
@@ -6359,6 +6372,62 @@ async function loadSheetFeatures(c) {
       subclassId = subclassRow?.id ?? null;
     }
 
+
+    // -----------------------------------------
+    // ANCESTRY
+    // -----------------------------------------
+    let ancestryRow = null;
+
+    if (c.ancestry) {
+      const { data, error } = await sb
+        .from('ancestries')
+        .select(`
+          id,
+          name,
+          feature_1_name,
+          feature_1_text,
+          feature_2_name,
+          feature_2_text
+        `)
+        .ilike('name', c.ancestry)
+        .maybeSingle();
+
+      if (error) {
+        console.error('ANCESTRY FEATURE ERROR:', error);
+      }
+
+      ancestryRow = data || null;
+    }
+
+
+    // -----------------------------------------
+    // COMMUNITY
+    // -----------------------------------------
+    let communityRow = null;
+
+    if (c.community) {
+      const { data, error } = await sb
+        .from('communities')
+        .select(`
+          id,
+          name,
+          feature_name,
+          feature_text
+        `)
+        .ilike('name', c.community)
+        .maybeSingle();
+
+      if (error) {
+        console.error('COMMUNITY FEATURE ERROR:', error);
+      }
+
+      communityRow = data || null;
+    }
+
+
+    // -----------------------------------------
+    // CLASS FEATURES
+    // -----------------------------------------
     let cf = [];
 
     if (classId) {
@@ -6374,6 +6443,10 @@ async function loadSheetFeatures(c) {
       }
     }
 
+
+    // -----------------------------------------
+    // SUBCLASS FEATURES
+    // -----------------------------------------
     let sf = [];
 
     if (subclassId) {
@@ -6389,6 +6462,10 @@ async function loadSheetFeatures(c) {
       }
     }
 
+
+    // -----------------------------------------
+    // DOMAIN CARDS
+    // -----------------------------------------
     const { data: domainCards, error: domainError } = await sb
       .from('character_domain_cards')
       .select('*, domain_cards(*)')
@@ -6402,8 +6479,16 @@ async function loadSheetFeatures(c) {
     const loadout = dc.filter(r => r.location === 'loadout');
     const vault = dc.filter(r => r.location === 'vault');
 
+
+    // =========================================
+    // BUILD HTML
+    // =========================================
     let html = '';
 
+
+    // -----------------------------------------
+    // DOMAIN CARDS
+    // -----------------------------------------
     html += `
       <div style="
         display:flex;
@@ -6411,7 +6496,7 @@ async function loadSheetFeatures(c) {
         justify-content:space-between;
         flex-wrap:wrap;
         gap:0.5rem;
-        margin-bottom:0.75rem;
+        margin-bottom:0.75rem
       ">
 
         <div class="vault-toggle-strip">
@@ -6419,16 +6504,14 @@ async function loadSheetFeatures(c) {
           <button
             class="vault-toggle-btn active"
             id="btn-loadout"
-            onclick="switchVaultView('loadout')"
-          >
+            onclick="switchVaultView('loadout')">
             Loadout (${loadout.length}/5)
           </button>
 
           <button
             class="vault-toggle-btn"
             id="btn-vault"
-            onclick="switchVaultView('vault')"
-          >
+            onclick="switchVaultView('vault')">
             Vault (${vault.length})
           </button>
 
@@ -6438,12 +6521,12 @@ async function loadSheetFeatures(c) {
           display:flex;
           align-items:center;
           gap:0.5rem;
-          flex-wrap:wrap;
+          flex-wrap:wrap
         ">
 
           <span style="
             font-size:0.78rem;
-            color:var(--muted);
+            color:var(--muted)
           ">
             Max 5 in loadout · Swap costs Recall Cost in Stress
           </span>
@@ -6454,8 +6537,7 @@ async function loadSheetFeatures(c) {
               '${c.id}',
               '${c.class || ''}',
               ${c.level || 1}
-            )"
-          >
+            )">
             + Add Card
           </button>
 
@@ -6464,7 +6546,6 @@ async function loadSheetFeatures(c) {
       </div>
 
       <div id="dc-loadout-view">
-
         ${
           loadout.length === 0
             ? `
@@ -6476,36 +6557,156 @@ async function loadSheetFeatures(c) {
                 .map(r => renderDomainCardSheet(r, 'loadout', c.id))
                 .join('')
         }
-
       </div>
 
-      <div
-        id="dc-vault-view"
-        style="display:none"
-      >
-
+      <div id="dc-vault-view" style="display:none">
         ${
           vault.length === 0
             ? `
               <div class="empty-state" style="margin-bottom:0.75rem">
-                No cards in vault
+                No cards in vault.
               </div>
             `
             : vault
                 .map(r => renderDomainCardSheet(r, 'vault', c.id))
                 .join('')
         }
-
       </div>
     `;
 
-    if (cf.length > 0 || sf.length > 0) {
-      html += '<hr style="margin:1.25rem 0">';
+
+    html += '<hr style="margin:1.25rem 0">';
+
+
+    // -----------------------------------------
+    // ANCESTRY FEATURES
+    // -----------------------------------------
+    if (
+      ancestryRow?.feature_1_name ||
+      ancestryRow?.feature_2_name
+    ) {
+      html += `
+        <div class="dc-section-label">
+          Ancestry Features — ${c.ancestry}
+        </div>
+      `;
+
+      if (ancestryRow.feature_1_name) {
+        html += `
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <span class="feature-card-title">
+                ${ancestryRow.feature_1_name}
+              </span>
+            </div>
+
+            ${
+              ancestryRow.feature_1_text
+                ? `
+                  <div class="feature-card-body">
+                    ${ancestryRow.feature_1_text}
+                  </div>
+                `
+                : ''
+            }
+          </div>
+        `;
+      }
+
+      if (ancestryRow.feature_2_name) {
+        html += `
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <span class="feature-card-title">
+                ${ancestryRow.feature_2_name}
+              </span>
+            </div>
+
+            ${
+              ancestryRow.feature_2_text
+                ? `
+                  <div class="feature-card-body">
+                    ${ancestryRow.feature_2_text}
+                  </div>
+                `
+                : ''
+            }
+          </div>
+        `;
+      }
     }
 
-    // Class Features
-    if (cf.length > 0) {
 
+    // -----------------------------------------
+    // COMMUNITY FEATURE
+    // -----------------------------------------
+    if (communityRow?.feature_name) {
+      html += `
+        <div class="dc-section-label">
+          Community Feature — ${c.community}
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-card-header">
+            <span class="feature-card-title">
+              ${communityRow.feature_name}
+            </span>
+          </div>
+
+          ${
+            communityRow.feature_text
+              ? `
+                <div class="feature-card-body">
+                  ${communityRow.feature_text}
+                </div>
+              `
+              : ''
+          }
+        </div>
+      `;
+    }
+
+
+    // -----------------------------------------
+    // CLASS HOPE FEATURE
+    // -----------------------------------------
+    if (classRow?.hope_feature_name) {
+      html += `
+        <div class="dc-section-label">
+          Hope Feature — ${c.class}
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-card-header">
+
+            <span class="feature-card-title">
+              ${classRow.hope_feature_name}
+            </span>
+
+            <span class="feature-card-type">
+              Hope
+            </span>
+
+          </div>
+
+          ${
+            classRow.hope_feature_text
+              ? `
+                <div class="feature-card-body">
+                  ${classRow.hope_feature_text}
+                </div>
+              `
+              : ''
+          }
+        </div>
+      `;
+    }
+
+
+    // -----------------------------------------
+    // CLASS FEATURES
+    // -----------------------------------------
+    if (cf.length > 0) {
       html += `
         <div class="dc-section-label">
           Class Features — ${c.class}
@@ -6520,6 +6721,16 @@ async function loadSheetFeatures(c) {
             <span class="feature-card-title">
               ${f.feature_name}
             </span>
+
+            ${
+              f.feature_type
+                ? `
+                  <span class="feature-card-type">
+                    ${f.feature_type}
+                  </span>
+                `
+                : ''
+            }
 
           </div>
 
@@ -6537,9 +6748,11 @@ async function loadSheetFeatures(c) {
       `).join('');
     }
 
-    // Subclass Features
-    if (sf.length > 0) {
 
+    // -----------------------------------------
+    // SUBCLASS FEATURES
+    // -----------------------------------------
+    if (sf.length > 0) {
       html += `
         <div class="dc-section-label">
           Subclass Features — ${c.subclass}
@@ -6581,18 +6794,11 @@ async function loadSheetFeatures(c) {
       `).join('');
     }
 
-    if (!cf.length && !sf.length && !dc.length) {
-      html += `
-        <div class="empty-state" style="padding:1rem">
-          No features loaded yet.
-        </div>
-      `;
-    }
 
     el.innerHTML = html;
 
   } catch (err) {
-    console.error('LOAD SHEET FEATURES ERROR:', err);
+    console.error('FEATURE LOAD ERROR:', err);
 
     el.innerHTML = `
       <div class="empty-state" style="color:var(--ruby)">
@@ -6612,13 +6818,20 @@ async function loadGMSheetFeatures(c) {
   el.innerHTML = '<div class="loading">Loading features…</div>';
 
   try {
-    // Find numeric class ID from character's class name
+    // -----------------------------------------
+    // CLASS
+    // -----------------------------------------
     let classId = null;
+    let classRow = null;
 
     if (c.class) {
-      const { data: classRow, error } = await sb
+      const { data, error } = await sb
         .from('classes')
-        .select('id')
+        .select(`
+          id,
+          hope_feature_name,
+          hope_feature_text
+        `)
         .ilike('name', c.class)
         .maybeSingle();
 
@@ -6626,10 +6839,14 @@ async function loadGMSheetFeatures(c) {
         console.error('GM CLASS LOOKUP ERROR:', error);
       }
 
+      classRow = data || null;
       classId = classRow?.id ?? null;
     }
 
-    // Find numeric subclass ID from character's subclass name
+
+    // -----------------------------------------
+    // SUBCLASS
+    // -----------------------------------------
     let subclassId = null;
 
     if (c.subclass) {
@@ -6652,7 +6869,62 @@ async function loadGMSheetFeatures(c) {
       subclassId = subclassRow?.id ?? null;
     }
 
-    // Class features
+
+    // -----------------------------------------
+    // ANCESTRY
+    // -----------------------------------------
+    let ancestryRow = null;
+
+    if (c.ancestry) {
+      const { data, error } = await sb
+        .from('ancestries')
+        .select(`
+          id,
+          name,
+          feature_1_name,
+          feature_1_text,
+          feature_2_name,
+          feature_2_text
+        `)
+        .ilike('name', c.ancestry)
+        .maybeSingle();
+
+      if (error) {
+        console.error('GM ANCESTRY FEATURE ERROR:', error);
+      }
+
+      ancestryRow = data || null;
+    }
+
+
+    // -----------------------------------------
+    // COMMUNITY
+    // -----------------------------------------
+    let communityRow = null;
+
+    if (c.community) {
+      const { data, error } = await sb
+        .from('communities')
+        .select(`
+          id,
+          name,
+          feature_name,
+          feature_text
+        `)
+        .ilike('name', c.community)
+        .maybeSingle();
+
+      if (error) {
+        console.error('GM COMMUNITY FEATURE ERROR:', error);
+      }
+
+      communityRow = data || null;
+    }
+
+
+    // -----------------------------------------
+    // CLASS FEATURES
+    // -----------------------------------------
     let cf = [];
 
     if (classId) {
@@ -6668,7 +6940,10 @@ async function loadGMSheetFeatures(c) {
       }
     }
 
-    // Subclass features
+
+    // -----------------------------------------
+    // SUBCLASS FEATURES
+    // -----------------------------------------
     let sf = [];
 
     if (subclassId) {
@@ -6684,7 +6959,10 @@ async function loadGMSheetFeatures(c) {
       }
     }
 
-    // Character's domain cards
+
+    // -----------------------------------------
+    // DOMAIN CARDS
+    // -----------------------------------------
     const { data: domainCards, error: domainError } = await sb
       .from('character_domain_cards')
       .select('*, domain_cards(*)')
@@ -6698,13 +6976,28 @@ async function loadGMSheetFeatures(c) {
     const loadout = dc.filter(r => r.location === 'loadout');
     const vault = dc.filter(r => r.location === 'vault');
 
+
+    // =========================================
+    // BUILD HTML
+    // =========================================
     let html = '';
 
-    // Domain Cards
+
+    // -----------------------------------------
+    // DOMAIN CARDS
+    // -----------------------------------------
     html += `
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem">
+      <div style="
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        flex-wrap:wrap;
+        gap:0.5rem;
+        margin-bottom:0.75rem
+      ">
 
         <div class="vault-toggle-strip">
+
           <button
             class="vault-toggle-btn active"
             id="btn-loadout"
@@ -6718,6 +7011,7 @@ async function loadGMSheetFeatures(c) {
             onclick="switchVaultView('vault')">
             Vault (${vault.length})
           </button>
+
         </div>
 
       </div>
@@ -6725,7 +7019,11 @@ async function loadGMSheetFeatures(c) {
       <div id="dc-loadout-view">
         ${
           loadout.length === 0
-            ? '<div class="empty-state" style="margin-bottom:0.75rem">No cards in loadout.</div>'
+            ? `
+              <div class="empty-state" style="margin-bottom:0.75rem">
+                No cards in loadout.
+              </div>
+            `
             : loadout
                 .map(r => renderDomainCardSheet(r, 'loadout', c.id))
                 .join('')
@@ -6735,7 +7033,11 @@ async function loadGMSheetFeatures(c) {
       <div id="dc-vault-view" style="display:none">
         ${
           vault.length === 0
-            ? '<div class="empty-state" style="margin-bottom:0.75rem">No cards in vault.</div>'
+            ? `
+              <div class="empty-state" style="margin-bottom:0.75rem">
+                No cards in vault.
+              </div>
+            `
             : vault
                 .map(r => renderDomainCardSheet(r, 'vault', c.id))
                 .join('')
@@ -6743,11 +7045,142 @@ async function loadGMSheetFeatures(c) {
       </div>
     `;
 
-    if (cf.length > 0 || sf.length > 0) {
-      html += '<hr style="margin:1.25rem 0">';
+
+    html += '<hr style="margin:1.25rem 0">';
+
+
+    // -----------------------------------------
+    // ANCESTRY FEATURES
+    // -----------------------------------------
+    if (
+      ancestryRow?.feature_1_name ||
+      ancestryRow?.feature_2_name
+    ) {
+      html += `
+        <div class="dc-section-label">
+          Ancestry Features — ${c.ancestry}
+        </div>
+      `;
+
+      if (ancestryRow.feature_1_name) {
+        html += `
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <span class="feature-card-title">
+                ${ancestryRow.feature_1_name}
+              </span>
+            </div>
+
+            ${
+              ancestryRow.feature_1_text
+                ? `
+                  <div class="feature-card-body">
+                    ${ancestryRow.feature_1_text}
+                  </div>
+                `
+                : ''
+            }
+          </div>
+        `;
+      }
+
+      if (ancestryRow.feature_2_name) {
+        html += `
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <span class="feature-card-title">
+                ${ancestryRow.feature_2_name}
+              </span>
+            </div>
+
+            ${
+              ancestryRow.feature_2_text
+                ? `
+                  <div class="feature-card-body">
+                    ${ancestryRow.feature_2_text}
+                  </div>
+                `
+                : ''
+            }
+          </div>
+        `;
+      }
     }
 
-    // Class Features
+
+    // -----------------------------------------
+    // COMMUNITY FEATURE
+    // -----------------------------------------
+    if (communityRow?.feature_name) {
+      html += `
+        <div class="dc-section-label">
+          Community Feature — ${c.community}
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-card-header">
+
+            <span class="feature-card-title">
+              ${communityRow.feature_name}
+            </span>
+
+          </div>
+
+          ${
+            communityRow.feature_text
+              ? `
+                <div class="feature-card-body">
+                  ${communityRow.feature_text}
+                </div>
+              `
+              : ''
+          }
+
+        </div>
+      `;
+    }
+
+
+    // -----------------------------------------
+    // CLASS HOPE FEATURE
+    // -----------------------------------------
+    if (classRow?.hope_feature_name) {
+      html += `
+        <div class="dc-section-label">
+          Hope Feature — ${c.class}
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-card-header">
+
+            <span class="feature-card-title">
+              ${classRow.hope_feature_name}
+            </span>
+
+            <span class="feature-card-type">
+              Hope
+            </span>
+
+          </div>
+
+          ${
+            classRow.hope_feature_text
+              ? `
+                <div class="feature-card-body">
+                  ${classRow.hope_feature_text}
+                </div>
+              `
+              : ''
+          }
+
+        </div>
+      `;
+    }
+
+
+    // -----------------------------------------
+    // CLASS FEATURES
+    // -----------------------------------------
     if (cf.length > 0) {
       html += `
         <div class="dc-section-label">
@@ -6757,22 +7190,43 @@ async function loadGMSheetFeatures(c) {
 
       html += cf.map(f => `
         <div class="feature-card">
+
           <div class="feature-card-header">
+
             <span class="feature-card-title">
               ${f.feature_name}
             </span>
+
+            ${
+              f.feature_type
+                ? `
+                  <span class="feature-card-type">
+                    ${f.feature_type}
+                  </span>
+                `
+                : ''
+            }
+
           </div>
 
           ${
             f.feature_text
-              ? `<div class="feature-card-body">${f.feature_text}</div>`
+              ? `
+                <div class="feature-card-body">
+                  ${f.feature_text}
+                </div>
+              `
               : ''
           }
+
         </div>
       `).join('');
     }
 
-    // Subclass Features
+
+    // -----------------------------------------
+    // SUBCLASS FEATURES
+    // -----------------------------------------
     if (sf.length > 0) {
       html += `
         <div class="dc-section-label">
@@ -6782,39 +7236,47 @@ async function loadGMSheetFeatures(c) {
 
       html += sf.map(f => `
         <div class="feature-card">
+
           <div class="feature-card-header">
+
             <span class="feature-card-title">
               ${f.feature_name}
             </span>
 
             ${
               f.tier
-                ? `<span class="feature-card-type">${f.tier}</span>`
+                ? `
+                  <span class="feature-card-type">
+                    ${f.tier}
+                  </span>
+                `
                 : ''
             }
+
           </div>
 
           ${
             f.feature_text
-              ? `<div class="feature-card-body">${f.feature_text}</div>`
+              ? `
+                <div class="feature-card-body">
+                  ${f.feature_text}
+                </div>
+              `
               : ''
           }
+
         </div>
       `).join('');
     }
 
-    if (!cf.length && !sf.length && !dc.length) {
-      html += `
-        <div class="empty-state" style="padding:1rem">
-          No features loaded yet.
-        </div>
-      `;
-    }
 
     el.innerHTML = html;
 
+
     console.log('GM CLASS ID:', classId);
     console.log('GM SUBCLASS ID:', subclassId);
+    console.log('GM ANCESTRY:', ancestryRow);
+    console.log('GM COMMUNITY:', communityRow);
     console.log('GM CLASS FEATURES:', cf);
     console.log('GM SUBCLASS FEATURES:', sf);
     console.log('GM DOMAIN CARDS:', dc);

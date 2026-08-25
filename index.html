@@ -6376,28 +6376,41 @@ async function loadSheetFeatures(c) {
     // -----------------------------------------
     // ANCESTRY
     // -----------------------------------------
-    let ancestryRow = null;
+   let ancestryId = null;
+let ancestryFeatures = [];
 
-    if (c.ancestry) {
-      const { data, error } = await sb
-        .from('ancestries')
-        .select(`
-          id,
-          name,
-          feature_1_name,
-          feature_1_text,
-          feature_2_name,
-          feature_2_text
-        `)
-        .ilike('name', c.ancestry)
-        .maybeSingle();
+if (c.ancestry) {
+  const { data: ancestryRow, error: ancestryError } = await sb
+    .from('ancestries')
+    .select('id')
+    .ilike('name', c.ancestry)
+    .maybeSingle();
 
-      if (error) {
-        console.error('ANCESTRY FEATURE ERROR:', error);
-      }
+  if (ancestryError) {
+    console.error('ANCESTRY LOOKUP ERROR:', ancestryError);
+  }
 
-      ancestryRow = data || null;
+  ancestryId = ancestryRow?.id ?? null;
+
+  if (ancestryId) {
+    const { data, error } = await sb
+      .from('ancestry_features')
+      .select(`
+        id,
+        ancestry_id,
+        feature_name,
+        feature_text
+      `)
+      .eq('ancestry_id', ancestryId)
+      .order('id');
+
+    if (error) {
+      console.error('ANCESTRY FEATURES ERROR:', error);
+    } else {
+      ancestryFeatures = data || [];
     }
+  }
+}
 
 
     // -----------------------------------------
@@ -6578,63 +6591,38 @@ async function loadSheetFeatures(c) {
     html += '<hr style="margin:1.25rem 0">';
 
 
-    // -----------------------------------------
-    // ANCESTRY FEATURES
-    // -----------------------------------------
-    if (
-      ancestryRow?.feature_1_name ||
-      ancestryRow?.feature_2_name
-    ) {
-      html += `
-        <div class="dc-section-label">
-          Ancestry Features — ${c.ancestry}
-        </div>
-      `;
+ // -----------------------------------------
+// ANCESTRY FEATURES
+// -----------------------------------------
+if (ancestryFeatures.length > 0) {
+  html += `
+    <div class="dc-section-label">
+      Ancestry Features — ${c.ancestry}
+    </div>
+  `;
 
-      if (ancestryRow.feature_1_name) {
-        html += `
-          <div class="feature-card">
-            <div class="feature-card-header">
-              <span class="feature-card-title">
-                ${ancestryRow.feature_1_name}
-              </span>
+  html += ancestryFeatures.map(f => `
+    <div class="feature-card">
+
+      <div class="feature-card-header">
+        <span class="feature-card-title">
+          ${f.feature_name}
+        </span>
+      </div>
+
+      ${
+        f.feature_text
+          ? `
+            <div class="feature-card-body">
+              ${f.feature_text}
             </div>
-
-            ${
-              ancestryRow.feature_1_text
-                ? `
-                  <div class="feature-card-body">
-                    ${ancestryRow.feature_1_text}
-                  </div>
-                `
-                : ''
-            }
-          </div>
-        `;
+          `
+          : ''
       }
 
-      if (ancestryRow.feature_2_name) {
-        html += `
-          <div class="feature-card">
-            <div class="feature-card-header">
-              <span class="feature-card-title">
-                ${ancestryRow.feature_2_name}
-              </span>
-            </div>
-
-            ${
-              ancestryRow.feature_2_text
-                ? `
-                  <div class="feature-card-body">
-                    ${ancestryRow.feature_2_text}
-                  </div>
-                `
-                : ''
-            }
-          </div>
-        `;
-      }
-    }
+    </div>
+  `).join('');
+}
 
 
     // -----------------------------------------
@@ -6873,28 +6861,41 @@ async function loadGMSheetFeatures(c) {
     // -----------------------------------------
     // ANCESTRY
     // -----------------------------------------
-    let ancestryRow = null;
+   let ancestryId = null;
+let ancestryFeatures = [];
 
-    if (c.ancestry) {
-      const { data, error } = await sb
-        .from('ancestries')
-        .select(`
-          id,
-          name,
-          feature_1_name,
-          feature_1_text,
-          feature_2_name,
-          feature_2_text
-        `)
-        .ilike('name', c.ancestry)
-        .maybeSingle();
+if (c.ancestry) {
+  const { data: ancestryRow, error: ancestryError } = await sb
+    .from('ancestries')
+    .select('id')
+    .ilike('name', c.ancestry)
+    .maybeSingle();
 
-      if (error) {
-        console.error('GM ANCESTRY FEATURE ERROR:', error);
-      }
+  if (ancestryError) {
+    console.error('ANCESTRY LOOKUP ERROR:', ancestryError);
+  }
 
-      ancestryRow = data || null;
+  ancestryId = ancestryRow?.id ?? null;
+
+  if (ancestryId) {
+    const { data, error } = await sb
+      .from('ancestry_features')
+      .select(`
+        id,
+        ancestry_id,
+        feature_name,
+        feature_text
+      `)
+      .eq('ancestry_id', ancestryId)
+      .order('id');
+
+    if (error) {
+      console.error('ANCESTRY FEATURES ERROR:', error);
+    } else {
+      ancestryFeatures = data || [];
     }
+  }
+}
 
 
     // -----------------------------------------
@@ -7049,64 +7050,38 @@ async function loadGMSheetFeatures(c) {
     html += '<hr style="margin:1.25rem 0">';
 
 
-    // -----------------------------------------
-    // ANCESTRY FEATURES
-    // -----------------------------------------
-    if (
-      ancestryRow?.feature_1_name ||
-      ancestryRow?.feature_2_name
-    ) {
-      html += `
-        <div class="dc-section-label">
-          Ancestry Features — ${c.ancestry}
-        </div>
-      `;
+   // -----------------------------------------
+// ANCESTRY FEATURES
+// -----------------------------------------
+if (ancestryFeatures.length > 0) {
+  html += `
+    <div class="dc-section-label">
+      Ancestry Features — ${c.ancestry}
+    </div>
+  `;
 
-      if (ancestryRow.feature_1_name) {
-        html += `
-          <div class="feature-card">
-            <div class="feature-card-header">
-              <span class="feature-card-title">
-                ${ancestryRow.feature_1_name}
-              </span>
+  html += ancestryFeatures.map(f => `
+    <div class="feature-card">
+
+      <div class="feature-card-header">
+        <span class="feature-card-title">
+          ${f.feature_name}
+        </span>
+      </div>
+
+      ${
+        f.feature_text
+          ? `
+            <div class="feature-card-body">
+              ${f.feature_text}
             </div>
-
-            ${
-              ancestryRow.feature_1_text
-                ? `
-                  <div class="feature-card-body">
-                    ${ancestryRow.feature_1_text}
-                  </div>
-                `
-                : ''
-            }
-          </div>
-        `;
+          `
+          : ''
       }
 
-      if (ancestryRow.feature_2_name) {
-        html += `
-          <div class="feature-card">
-            <div class="feature-card-header">
-              <span class="feature-card-title">
-                ${ancestryRow.feature_2_name}
-              </span>
-            </div>
-
-            ${
-              ancestryRow.feature_2_text
-                ? `
-                  <div class="feature-card-body">
-                    ${ancestryRow.feature_2_text}
-                  </div>
-                `
-                : ''
-            }
-          </div>
-        `;
-      }
-    }
-
+    </div>
+  `).join('');
+}
 
     // -----------------------------------------
     // COMMUNITY FEATURE

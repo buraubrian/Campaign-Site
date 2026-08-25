@@ -2725,11 +2725,6 @@ const characterLevel = Number(charPageData?.level) || 1;
         value: baseSevere
       });
 
-          severeParts.push({
-        label: armor.name,
-        value: baseSevere
-      });
-
       // Apply armor feature effects automatically
       if (armor.armor_feature_id) {
         const { data: effects } = await sb
@@ -5372,7 +5367,15 @@ async function refreshCalculatedStats(characterId) {
         Loot
       </button>
     </div>
-
+<div
+  id="equipment-tier-tabs"
+  style="
+    display:flex;
+    gap:0.4rem;
+    flex-wrap:wrap;
+    margin-bottom:1rem;
+  "
+></div>
     <div id="equipment-picker-content">
       <div class="loading">Loading weapons…</div>
     </div>
@@ -5400,36 +5403,35 @@ async function refreshCalculatedStats(characterId) {
   const el = document.getElementById('equipment-picker-content');
   if (!el) return;
 
-if (category === 'armor') {
-  await loadArmorEquipmentPicker(characterId, el);
-  return;
-}
+  // Show/hide and build Tier buttons
+  await renderEquipmentTierTabs(category, characterId);
 
-if (category !== 'weapons') {
+  if (category === 'armor') {
+    await loadArmorEquipmentPicker(characterId, el);
+    return;
+  }
+
+  if (category === 'weapons') {
+    await loadWeaponEquipmentPicker(characterId, el);
+    return;
+  }
+
+  // Consumables / Loot do not use Tier buttons
   const label =
-    category === 'consumables' ? 'Consumables' :
-    'Loot';
+    category === 'consumables'
+      ? 'Consumables'
+      : 'Loot';
 
   el.innerHTML = `
     <div class="empty-state">
       ${label} will appear here once that reference data is imported.
     </div>
   `;
-
-  return;
 }
+  async function loadWeaponEquipmentPicker(characterId, el) {
+  if (!el) return;
 
   el.innerHTML = '<div class="loading">Loading weapons…</div>';
-
-  const characterLevel = charPageData?.level || 1;
-
-  const { data: levelRow } = await sb
-    .from('levels')
-    .select('tier')
-    .eq('level', characterLevel)
-    .single();
-
-  const tier = levelRow?.tier || 1;
 
   const { data: weapons, error } = await sb
     .from('weapons')
@@ -5442,8 +5444,8 @@ if (category !== 'weapons') {
       burden,
       weapon_feature_id
     `)
-    .lte('tier', tier)
-    .order('name');
+    .eq('tier', currentEquipmentTier)
+    .order('id');
 
   if (error) {
     el.innerHTML = `
@@ -5475,7 +5477,16 @@ if (category !== 'weapons') {
     );
   }
 
-  el.innerHTML = (weapons || []).map(weapon => {
+  if (!weapons || weapons.length === 0) {
+    el.innerHTML = `
+      <div class="empty-state">
+        No weapons are available for Tier ${currentEquipmentTier}.
+      </div>
+    `;
+    return;
+  }
+
+  el.innerHTML = weapons.map(weapon => {
     const hands =
       Number(weapon.burden) === 2
         ? '✋ ✋'
@@ -5485,8 +5496,10 @@ if (category !== 'weapons') {
       featuresById[weapon.weapon_feature_id];
 
     return `
-      <div class="weapon-card-display"
-           style="padding:1rem;margin-bottom:0.75rem">
+      <div
+        class="weapon-card-display"
+        style="padding:1rem;margin-bottom:0.75rem"
+      >
 
         <div style="
           display:flex;
@@ -5527,6 +5540,7 @@ if (category !== 'weapons') {
               <strong style="color:var(--gold)">
                 Feature:
               </strong>
+
               ${
                 feature
                   ? `<strong>${feature.name}</strong> — ${feature.rules_text}`
@@ -5546,9 +5560,79 @@ if (category !== 'weapons') {
           </button>
 
         </div>
+
       </div>
     `;
   }).join('');
+}
+  async function renderEquipmentTierTabs(category, characterId) {
+  const tierEl = document.getElementById('equipment-tier-tabs');
+  if (!tierEl) return;
+
+  // No tier filters for Consumables or Loot
+  if (category !== 'weapons' && category !== 'armor') {
+    tierEl.innerHTML = '';
+    tierEl.style.display = 'none';
+    return;
+  }
+
+  tierEl.style.display = 'flex';
+
+  const characterLevel = charPageData?.level || 1;
+
+  const { data: levelRow } = await sb
+    .from('levels')
+    .select('tier')
+    .eq('level', characterLevel)
+    .single();
+
+  const maxTier = levelRow?.tier || 1;
+
+  // If current selection is above what the character can use,
+  // reset it.
+  if (currentEquipmentTier > maxTier) {
+    currentEquipmentTier = maxTier;
+  }
+
+  tierEl.innerHTML = Array.from(
+    { length: maxTier },
+    (_, i) => i + 1
+  ).map(tier => `
+    <button
+      class="sheet-tab-chip ${currentEquipmentTier === tier ? 'active' : ''}"
+      onclick="selectEquipmentTier(
+        ${tier},
+        '${category}',
+        '${characterId}',
+        this
+      )"
+    >
+      Tier ${tier}
+    </button>
+  `).join('');
+}
+  async function selectEquipmentTier(
+  tier,
+  category,
+  characterId,
+  btn
+) {
+  currentEquipmentTier = tier;
+
+  document
+    .querySelectorAll('#equipment-tier-tabs .sheet-tab-chip')
+    .forEach(b => b.classList.remove('active'));
+
+  btn?.classList.add('active');
+
+  const el =
+    document.getElementById('equipment-picker-content');
+
+  if (category === 'armor') {
+    await loadArmorEquipmentPicker(characterId, el);
+  } else {
+    await loadWeaponEquipmentPicker(characterId, el);
+  }
 }
   async function loadArmorEquipmentPicker(characterId, el) {
   el.innerHTML = '<div class="loading">Loading armor…</div>';
@@ -5583,8 +5667,8 @@ if (category !== 'weapons') {
       base_score,
       armor_feature_id
     `)
-    .lte('tier', tier)
-    .order('name');
+    .eq('tier', currentEquipmentTier)
+.order('id');
 
   if (error) {
     el.innerHTML = `
@@ -5623,7 +5707,7 @@ if (category !== 'weapons') {
   if (!armors || armors.length === 0) {
     el.innerHTML = `
       <div class="empty-state">
-        No armor is available for Tier ${tier}.
+        No armor is available for Tier ${currentEquipmentTier}.
       </div>
     `;
     return;
@@ -7171,6 +7255,7 @@ let charPageId = null;
 let charPageData = null;
 let gmCharacterView = false;
 let currentInventoryTab = 'weapon';
+let currentEquipmentTier = 1;
   
 async function openCharPage(charId, tab='sheet') {
   gmCharacterView = false;

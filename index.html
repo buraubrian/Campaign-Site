@@ -9604,46 +9604,35 @@ function builderHTML(c) {
 
     </div>
 
-    <div class="field-row cols-2">
+<div style="margin-top:0.75rem">
 
-      <div>
-        <label>Armor</label>
+  <div>
+    <label>Armor</label>
 
-        <button
-          class="picker-trigger${c.armor_name ? ' has-value' : ''}"
-          onclick="openPicker(
-            'armor',
-            'b-armor',
-            'Armor'
-          )"
-          style="width:100%"
-        >
-          <span>
-            ${c.armor_name || 'Browse armor…'}
-          </span>
+    <button
+      class="picker-trigger${c.armor_name ? ' has-value' : ''}"
+      onclick="openPicker(
+        'armor',
+        'b-armor',
+        'Armor'
+      )"
+      style="width:100%"
+    >
+      <span>
+        ${c.armor_name || 'Browse armor…'}
+      </span>
 
-          <span class="pt-arrow">▼</span>
-        </button>
+      <span class="pt-arrow">▼</span>
+    </button>
 
-        <input
-          type="hidden"
-          id="b-armor"
-          value="${c.armor_name || ''}"
-        />
-      </div>
+    <input
+      type="hidden"
+      id="b-armor"
+      value="${c.armor_name || ''}"
+    />
+  </div>
 
-      <div>
-        <label>Additional Starting Inventory</label>
-
-        <input
-          type="text"
-          id="b-inventory"
-          value="${c.inventory || ''}"
-          placeholder="Other starting supplies…"
-        />
-      </div>
-
-    </div>
+</div>
   </div>
 
   <!-- Step 3 -->
@@ -10104,9 +10093,6 @@ async function saveBuilderChanges() {
 
     armor_name:
       v('b-armor'),
-
-    inventory:
-      v('b-inventory'),
 
     experience_1_name:
       v('b-exp1-name'),

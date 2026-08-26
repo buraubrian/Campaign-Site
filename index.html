@@ -5676,8 +5676,15 @@ async function refreshCalculatedStats(characterId) {
   function openEquipmentPicker(characterId) {
   document.getElementById('picker-title').textContent = 'Add Equipment';
 
-  document.getElementById('picker-search').value = '';
-  document.getElementById('picker-search').style.display = 'none';
+  const search = document.getElementById('picker-search');
+
+search.value = '';
+search.style.display = 'block';
+search.placeholder = 'Search equipment...';
+
+search.oninput = () => {
+  filterEquipmentPicker(search.value);
+};
 
   document.getElementById('picker-body').innerHTML = `
     <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem">
@@ -5728,6 +5735,23 @@ async function refreshCalculatedStats(characterId) {
   document.body.style.overflow = 'hidden';
 
   showEquipmentPickerCategory('weapons', characterId);
+}
+  function filterEquipmentPicker(searchText) {
+  const term = String(searchText || '')
+    .trim()
+    .toLowerCase();
+
+  document
+    .querySelectorAll('#equipment-picker-content .equipment-picker-item')
+    .forEach(card => {
+      const searchValue =
+        card.dataset.search || '';
+
+      card.style.display =
+        !term || searchValue.includes(term)
+          ? ''
+          : 'none';
+    });
 }
 async function showEquipmentPickerCategory(
   category,
@@ -5860,11 +5884,24 @@ async function showEquipmentPickerCategory(
     const feature =
       featuresById[weapon.weapon_feature_id];
 
-    return `
-      <div
-        class="weapon-card-display"
-        style="padding:1rem;margin-bottom:0.75rem"
-      >
+    const searchText = [
+  weapon.name,
+  weapon.category,
+  weapon.weapon_type,
+  feature?.name,
+  feature?.rules_text,
+  `tier ${weapon.tier}`
+]
+  .filter(Boolean)
+  .join(' ')
+  .toLowerCase();
+
+return `
+  <div
+    class="weapon-card-display equipment-picker-item"
+    data-search="${searchText}"
+    style="padding:1rem;margin-bottom:0.75rem"
+  >
 
         <div style="
           display:flex;
@@ -5957,6 +5994,8 @@ async function showEquipmentPickerCategory(
     .order('id');
 
   if (error) {
+    console.error('CONSUMABLE LOAD ERROR:', error);
+
     el.innerHTML = `
       <div
         class="empty-state"
@@ -5970,6 +6009,11 @@ async function showEquipmentPickerCategory(
     return;
   }
 
+  console.log(
+    'CONSUMABLES LOADED:',
+    consumables
+  );
+
   if (!consumables || consumables.length === 0) {
     el.innerHTML = `
       <div class="empty-state">
@@ -5980,100 +6024,128 @@ async function showEquipmentPickerCategory(
     return;
   }
 
-  el.innerHTML = consumables.map(item => `
-    <div
-      class="weapon-card-display"
-      style="
-        padding:1rem;
-        margin-bottom:0.75rem
-      "
-    >
+  el.innerHTML = consumables.map(item => {
+    const searchText = [
+      item.name,
+      item.type,
+      item.description,
+      item.roll_type,
+      item.roll_prompt,
+      item.effect_prompt
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
 
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        align-items:flex-start;
-        gap:1rem;
-      ">
+    return `
+      <div
+        class="weapon-card-display equipment-picker-item"
+        data-search="${searchText}"
+        style="
+          padding:1rem;
+          margin-bottom:0.75rem
+        "
+      >
 
-        <div style="flex:1">
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          align-items:flex-start;
+          gap:1rem;
+        ">
 
-          <div style="
-            font-family:'Cinzel',serif;
-            color:var(--gold-light);
-            font-size:0.95rem;
-          ">
-            ${item.name}
+          <div style="flex:1">
+
+            <div style="
+              font-family:'Cinzel',serif;
+              color:var(--gold-light);
+              font-size:0.95rem;
+            ">
+              ${item.name}
+            </div>
+
+            <div style="
+              font-size:0.75rem;
+              color:var(--muted);
+              margin-top:0.2rem;
+            ">
+              ${item.type || 'Consumable'}
+            </div>
+
+            ${
+              item.description
+                ? `
+                  <div style="
+                    font-size:0.82rem;
+                    margin-top:0.45rem;
+                    line-height:1.45;
+                  ">
+                    ${item.description}
+                  </div>
+                `
+                : ''
+            }
+
+            ${
+              item.requires_roll
+                ? `
+                  <div style="
+                    font-size:0.76rem;
+                    color:var(--gold);
+                    margin-top:0.4rem;
+                  ">
+                    Roll:
+                    ${
+                      item.roll_prompt ||
+                      item.roll_type ||
+                      'Required'
+                    }
+                  </div>
+                `
+                : ''
+            }
+
+            ${
+              item.persistent_effect
+                ? `
+                  <div style="
+                    font-size:0.74rem;
+                    color:var(--amethyst);
+                    margin-top:0.35rem;
+                  ">
+                    ${
+                      formatConsumableDuration(
+                        item.effect_duration
+                      )
+                    }
+                  </div>
+                `
+                : ''
+            }
+
           </div>
 
-          <div style="
-            font-size:0.75rem;
-            color:var(--muted);
-            margin-top:0.2rem;
-          ">
-            ${item.type || 'Consumable'}
-          </div>
-
-          ${
-            item.description
-              ? `
-                <div style="
-                  font-size:0.82rem;
-                  margin-top:0.45rem;
-                  line-height:1.45;
-                ">
-                  ${item.description}
-                </div>
-              `
-              : ''
-          }
-
-          ${
-            item.requires_roll
-              ? `
-                <div style="
-                  font-size:0.76rem;
-                  color:var(--gold);
-                  margin-top:0.4rem;
-                ">
-                  Roll:
-                  ${item.roll_prompt || item.roll_type}
-                </div>
-              `
-              : ''
-          }
-
-          ${
-            item.persistent_effect
-              ? `
-                <div style="
-                  font-size:0.74rem;
-                  color:var(--amethyst);
-                  margin-top:0.35rem;
-                ">
-                  ${formatConsumableDuration(
-                    item.effect_duration
-                  )}
-                </div>
-              `
-              : ''
-          }
+          <button
+            class="btn btn-gold btn-sm"
+            onclick="addConsumableToCharacterInventory(
+              '${characterId}',
+              ${item.id}
+            )">
+            Add
+          </button>
 
         </div>
 
-        <button
-          class="btn btn-gold btn-sm"
-          onclick="addConsumableToCharacterInventory(
-            '${characterId}',
-            ${item.id}
-          )">
-          Add
-        </button>
-
       </div>
+    `;
+  }).join('');
 
-    </div>
-  `).join('');
+  const search =
+    document.getElementById('picker-search');
+
+  if (search?.value) {
+    filterEquipmentPicker(search.value);
+  }
 }
   async function addConsumableToCharacterInventory(
   characterId,
@@ -6639,12 +6711,28 @@ async function showEquipmentPickerCategory(
     return;
   }
 
-  el.innerHTML = armors.map(armor => {
-    const feature = featuresById[armor.armor_feature_id];
+el.innerHTML = armors.map(armor => {
+  const feature = featuresById[armor.armor_feature_id];
 
-    return `
-      <div class="weapon-card-display"
-           style="padding:1rem;margin-bottom:0.75rem">
+  const searchText = [
+    armor.name,
+    `tier ${armor.tier}`,
+    `armor score ${armor.base_score}`,
+    `major ${armor.base_threshold_major}`,
+    `severe ${armor.base_threshold_severe}`,
+    feature?.name,
+    feature?.rules_text
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return `
+    <div
+      class="weapon-card-display equipment-picker-item"
+      data-search="${searchText}"
+      style="padding:1rem;margin-bottom:0.75rem"
+    >
 
         <div style="
           display:flex;

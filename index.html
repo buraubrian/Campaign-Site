@@ -5759,19 +5759,27 @@ async function showEquipmentPickerCategory(
   btn = null
 ) {
   document
-    .querySelectorAll('#picker-body .sheet-tab-chip')
-    .forEach(b => b.classList.remove('active'));
+    .querySelectorAll(
+      '#picker-body .sheet-tab-chip'
+    )
+    .forEach(b =>
+      b.classList.remove('active')
+    );
 
   if (btn) {
     btn.classList.add('active');
   } else {
     document
-      .getElementById(`equipment-tab-${category}`)
+      .getElementById(
+        `equipment-tab-${category}`
+      )
       ?.classList.add('active');
   }
 
   const el =
-    document.getElementById('equipment-picker-content');
+    document.getElementById(
+      'equipment-picker-content'
+    );
 
   if (!el) return;
 
@@ -5808,11 +5816,10 @@ async function showEquipmentPickerCategory(
   }
 
   if (category === 'loot') {
-    el.innerHTML = `
-      <div class="empty-state">
-        Loot will appear here once the loot reference data is imported.
-      </div>
-    `;
+    await loadLootEquipmentPicker(
+      characterId,
+      el
+    );
 
     return;
   }
@@ -6146,6 +6153,298 @@ return `
   if (search?.value) {
     filterEquipmentPicker(search.value);
   }
+}
+  async function loadLootEquipmentPicker(
+  characterId,
+  el
+) {
+  if (!el) return;
+
+  el.innerHTML =
+    '<div class="loading">Loading loot…</div>';
+
+  const {
+    data: loot,
+    error
+  } = await sb
+    .from('loot')
+    .select(`
+      id,
+      name,
+      category,
+      description,
+      requires_roll,
+      roll_type,
+      roll_prompt,
+      effect_prompt,
+      persistent_effect,
+      effect_duration,
+      activation_type
+    `)
+
+    // Class items are chosen during
+    // character creation, not here.
+    .neq('category', 'class_item')
+
+    .order('id');
+
+  if (error) {
+    console.error(
+      'LOOT LOAD ERROR:',
+      error
+    );
+
+    el.innerHTML = `
+      <div
+        class="empty-state"
+        style="color:var(--ruby)"
+      >
+        Could not load loot:
+        ${error.message}
+      </div>
+    `;
+
+    return;
+  }
+
+  console.log(
+    'LOOT LOADED:',
+    loot
+  );
+
+  if (!loot || loot.length === 0) {
+    el.innerHTML = `
+      <div class="empty-state">
+        No loot is available.
+      </div>
+    `;
+
+    return;
+  }
+
+  el.innerHTML = loot.map(item => {
+    const searchText = [
+      item.name,
+      item.category,
+      item.description,
+      item.roll_type,
+      item.roll_prompt,
+      item.effect_prompt,
+      item.activation_type
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    return `
+      <div
+        class="
+          weapon-card-display
+          equipment-picker-item
+        "
+        data-search="${searchText}"
+        style="
+          padding:1rem;
+          margin-bottom:0.75rem
+        "
+      >
+
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          align-items:flex-start;
+          gap:1rem;
+        ">
+
+          <div style="flex:1">
+
+            <div style="
+              font-family:'Cinzel',serif;
+              color:var(--gold-light);
+              font-size:0.95rem;
+            ">
+              ${item.name}
+            </div>
+
+            <div style="
+              font-size:0.75rem;
+              color:var(--muted);
+              margin-top:0.2rem;
+            ">
+              ${item.category || 'Loot'}
+            </div>
+
+            ${
+              item.description
+                ? `
+                  <div style="
+                    font-size:0.82rem;
+                    margin-top:0.45rem;
+                    line-height:1.45;
+                  ">
+                    ${item.description}
+                  </div>
+                `
+                : ''
+            }
+
+            ${
+              item.requires_roll
+                ? `
+                  <div style="
+                    font-size:0.76rem;
+                    color:var(--gold);
+                    margin-top:0.4rem;
+                  ">
+                    Roll:
+                    ${
+                      item.roll_prompt ||
+                      item.roll_type ||
+                      'Required'
+                    }
+                  </div>
+                `
+                : ''
+            }
+
+            ${
+              item.activation_type
+                ? `
+                  <div style="
+                    font-size:0.72rem;
+                    color:var(--amethyst);
+                    margin-top:0.35rem;
+                    text-transform:capitalize;
+                  ">
+                    ${item.activation_type}
+                  </div>
+                `
+                : ''
+            }
+
+          </div>
+
+          <button
+            class="btn btn-gold btn-sm"
+            onclick="
+              addLootToCharacterInventory(
+                '${characterId}',
+                ${item.id}
+              )
+            "
+          >
+            Add
+          </button>
+
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const search =
+    document.getElementById(
+      'picker-search'
+    );
+
+  if (search?.value) {
+    filterEquipmentPicker(
+      search.value
+    );
+  }
+}
+  async function addLootToCharacterInventory(
+  characterId,
+  lootId
+) {
+  if (!characterId || !lootId) {
+    return;
+  }
+
+  const {
+    data: existing,
+    error: existingError
+  } = await sb
+    .from('character_items')
+    .select('id,quantity')
+    .eq(
+      'character_id',
+      characterId
+    )
+    .eq(
+      'item_type',
+      'loot'
+    )
+    .eq(
+      'item_id',
+      lootId
+    )
+    .maybeSingle();
+
+  if (existingError) {
+    toast(
+      'Could not check inventory: ' +
+      existingError.message,
+      'error'
+    );
+
+    return;
+  }
+
+  if (existing) {
+    const newQuantity =
+      (existing.quantity || 1) + 1;
+
+    const { error } = await sb
+      .from('character_items')
+      .update({
+        quantity: newQuantity
+      })
+      .eq(
+        'id',
+        existing.id
+      );
+
+    if (error) {
+      toast(
+        'Could not add loot: ' +
+        error.message,
+        'error'
+      );
+
+      return;
+    }
+
+  } else {
+    const { error } = await sb
+      .from('character_items')
+      .insert({
+        character_id: characterId,
+        item_type: 'loot',
+        item_id: lootId,
+        quantity: 1,
+        is_equipped: false,
+        equipment_slot: null
+      });
+
+    if (error) {
+      toast(
+        'Could not add loot: ' +
+        error.message,
+        'error'
+      );
+
+      return;
+    }
+  }
+
+  toast(
+    'Loot added to inventory!',
+    'success'
+  );
+
+  await loadCharacterEquipment(
+    characterId
+  );
 }
   async function addConsumableToCharacterInventory(
   characterId,
@@ -8823,7 +9122,7 @@ function togglePip(kind, idx, max) {
     document.getElementById('char-page-panel-builder')?.classList.contains('active');
 
   if (builderOpen) {
-    const ok = await saveBuilderChanges();
+    const ok = await ;
     if (ok === false) return;
   } else {
     const ok = await saveSheetInline();
@@ -9057,130 +9356,435 @@ async function renderGMCharSheet() {
     loadActiveWeapons(c.id);
   }
 }
-function renderCharBuilder() {
+async function renderCharBuilder() {
   const c = charPageData;
-  document.getElementById('char-builder-content').innerHTML = builderHTML(c);
+
+  document.getElementById('char-builder-content').innerHTML =
+    builderHTML(c);
+
+  await loadClassItemOptions(
+    'b',
+    c.class,
+    c.id
+  );
 }
 
 // Builder in edit mode — same wizard layout but all steps visible as sections
 function builderHTML(c) {
   return `
-  <div class="section-header"><h2>Character Builder</h2></div>
+  <div class="section-header">
+    <h2>Character Builder</h2>
+  </div>
 
   <!-- Step 1 -->
   <div class="card">
     <h3>Step 1 — Getting Started</h3>
+
     <div class="field-row cols-2">
-      <div><label>Character Name</label><input type="text" id="b-name" value="${c.name||''}" /></div>
-      <div><label>Pronouns</label><input type="text" id="b-pronouns" value="${c.pronouns||''}" placeholder="e.g. he/him, she/her, they/them" /></div>
+      <div>
+        <label>Character Name</label>
+        <input
+          type="text"
+          id="b-name"
+          value="${c.name || ''}"
+        />
+      </div>
+
+      <div>
+        <label>Pronouns</label>
+        <input
+          type="text"
+          id="b-pronouns"
+          value="${c.pronouns || ''}"
+          placeholder="e.g. he/him, she/her, they/them"
+        />
+      </div>
     </div>
+
     <div class="field-row cols-2">
-      <div><label>Level</label><input type="number" id="b-level" value="${c.level||1}" min="1" max="10" /></div>
+      <div>
+        <label>Level</label>
+        <input
+          type="number"
+          id="b-level"
+          value="${c.level || 1}"
+          min="1"
+          max="10"
+        />
+      </div>
     </div>
   </div>
 
   <!-- Step 2 -->
   <div class="card">
     <h3>Step 2 — Class & Gear</h3>
+
     <div class="field-row cols-2">
+
       <div>
         <label>Class</label>
-        <button class="picker-trigger${c.class?' has-value':''}" onclick="openPicker('classes','b-class','Class')" style="width:100%">
-          <span>${c.class||'Browse classes…'}</span><span class="pt-arrow">▼</span>
+
+        <button
+          class="picker-trigger${c.class ? ' has-value' : ''}"
+          onclick="openPicker(
+            'classes',
+            'b-class',
+            'Class'
+          )"
+          style="width:100%"
+        >
+          <span>
+            ${c.class || 'Browse classes…'}
+          </span>
+
+          <span class="pt-arrow">▼</span>
         </button>
-        <input type="hidden" id="b-class" value="${c.class||''}" />
-        <div class="ls-info-panel" id="b-class-info" style="display:none"></div>
+
+        <input
+          type="hidden"
+          id="b-class"
+          value="${c.class || ''}"
+        />
+
+        <div
+          class="ls-info-panel"
+          id="b-class-info"
+          style="display:none"
+        ></div>
       </div>
+
       <div>
         <label>Subclass</label>
-        <button class="picker-trigger${c.subclass?' has-value':''}" onclick="openPicker('subclasses','b-subclass','Subclass')" style="width:100%">
-          <span>${c.subclass||'Browse subclasses…'}</span><span class="pt-arrow">▼</span>
+
+        <button
+          class="picker-trigger${c.subclass ? ' has-value' : ''}"
+          onclick="openPicker(
+            'subclasses',
+            'b-subclass',
+            'Subclass'
+          )"
+          style="width:100%"
+        >
+          <span>
+            ${c.subclass || 'Browse subclasses…'}
+          </span>
+
+          <span class="pt-arrow">▼</span>
         </button>
-        <input type="hidden" id="b-subclass" value="${c.subclass||''}" />
+
+        <input
+          type="hidden"
+          id="b-subclass"
+          value="${c.subclass || ''}"
+        />
       </div>
+
     </div>
+
+    <div
+      id="b-class-item-wrap"
+      style="margin-top:1rem"
+    >
+      <label style="margin-bottom:0.5rem">
+        Class Item
+      </label>
+
+      <div
+        id="b-class-item-options"
+        class="loading"
+        style="padding:1rem"
+      >
+        Loading class items…
+      </div>
+
+      <input
+        type="hidden"
+        id="b-class-item"
+        value=""
+      />
+    </div>
+
     <hr />
-    <label style="margin-bottom:0.75rem;display:block">Traits</label>
+
+    <label
+      style="
+        margin-bottom:0.75rem;
+        display:block
+      "
+    >
+      Traits
+    </label>
+
     ${builderTraitsHTML(c)}
+
     <hr />
+
     <div class="field-row cols-2">
+
       <div>
         <label>Primary Weapon</label>
-        <button class="picker-trigger${c.weapon_primary?' has-value':''}" onclick="openPicker('weapons','b-wpn1','Primary Weapon')" style="width:100%">
-          <span>${c.weapon_primary||'Browse weapons…'}</span><span class="pt-arrow">▼</span>
+
+        <button
+          class="picker-trigger${c.weapon_primary ? ' has-value' : ''}"
+          onclick="openPicker(
+            'weapons',
+            'b-wpn1',
+            'Primary Weapon'
+          )"
+          style="width:100%"
+        >
+          <span>
+            ${c.weapon_primary || 'Browse weapons…'}
+          </span>
+
+          <span class="pt-arrow">▼</span>
         </button>
-        <input type="hidden" id="b-wpn1" value="${c.weapon_primary||''}" />
+
+        <input
+          type="hidden"
+          id="b-wpn1"
+          value="${c.weapon_primary || ''}"
+        />
       </div>
+
       <div>
         <label>Secondary Weapon</label>
-        <button class="picker-trigger${c.weapon_secondary?' has-value':''}" onclick="openPicker('weapons','b-wpn2','Secondary Weapon')" style="width:100%">
-          <span>${c.weapon_secondary||'Browse weapons…'}</span><span class="pt-arrow">▼</span>
+
+        <button
+          class="picker-trigger${c.weapon_secondary ? ' has-value' : ''}"
+          onclick="openPicker(
+            'weapons',
+            'b-wpn2',
+            'Secondary Weapon'
+          )"
+          style="width:100%"
+        >
+          <span>
+            ${c.weapon_secondary || 'Browse weapons…'}
+          </span>
+
+          <span class="pt-arrow">▼</span>
         </button>
-        <input type="hidden" id="b-wpn2" value="${c.weapon_secondary||''}" />
+
+        <input
+          type="hidden"
+          id="b-wpn2"
+          value="${c.weapon_secondary || ''}"
+        />
       </div>
+
     </div>
+
     <div class="field-row cols-2">
+
       <div>
         <label>Armor</label>
-        <button class="picker-trigger${c.armor_name?' has-value':''}" onclick="openPicker('armor','b-armor','Armor')" style="width:100%">
-          <span>${c.armor_name||'Browse armor…'}</span><span class="pt-arrow">▼</span>
+
+        <button
+          class="picker-trigger${c.armor_name ? ' has-value' : ''}"
+          onclick="openPicker(
+            'armor',
+            'b-armor',
+            'Armor'
+          )"
+          style="width:100%"
+        >
+          <span>
+            ${c.armor_name || 'Browse armor…'}
+          </span>
+
+          <span class="pt-arrow">▼</span>
         </button>
-        <input type="hidden" id="b-armor" value="${c.armor_name||''}" />
+
+        <input
+          type="hidden"
+          id="b-armor"
+          value="${c.armor_name || ''}"
+        />
       </div>
+
       <div>
-        <label>Starting Inventory</label>
-        <input type="text" id="b-inventory" value="${c.inventory||''}" placeholder="Class items, gold, etc." />
+        <label>Additional Starting Inventory</label>
+
+        <input
+          type="text"
+          id="b-inventory"
+          value="${c.inventory || ''}"
+          placeholder="Other starting supplies…"
+        />
       </div>
+
     </div>
   </div>
 
   <!-- Step 3 -->
   <div class="card">
     <h3>Step 3 — Heritage</h3>
+
     <div class="field-row cols-2">
+
       <div>
         <label>Ancestry</label>
-        <button class="picker-trigger${c.ancestry?' has-value':''}" onclick="openPicker('ancestries','b-ancestry','Ancestry')" style="width:100%">
-          <span>${c.ancestry||'Browse ancestries…'}</span><span class="pt-arrow">▼</span>
+
+        <button
+          class="picker-trigger${c.ancestry ? ' has-value' : ''}"
+          onclick="openPicker(
+            'ancestries',
+            'b-ancestry',
+            'Ancestry'
+          )"
+          style="width:100%"
+        >
+          <span>
+            ${c.ancestry || 'Browse ancestries…'}
+          </span>
+
+          <span class="pt-arrow">▼</span>
         </button>
-        <input type="hidden" id="b-ancestry" value="${c.ancestry||''}" />
-        <div class="ls-info-panel" id="b-ancestry-info" style="display:none"></div>
+
+        <input
+          type="hidden"
+          id="b-ancestry"
+          value="${c.ancestry || ''}"
+        />
+
+        <div
+          class="ls-info-panel"
+          id="b-ancestry-info"
+          style="display:none"
+        ></div>
       </div>
+
       <div>
         <label>Community</label>
-        <button class="picker-trigger${c.community?' has-value':''}" onclick="openPicker('communities','b-community','Community')" style="width:100%">
-          <span>${c.community||'Browse communities…'}</span><span class="pt-arrow">▼</span>
+
+        <button
+          class="picker-trigger${c.community ? ' has-value' : ''}"
+          onclick="openPicker(
+            'communities',
+            'b-community',
+            'Community'
+          )"
+          style="width:100%"
+        >
+          <span>
+            ${c.community || 'Browse communities…'}
+          </span>
+
+          <span class="pt-arrow">▼</span>
         </button>
-        <input type="hidden" id="b-community" value="${c.community||''}" />
-        <div class="ls-info-panel" id="b-community-info" style="display:none"></div>
+
+        <input
+          type="hidden"
+          id="b-community"
+          value="${c.community || ''}"
+        />
+
+        <div
+          class="ls-info-panel"
+          id="b-community-info"
+          style="display:none"
+        ></div>
       </div>
+
     </div>
   </div>
 
   <!-- Step 4 -->
   <div class="card">
     <h3>Step 4 — Experiences</h3>
-    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1rem">Experiences reflect your character's history and give you a bonus die when they're relevant. Start with 2.</p>
-    <div class="field-row cols-2" style="margin-bottom:0.75rem">
-      <div><label>Experience 1</label><input type="text" id="b-exp1-name" value="${c.experience_1_name||''}" placeholder="e.g. Former Knight of the Obsidian Throne" /></div>
-      <div><label>Bonus</label>
+
+    <p
+      style="
+        color:var(--muted);
+        font-size:0.88rem;
+        margin-bottom:1rem
+      "
+    >
+      Experiences reflect your character's history
+      and give you a bonus die when they're relevant.
+      Start with 2.
+    </p>
+
+    <div
+      class="field-row cols-2"
+      style="margin-bottom:0.75rem"
+    >
+      <div>
+        <label>Experience 1</label>
+
+        <input
+          type="text"
+          id="b-exp1-name"
+          value="${c.experience_1_name || ''}"
+          placeholder="e.g. Former Knight of the Obsidian Throne"
+        />
+      </div>
+
+      <div>
+        <label>Bonus</label>
+
         <select id="b-exp1-bonus">
-          ${['+1','+2','+3'].map(b=>`<option value="${b}" ${(c.experience_1_bonus||'+2')===b?'selected':''}>${b}</option>`).join('')}
+          ${['+1', '+2', '+3'].map(b => `
+            <option
+              value="${b}"
+              ${(c.experience_1_bonus || '+2') === b
+                ? 'selected'
+                : ''}
+            >
+              ${b}
+            </option>
+          `).join('')}
         </select>
       </div>
     </div>
+
     <div class="field-row cols-2">
-      <div><label>Experience 2</label><input type="text" id="b-exp2-name" value="${c.experience_2_name||''}" placeholder="e.g. Speaks Sylvan fluently" /></div>
-      <div><label>Bonus</label>
+
+      <div>
+        <label>Experience 2</label>
+
+        <input
+          type="text"
+          id="b-exp2-name"
+          value="${c.experience_2_name || ''}"
+          placeholder="e.g. Speaks Sylvan fluently"
+        />
+      </div>
+
+      <div>
+        <label>Bonus</label>
+
         <select id="b-exp2-bonus">
-          ${['+1','+2','+3'].map(b=>`<option value="${b}" ${(c.experience_2_bonus||'+2')===b?'selected':''}>${b}</option>`).join('')}
+          ${['+1', '+2', '+3'].map(b => `
+            <option
+              value="${b}"
+              ${(c.experience_2_bonus || '+2') === b
+                ? 'selected'
+                : ''}
+            >
+              ${b}
+            </option>
+          `).join('')}
         </select>
       </div>
+
     </div>
   </div>
 
-  <div style="display:flex;justify-content:flex-end;margin-top:0.5rem">
-    <button class="btn btn-gold" onclick="saveBuilderChanges()">Save All Changes</button>
+  <div
+    style="
+      display:flex;
+      justify-content:flex-end;
+      margin-top:0.5rem
+    "
+  >
+    <button
+      class="btn btn-gold"
+      onclick=""
+    >
+      Save All Changes
+    </button>
   </div>
   `;
 }
@@ -9431,82 +10035,177 @@ async function syncCharacterWeaponsToInventory(characterId, primaryName, seconda
 } 
 async function saveBuilderChanges() {
   if (!charPageId) {
-    toast('No character loaded', 'error');
+    toast(
+      'No character loaded',
+      'error'
+    );
+
     return false;
   }
 
   const payload = {
-    name: v('b-name') || charPageData.name,
-    pronouns: v('b-pronouns'),
+    name:
+      v('b-name') ||
+      charPageData.name,
 
-    level: n('b-level') || charPageData.level,
+    pronouns:
+      v('b-pronouns'),
 
-    class: v('b-class'),
-    subclass: v('b-subclass'),
-    ancestry: v('b-ancestry'),
-    community: v('b-community'),
+    level:
+      n('b-level') ||
+      charPageData.level,
 
-    weapon_primary: v('b-wpn1'),
-    weapon_secondary: v('b-wpn2'),
+    class:
+      v('b-class'),
 
-    armor_name: v('b-armor'),
-    inventory: v('b-inventory'),
+    subclass:
+      v('b-subclass'),
 
-    experience_1_name: v('b-exp1-name'),
-    experience_1_bonus: v('b-exp1-bonus') || '+2',
+    ancestry:
+      v('b-ancestry'),
 
-    experience_2_name: v('b-exp2-name'),
-    experience_2_bonus: v('b-exp2-bonus') || '+2',
+    community:
+      v('b-community'),
 
-    agility: charPageData.agility || 0,
-    strength: charPageData.strength || 0,
-    finesse: charPageData.finesse || 0,
-    instinct: charPageData.instinct || 0,
-    presence: charPageData.presence || 0,
-    knowledge: charPageData.knowledge || 0,
+    weapon_primary:
+      v('b-wpn1'),
 
-    updated_at: new Date().toISOString()
+    weapon_secondary:
+      v('b-wpn2'),
+
+    armor_name:
+      v('b-armor'),
+
+    inventory:
+      v('b-inventory'),
+
+    experience_1_name:
+      v('b-exp1-name'),
+
+    experience_1_bonus:
+      v('b-exp1-bonus') ||
+      '+2',
+
+    experience_2_name:
+      v('b-exp2-name'),
+
+    experience_2_bonus:
+      v('b-exp2-bonus') ||
+      '+2',
+
+    agility:
+      charPageData.agility || 0,
+
+    strength:
+      charPageData.strength || 0,
+
+    finesse:
+      charPageData.finesse || 0,
+
+    instinct:
+      charPageData.instinct || 0,
+
+    presence:
+      charPageData.presence || 0,
+
+    knowledge:
+      charPageData.knowledge || 0,
+
+    updated_at:
+      new Date().toISOString()
   };
 
-  const { data: savedCharacter, error } = await sb
+  const {
+    data: savedCharacter,
+    error
+  } = await sb
     .from('characters')
     .update(payload)
     .eq('id', charPageId)
-    .eq('owner_id', currentUser.id)
+    .eq(
+      'owner_id',
+      currentUser.id
+    )
     .select()
     .single();
 
   if (error) {
-    toast(error.message, 'error');
+    toast(
+      error.message,
+      'error'
+    );
+
     return false;
   }
 
-  charPageId = savedCharacter.id;
-  charPageData = savedCharacter;
-  editingCharId = savedCharacter.id;
+  charPageId =
+    savedCharacter.id;
 
-  const weaponsSaved = await syncCharacterWeaponsToInventory(
-    charPageId,
-    payload.weapon_primary,
-    payload.weapon_secondary
-  );
+  charPageData =
+    savedCharacter;
+
+  editingCharId =
+    savedCharacter.id;
+
+  const weaponsSaved =
+    await syncCharacterWeaponsToInventory(
+      charPageId,
+      payload.weapon_primary,
+      payload.weapon_secondary
+    );
 
   if (!weaponsSaved) {
     return false;
   }
 
+  const armorSaved =
+    await syncCharacterArmorToInventory(
+      charPageId,
+      payload.armor_name
+    );
+
+  if (!armorSaved) {
+    return false;
+  }
+
+  const selectedClassItem =
+    Number(
+      document.getElementById(
+        'b-class-item'
+      )?.value ||
+      charPageData
+        .class_item_loot_id ||
+      0
+    );
+
+  if (selectedClassItem) {
+    const classItemSaved =
+      await syncCharacterClassItem(
+        charPageId,
+        selectedClassItem
+      );
+
+    if (!classItemSaved) {
+      return false;
+    }
+  }
+
   charPageData = {
     ...charPageData,
-    ...payload
+    ...payload,
+    class_item_loot_id:
+      selectedClassItem || null
   };
 
-  toast('Character updated!', 'success');
+  toast(
+    'Character updated!',
+    'success'
+  );
 
   goHome();
 
   return true;
 }
-
 function openCharCreatorForCampaign() { openCharWizard(); }
 
 async function openCharEditor(charId) { openCharPage(charId, 'builder'); }
@@ -9728,14 +10427,51 @@ function renderWizardStepNav() {
 
 function renderWizardStep() {
   renderWizardStepNav();
-  const step = WIZARD_STEPS[wizardStep].id;
-  const content = document.getElementById('wizard-step-content');
-  if (step === 'getting-started') content.innerHTML = wizardStep1HTML();
-  if (step === 'class-gear')      content.innerHTML = wizardStep2HTML();
-  if (step === 'domain-cards')    { content.innerHTML = wizardStep2bHTML(); loadDomainCardPicker(); }
-  if (step === 'heritage')        content.innerHTML = wizardStep3HTML();
-  if (step === 'experiences')     content.innerHTML = wizardStep4HTML();
-  if (step === 'review')          content.innerHTML = wizardReviewHTML();
+
+  const step =
+    WIZARD_STEPS[wizardStep].id;
+
+  const content =
+    document.getElementById(
+      'wizard-step-content'
+    );
+
+  if (step === 'getting-started') {
+    content.innerHTML =
+      wizardStep1HTML();
+  }
+
+  if (step === 'class-gear') {
+    content.innerHTML =
+      wizardStep2HTML();
+
+    loadClassItemOptions(
+      'w',
+      wizardData.class
+    );
+  }
+
+  if (step === 'domain-cards') {
+    content.innerHTML =
+      wizardStep2bHTML();
+
+    loadDomainCardPicker();
+  }
+
+  if (step === 'heritage') {
+    content.innerHTML =
+      wizardStep3HTML();
+  }
+
+  if (step === 'experiences') {
+    content.innerHTML =
+      wizardStep4HTML();
+  }
+
+  if (step === 'review') {
+    content.innerHTML =
+      wizardReviewHTML();
+  }
 }
 
 function wizardStep1HTML() {
@@ -9754,98 +10490,754 @@ function wizardStep1HTML() {
 }
 
 function wizardStep2HTML() {
-  const attrs = ['agility','strength','finesse','instinct','presence','knowledge'];
+  const attrs = [
+    'agility',
+    'strength',
+    'finesse',
+    'instinct',
+    'presence',
+    'knowledge'
+  ];
+
   const shieldsHTML = attrs.map(a => `
     <div class="trait-shield">
-      <div class="trait-name">${a}</div>
-      <div class="trait-val" id="shield-${a}">${fmtMod(wizardData[a]||0)}</div>
+      <div class="trait-name">
+        ${a}
+      </div>
+
+      <div
+        class="trait-val"
+        id="shield-${a}"
+      >
+        ${fmtMod(wizardData[a] || 0)}
+      </div>
     </div>
   `).join('');
+
   const assignRows = [
-    { bonus:'+2', id:'w-trait-2' },
-    { bonus:'+1', id:'w-trait-1a' },
-    { bonus:'+1', id:'w-trait-1b' },
-    { bonus:'-1', id:'w-trait-neg1' },
+    { bonus: '+2', id: 'w-trait-2' },
+    { bonus: '+1', id: 'w-trait-1a' },
+    { bonus: '+1', id: 'w-trait-1b' },
+    { bonus: '-1', id: 'w-trait-neg1' }
   ];
+
   return `
-  <div class="card">
-    <h3>Class & Subclass</h3>
-    <div class="field-row cols-2">
-      <div>
-        <label>Class</label>
-        <button class="picker-trigger${wizardData.class?' has-value':''}" onclick="openPicker('classes','w-class','Class')">
-          <span>${wizardData.class || 'Browse classes…'}</span>
-          <span class="pt-arrow">▼</span>
-        </button>
-        <input type="hidden" id="w-class" value="${wizardData.class||''}" />
-        <div class="ls-info-panel" id="w-class-info" style="display:${wizardData.class?'block':'none'}"></div>
-      </div>
-      <div>
-        <label>Subclass</label>
-        <button class="picker-trigger${wizardData.subclass?' has-value':''}" onclick="openPicker('subclasses','w-subclass','Subclass')">
-          <span>${wizardData.subclass || 'Browse subclasses…'}</span>
-          <span class="pt-arrow">▼</span>
-        </button>
-        <input type="hidden" id="w-subclass" value="${wizardData.subclass||''}" />
-      </div>
-    </div>
-  </div>
+    <div class="card">
 
-  <div class="card">
-    <h3>Set Your Traits</h3>
-    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">Assign each modifier to a different trait. These reflect your character's natural abilities.</p>
-    <div class="trait-shields">${shieldsHTML}</div>
-    <hr />
-    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:0.85rem">Assign the following modifiers — each trait can only have one value:</p>
-    ${assignRows.map(row => `
-      <div class="trait-assign-row">
-        <span class="trait-bonus">${row.bonus}</span>
-        <select id="${row.id}" style="flex:1" onchange="previewTraitAssignment()">
-          <option value="">— choose a trait —</option>
-          ${attrs.map(a=>`<option value="${a}" ${wizardData['_trait_'+row.id]===a?'selected':''}>${a.charAt(0).toUpperCase()+a.slice(1)}</option>`).join('')}
-        </select>
-      </div>
-    `).join('')}
-    <button class="btn btn-ghost btn-sm" style="margin-top:0.75rem" onclick="applyWizardTraits()">Apply to Character</button>
-  </div>
+      <h3>Class & Subclass</h3>
 
-  <div class="card">
-    <h3>Starting Weapons & Armor</h3>
-    <div class="field-row cols-2">
-      <div>
-        <label>Primary Weapon</label>
-        <button class="picker-trigger${wizardData.weapon_primary?' has-value':''}" onclick="openPicker('weapons','w-wpn1','Primary Weapon')">
-          <span>${wizardData.weapon_primary || 'Browse weapons…'}</span>
-          <span class="pt-arrow">▼</span>
-        </button>
-        <input type="hidden" id="w-wpn1" value="${wizardData.weapon_primary||''}" />
+      <div class="field-row cols-2">
+
+        <div>
+          <label>Class</label>
+
+          <button
+            class="picker-trigger${wizardData.class ? ' has-value' : ''}"
+            onclick="openPicker(
+              'classes',
+              'w-class',
+              'Class'
+            )"
+          >
+            <span>
+              ${wizardData.class || 'Browse classes…'}
+            </span>
+
+            <span class="pt-arrow">▼</span>
+          </button>
+
+          <input
+            type="hidden"
+            id="w-class"
+            value="${wizardData.class || ''}"
+          />
+
+          <div
+            class="ls-info-panel"
+            id="w-class-info"
+            style="
+              display:${
+                wizardData.class
+                  ? 'block'
+                  : 'none'
+              }
+            "
+          ></div>
+        </div>
+
+        <div>
+          <label>Subclass</label>
+
+          <button
+            class="picker-trigger${wizardData.subclass ? ' has-value' : ''}"
+            onclick="openPicker(
+              'subclasses',
+              'w-subclass',
+              'Subclass'
+            )"
+          >
+            <span>
+              ${wizardData.subclass || 'Browse subclasses…'}
+            </span>
+
+            <span class="pt-arrow">▼</span>
+          </button>
+
+          <input
+            type="hidden"
+            id="w-subclass"
+            value="${wizardData.subclass || ''}"
+          />
+        </div>
+
       </div>
-      <div>
-        <label>Secondary Weapon</label>
-        <button class="picker-trigger${wizardData.weapon_secondary?' has-value':''}" onclick="openPicker('weapons','w-wpn2','Secondary Weapon')">
-          <span>${wizardData.weapon_secondary || 'Browse weapons…'}</span>
-          <span class="pt-arrow">▼</span>
-        </button>
-        <input type="hidden" id="w-wpn2" value="${wizardData.weapon_secondary||''}" />
-      </div>
+
     </div>
-    <div class="field-row cols-2">
-      <div>
-        <label>Armor</label>
-        <button class="picker-trigger${wizardData.armor_name?' has-value':''}" onclick="openPicker('armor','w-armor','Armor')">
-          <span>${wizardData.armor_name || 'Browse armor…'}</span>
-          <span class="pt-arrow">▼</span>
-        </button>
-        <input type="hidden" id="w-armor" value="${wizardData.armor_name||''}" />
+
+    <div class="card">
+
+      <h3>Class Item</h3>
+
+      <p
+        style="
+          color:var(--muted);
+          font-size:0.85rem;
+          margin-bottom:1rem
+        "
+      >
+        Choose one of the starting items
+        provided by your class.
+      </p>
+
+      <div
+        id="w-class-item-options"
+      >
+        ${
+          wizardData.class
+            ? '<div class="loading" style="padding:1rem">Loading class items…</div>'
+            : '<div class="empty-state" style="padding:1rem">Choose a class first.</div>'
+        }
       </div>
-      <div>
-        <label>Starting Inventory</label>
-        <input type="text" id="w-inventory" value="${wizardData.inventory||''}" placeholder="Class items, gold, supplies…" />
-      </div>
+
+      <input
+        type="hidden"
+        id="w-class-item"
+        value="${
+          wizardData.class_item_loot_id || ''
+        }"
+      />
+
     </div>
-  </div>`;
+
+    <div class="card">
+
+      <h3>Set Your Traits</h3>
+
+      <p
+        style="
+          color:var(--muted);
+          font-size:0.85rem;
+          margin-bottom:1rem
+        "
+      >
+        Assign each modifier to a different
+        trait. These reflect your character's
+        natural abilities.
+      </p>
+
+      <div class="trait-shields">
+        ${shieldsHTML}
+      </div>
+
+      <hr />
+
+      <p
+        style="
+          font-size:0.82rem;
+          color:var(--muted);
+          margin-bottom:0.85rem
+        "
+      >
+        Assign the following modifiers —
+        each trait can only have one value:
+      </p>
+
+      ${assignRows.map(row => `
+        <div class="trait-assign-row">
+
+          <span class="trait-bonus">
+            ${row.bonus}
+          </span>
+
+          <select
+            id="${row.id}"
+            style="flex:1"
+            onchange="previewTraitAssignment()"
+          >
+            <option value="">
+              — choose a trait —
+            </option>
+
+            ${attrs.map(a => `
+              <option
+                value="${a}"
+                ${
+                  wizardData[
+                    '_trait_' + row.id
+                  ] === a
+                    ? 'selected'
+                    : ''
+                }
+              >
+                ${
+                  a.charAt(0).toUpperCase() +
+                  a.slice(1)
+                }
+              </option>
+            `).join('')}
+
+          </select>
+
+        </div>
+      `).join('')}
+
+      <button
+        class="btn btn-ghost btn-sm"
+        style="margin-top:0.75rem"
+        onclick="applyWizardTraits()"
+      >
+        Apply to Character
+      </button>
+
+    </div>
+
+    <div class="card">
+
+      <h3>Starting Weapons & Armor</h3>
+
+      <div class="field-row cols-2">
+
+        <div>
+          <label>Primary Weapon</label>
+
+          <button
+            class="picker-trigger${wizardData.weapon_primary ? ' has-value' : ''}"
+            onclick="openPicker(
+              'weapons',
+              'w-wpn1',
+              'Primary Weapon'
+            )"
+          >
+            <span>
+              ${
+                wizardData.weapon_primary ||
+                'Browse weapons…'
+              }
+            </span>
+
+            <span class="pt-arrow">▼</span>
+          </button>
+
+          <input
+            type="hidden"
+            id="w-wpn1"
+            value="${
+              wizardData.weapon_primary || ''
+            }"
+          />
+        </div>
+
+        <div>
+          <label>Secondary Weapon</label>
+
+          <button
+            class="picker-trigger${wizardData.weapon_secondary ? ' has-value' : ''}"
+            onclick="openPicker(
+              'weapons',
+              'w-wpn2',
+              'Secondary Weapon'
+            )"
+          >
+            <span>
+              ${
+                wizardData.weapon_secondary ||
+                'Browse weapons…'
+              }
+            </span>
+
+            <span class="pt-arrow">▼</span>
+          </button>
+
+          <input
+            type="hidden"
+            id="w-wpn2"
+            value="${
+              wizardData.weapon_secondary || ''
+            }"
+          />
+        </div>
+
+      </div>
+
+      <div class="field-row cols-2">
+
+        <div>
+          <label>Armor</label>
+
+          <button
+            class="picker-trigger${wizardData.armor_name ? ' has-value' : ''}"
+            onclick="openPicker(
+              'armor',
+              'w-armor',
+              'Armor'
+            )"
+          >
+            <span>
+              ${
+                wizardData.armor_name ||
+                'Browse armor…'
+              }
+            </span>
+
+            <span class="pt-arrow">▼</span>
+          </button>
+
+          <input
+            type="hidden"
+            id="w-armor"
+            value="${
+              wizardData.armor_name || ''
+            }"
+          />
+        </div>
+
+        <div>
+          <label>
+            Additional Starting Inventory
+          </label>
+
+          <input
+            type="text"
+            id="w-inventory"
+            value="${
+              wizardData.inventory || ''
+            }"
+            placeholder="Other starting supplies…"
+          />
+        </div>
+
+      </div>
+
+    </div>
+  `;
+}
+  async function loadClassItemOptions(
+  prefix,
+  className,
+  characterId = null
+) {
+  const container =
+    document.getElementById(
+      `${prefix}-class-item-options`
+    );
+
+  if (!container) return;
+
+  if (!className) {
+    container.innerHTML = `
+      <div
+        class="empty-state"
+        style="padding:1rem"
+      >
+        Choose a class first.
+      </div>
+    `;
+
+    return;
+  }
+
+  container.innerHTML = `
+    <div
+      class="loading"
+      style="padding:1rem"
+    >
+      Loading class items…
+    </div>
+  `;
+
+  const { data: classRow, error: classError } =
+    await sb
+      .from('classes')
+      .select('id,name')
+      .ilike('name', className)
+      .single();
+
+  if (classError || !classRow) {
+    container.innerHTML = `
+      <div
+        class="empty-state"
+        style="color:var(--ruby)"
+      >
+        Could not find this class.
+      </div>
+    `;
+
+    return;
+  }
+
+  currentClassId = classRow.id;
+
+  const {
+    data: options,
+    error: optionError
+  } = await sb
+    .from('class_item_options')
+    .select(`
+      id,
+      class_id,
+      loot_id,
+      class_items,
+      sort_order
+    `)
+    .eq('class_id', classRow.id)
+    .order('sort_order');
+
+  if (optionError) {
+    console.error(
+      'CLASS ITEM OPTION ERROR:',
+      optionError
+    );
+
+    container.innerHTML = `
+      <div
+        class="empty-state"
+        style="color:var(--ruby)"
+      >
+        Could not load class items:
+        ${optionError.message}
+      </div>
+    `;
+
+    return;
+  }
+
+  if (!options || options.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        No class items have been configured
+        for ${className}.
+      </div>
+    `;
+
+    return;
+  }
+
+  const lootIds =
+    options.map(o => o.loot_id);
+
+  const {
+    data: lootRows,
+    error: lootError
+  } = await sb
+    .from('loot')
+    .select(`
+      id,
+      name,
+      category,
+      description
+    `)
+    .in('id', lootIds);
+
+  if (lootError) {
+    console.error(
+      'CLASS ITEM LOOT ERROR:',
+      lootError
+    );
+
+    container.innerHTML = `
+      <div
+        class="empty-state"
+        style="color:var(--ruby)"
+      >
+        Could not load class-item details.
+      </div>
+    `;
+
+    return;
+  }
+
+  let selectedLootId = null;
+
+  if (prefix === 'w') {
+    selectedLootId =
+      Number(
+        wizardData.class_item_loot_id
+      ) || null;
+  }
+
+  if (
+    prefix === 'b' &&
+    characterId
+  ) {
+    selectedLootId =
+      await getCharacterClassItemLootId(
+        characterId
+      );
+
+    charPageData.class_item_loot_id =
+      selectedLootId;
+  }
+
+  const hidden =
+    document.getElementById(
+      `${prefix}-class-item`
+    );
+
+  if (hidden) {
+    hidden.value =
+      selectedLootId || '';
+  }
+
+  container.innerHTML =
+    options.map(option => {
+      const loot =
+        (lootRows || []).find(
+          l =>
+            Number(l.id) ===
+            Number(option.loot_id)
+        );
+
+      const name =
+        loot?.name ||
+        option.class_items ||
+        'Class Item';
+
+      const selected =
+        Number(selectedLootId) ===
+        Number(option.loot_id);
+
+      return `
+        <button
+          type="button"
+          class="
+            picker-trigger
+            ${selected ? 'has-value' : ''}
+          "
+          style="
+            width:100%;
+            margin-bottom:0.6rem;
+            ${
+              selected
+                ? 'border-color:var(--gold);background:rgba(201,149,58,0.08);'
+                : ''
+            }
+          "
+          onclick="selectClassItem(
+            '${prefix}',
+            ${option.loot_id},
+            '${String(name)
+              .replace(/\\/g, '\\\\')
+              .replace(/'/g, "\\'")}'
+          )"
+        >
+          <span>
+            ${
+              selected
+                ? '✓ '
+                : ''
+            }${name}
+          </span>
+
+          <span class="pt-arrow">
+            ${
+              selected
+                ? 'Selected'
+                : 'Choose'
+            }
+          </span>
+        </button>
+      `;
+    }).join('');
 }
 
+
+async function getCharacterClassItemLootId(
+  characterId
+) {
+  const {
+    data: classLoot,
+    error: lootError
+  } = await sb
+    .from('loot')
+    .select('id')
+    .eq('category', 'class_item');
+
+  if (lootError) {
+    console.error(
+      'CLASS ITEM LOOKUP ERROR:',
+      lootError
+    );
+
+    return null;
+  }
+
+  const classLootIds =
+    (classLoot || []).map(
+      r => r.id
+    );
+
+  if (classLootIds.length === 0) {
+    return null;
+  }
+
+  const {
+    data: owned,
+    error: ownedError
+  } = await sb
+    .from('character_items')
+    .select('item_id')
+    .eq('character_id', characterId)
+    .eq('item_type', 'loot')
+    .in('item_id', classLootIds)
+    .limit(1);
+
+  if (ownedError) {
+    console.error(
+      'CHARACTER CLASS ITEM ERROR:',
+      ownedError
+    );
+
+    return null;
+  }
+
+  return owned?.[0]?.item_id || null;
+}
+
+
+function selectClassItem(
+  prefix,
+  lootId,
+  itemName
+) {
+  const hidden =
+    document.getElementById(
+      `${prefix}-class-item`
+    );
+
+  if (hidden) {
+    hidden.value = lootId;
+  }
+
+  if (prefix === 'w') {
+    wizardData.class_item_loot_id =
+      Number(lootId);
+
+    wizardData.class_item_name =
+      itemName;
+
+    loadClassItemOptions(
+      'w',
+      wizardData.class
+    );
+
+    return;
+  }
+
+  if (prefix === 'b') {
+    charPageData.class_item_loot_id =
+      Number(lootId);
+
+    loadClassItemOptions(
+      'b',
+      v('b-class'),
+      charPageId
+    );
+  }
+}
+
+
+async function syncCharacterClassItem(
+  characterId,
+  selectedLootId
+) {
+  if (
+    !characterId ||
+    !selectedLootId
+  ) {
+    return true;
+  }
+
+  const {
+    data: classLoot,
+    error: lootError
+  } = await sb
+    .from('loot')
+    .select('id')
+    .eq('category', 'class_item');
+
+  if (lootError) {
+    toast(
+      'Could not identify class items: ' +
+      lootError.message,
+      'error'
+    );
+
+    return false;
+  }
+
+  const classLootIds =
+    (classLoot || []).map(
+      r => r.id
+    );
+
+  if (classLootIds.length > 0) {
+    const {
+      error: deleteError
+    } = await sb
+      .from('character_items')
+      .delete()
+      .eq('character_id', characterId)
+      .eq('item_type', 'loot')
+      .in('item_id', classLootIds);
+
+    if (deleteError) {
+      toast(
+        'Could not replace class item: ' +
+        deleteError.message,
+        'error'
+      );
+
+      return false;
+    }
+  }
+
+  const {
+    error: insertError
+  } = await sb
+    .from('character_items')
+    .insert({
+      character_id: characterId,
+      item_type: 'loot',
+      item_id: Number(
+        selectedLootId
+      ),
+      quantity: 1,
+      is_equipped: false,
+      equipment_slot: null
+    });
+
+  if (insertError) {
+    toast(
+      'Class item save failed: ' +
+      insertError.message,
+      'error'
+    );
+
+    return false;
+  }
+
+  return true;
+}
 /* ═══════════════════════════════════════════════════════
    WIZARD STEP 2B — DOMAIN CARDS
 ════════════════════════════════════════════════════════ */
@@ -10140,75 +11532,238 @@ function wizardPrev() {
 async function saveWizardProgress() {
   const payload = {
     owner_id: currentUser.id,
-    name: wizardData.name || 'Unnamed Hero',
-    pronouns: wizardData.pronouns,
-    level: wizardData.level||1,
-    class: wizardData.class, subclass: wizardData.subclass,
-    agility: wizardData.agility||0, strength: wizardData.strength||0,
-    finesse: wizardData.finesse||0, instinct: wizardData.instinct||0,
-    presence: wizardData.presence||0, knowledge: wizardData.knowledge||0,
-    evasion: wizardData.evasion||10, max_hp: wizardData.max_hp||6,
-    current_hp: wizardData.current_hp||6, max_stress: wizardData.max_stress||6,
-    current_stress: 0, max_armor: wizardData.max_armor||3,
-    current_armor: 0, max_hope: wizardData.max_hope||6, current_hope: wizardData.max_hope||6,
-    minor_threshold: wizardData.minor_threshold||5,
-    major_threshold: wizardData.major_threshold||10,
-    severe_threshold: wizardData.severe_threshold||15,
-    weapon_primary: wizardData.weapon_primary, weapon_secondary: wizardData.weapon_secondary,
-    armor_name: wizardData.armor_name, inventory: wizardData.inventory,
-    ancestry: wizardData.ancestry, community: wizardData.community,
-    experience_1_name: wizardData.experience_1_name, experience_1_bonus: wizardData.experience_1_bonus,
-    experience_2_name: wizardData.experience_2_name, experience_2_bonus: wizardData.experience_2_bonus,
-    updated_at: new Date().toISOString()
+
+    name:
+      wizardData.name ||
+      'Unnamed Hero',
+
+    pronouns:
+      wizardData.pronouns,
+
+    level:
+      wizardData.level || 1,
+
+    class:
+      wizardData.class,
+
+    subclass:
+      wizardData.subclass,
+
+    agility:
+      wizardData.agility || 0,
+
+    strength:
+      wizardData.strength || 0,
+
+    finesse:
+      wizardData.finesse || 0,
+
+    instinct:
+      wizardData.instinct || 0,
+
+    presence:
+      wizardData.presence || 0,
+
+    knowledge:
+      wizardData.knowledge || 0,
+
+    evasion:
+      wizardData.evasion || 10,
+
+    max_hp:
+      wizardData.max_hp || 6,
+
+    current_hp:
+      wizardData.current_hp || 6,
+
+    max_stress:
+      wizardData.max_stress || 6,
+
+    current_stress: 0,
+
+    max_armor:
+      wizardData.max_armor || 3,
+
+    current_armor: 0,
+
+    max_hope:
+      wizardData.max_hope || 6,
+
+    current_hope:
+      wizardData.max_hope || 6,
+
+    minor_threshold:
+      wizardData.minor_threshold || 5,
+
+    major_threshold:
+      wizardData.major_threshold || 10,
+
+    severe_threshold:
+      wizardData.severe_threshold || 15,
+
+    weapon_primary:
+      wizardData.weapon_primary,
+
+    weapon_secondary:
+      wizardData.weapon_secondary,
+
+    armor_name:
+      wizardData.armor_name,
+
+    inventory:
+      wizardData.inventory,
+
+    ancestry:
+      wizardData.ancestry,
+
+    community:
+      wizardData.community,
+
+    experience_1_name:
+      wizardData.experience_1_name,
+
+    experience_1_bonus:
+      wizardData.experience_1_bonus,
+
+    experience_2_name:
+      wizardData.experience_2_name,
+
+    experience_2_bonus:
+      wizardData.experience_2_bonus,
+
+    updated_at:
+      new Date().toISOString()
   };
-  let charId = wizardCharId;
+
+  let charId =
+    wizardCharId;
+
   if (charId) {
-    const { error } = await sb.from('characters').update(payload).eq('id', charId);
-    if (error) { toast('Auto-save failed: ' + error.message, 'error'); return; }
+    const { error } = await sb
+      .from('characters')
+      .update(payload)
+      .eq('id', charId);
+
+    if (error) {
+      toast(
+        'Auto-save failed: ' +
+        error.message,
+        'error'
+      );
+
+      return false;
+    }
   } else {
-    const { data, error } = await sb.from('characters').insert(payload).select().single();
-    if (error) { toast('Save failed: ' + error.message, 'error'); return; }
-    charId = data.id; wizardCharId = data.id; wizardData.id = data.id;
+    const {
+      data,
+      error
+    } = await sb
+      .from('characters')
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      toast(
+        'Save failed: ' +
+        error.message,
+        'error'
+      );
+
+      return false;
+    }
+
+    charId = data.id;
+    wizardCharId = data.id;
+    wizardData.id = data.id;
   }
-    // save domain cards if any selected
-  if (wizardData.selectedDomainCards && wizardData.selectedDomainCards.length > 0 && charId) {
-    await sb.from('character_domain_cards')
+
+  // Save starting domain cards.
+  if (
+    wizardData.selectedDomainCards &&
+    wizardData.selectedDomainCards.length >
+      0 &&
+    charId
+  ) {
+    await sb
+      .from('character_domain_cards')
       .delete()
-      .eq('character_id', charId)
-      .eq('acquired_at_level', wizardData.level || 1);
+      .eq(
+        'character_id',
+        charId
+      )
+      .eq(
+        'acquired_at_level',
+        wizardData.level || 1
+      );
 
-    const cardRows = wizardData.selectedDomainCards.map(c => ({
-      character_id: charId,
-      domain_card_id: c.id,
-      location: 'loadout',
-      acquired_at_level: wizardData.level || 1
-    }));
+    const cardRows =
+      wizardData.selectedDomainCards.map(
+        c => ({
+          character_id: charId,
+          domain_card_id: c.id,
+          location: 'loadout',
+          acquired_at_level:
+            wizardData.level || 1
+        })
+      );
 
-    const { error: cardError } = await sb
+    const {
+      error: cardError
+    } = await sb
       .from('character_domain_cards')
       .insert(cardRows);
 
     if (cardError) {
-      toast('Domain cards save failed: ' + cardError.message, 'error');
+      toast(
+        'Domain cards save failed: ' +
+        cardError.message,
+        'error'
+      );
     }
   }
 
-const weaponsSaved = await syncCharacterWeaponsToInventory(
-  charId,
-  wizardData.weapon_primary,
-  wizardData.weapon_secondary
-);
+  const weaponsSaved =
+    await syncCharacterWeaponsToInventory(
+      charId,
+      wizardData.weapon_primary,
+      wizardData.weapon_secondary
+    );
 
-if (!weaponsSaved) return;
+  if (!weaponsSaved) {
+    return false;
+  }
 
-const armorSaved = await syncCharacterArmorToInventory(
-  charId,
-  wizardData.armor_name
-);
+  const armorSaved =
+    await syncCharacterArmorToInventory(
+      charId,
+      wizardData.armor_name
+    );
 
-if (!armorSaved) return;
+  if (!armorSaved) {
+    return false;
+  }
 
-toast('Progress saved', 'success');
+  if (
+    wizardData.class_item_loot_id
+  ) {
+    const classItemSaved =
+      await syncCharacterClassItem(
+        charId,
+        wizardData.class_item_loot_id
+      );
+
+    if (!classItemSaved) {
+      return false;
+    }
+  }
+
+  toast(
+    'Progress saved',
+    'success'
+  );
+
+  return true;
 }
 async function finalizeCharacter() {
   await saveWizardProgress();
@@ -11902,47 +13457,253 @@ function lsPrefix(dropId) {
 }
 
 function selectClass(row, dropId) {
-  const p = lsPrefix(dropId||'');
+  const p =
+    lsPrefix(dropId || '');
+
   currentClassId = row.id;
-  const input = document.getElementById(`${p}-class`) || document.getElementById('s-class');
-  if (input) input.value = row.name;
-  closeDrop(dropId || 'class-drop');
-  // clear subclass input and reset its trigger button label
-  const subInput = document.getElementById(`${p}-subclass`) || document.getElementById('s-subclass');
+
+  const input =
+    document.getElementById(
+      `${p}-class`
+    ) ||
+    document.getElementById(
+      's-class'
+    );
+
+  if (input) {
+    input.value = row.name;
+  }
+
+  closeDrop(
+    dropId || 'class-drop'
+  );
+
+  // Clear subclass when class changes.
+  const subInput =
+    document.getElementById(
+      `${p}-subclass`
+    ) ||
+    document.getElementById(
+      's-subclass'
+    );
+
   if (subInput) {
     subInput.value = '';
-    // reset picker trigger button if present
-    const subBtn = subInput.previousElementSibling;
-    if (subBtn && subBtn.classList.contains('picker-trigger')) {
-      subBtn.querySelector('span:first-child').textContent = 'Browse subclasses…';
-      subBtn.classList.remove('has-value');
+
+    const subBtn =
+      subInput.previousElementSibling;
+
+    if (
+      subBtn &&
+      subBtn.classList.contains(
+        'picker-trigger'
+      )
+    ) {
+      const label =
+        subBtn.querySelector(
+          'span:first-child'
+        );
+
+      if (label) {
+        label.textContent =
+          'Browse subclasses…';
+      }
+
+      subBtn.classList.remove(
+        'has-value'
+      );
     }
   }
+
   if (row.starting_evasion) {
-    const el = document.getElementById('s-evasion'); if(el) el.value = row.starting_evasion;
-    if (typeof wizardData !== 'undefined') wizardData.evasion = row.starting_evasion;
-    if (typeof charPageData !== 'undefined' && charPageData) charPageData.evasion = row.starting_evasion;
+    const el =
+      document.getElementById(
+        's-evasion'
+      );
+
+    if (el) {
+      el.value =
+        row.starting_evasion;
+    }
+
+    if (
+      typeof wizardData !==
+      'undefined'
+    ) {
+      wizardData.evasion =
+        row.starting_evasion;
+    }
+
+    if (
+      typeof charPageData !==
+        'undefined' &&
+      charPageData
+    ) {
+      charPageData.evasion =
+        row.starting_evasion;
+    }
   }
+
   if (row.starting_hit_points) {
-    const el = document.getElementById('s-max-hp');
-    if(el) { el.value = row.starting_hit_points; rebuildPips('hp', row.starting_hit_points, row.starting_hit_points); }
-    const cur = document.getElementById('s-cur-hp'); if(cur) cur.value = row.starting_hit_points;
-    if (typeof wizardData !== 'undefined') { wizardData.max_hp = row.starting_hit_points; wizardData.current_hp = row.starting_hit_points; }
-    if (typeof charPageData !== 'undefined' && charPageData) { charPageData.max_hp = row.starting_hit_points; charPageData.current_hp = row.starting_hit_points; }
+    const el =
+      document.getElementById(
+        's-max-hp'
+      );
+
+    if (el) {
+      el.value =
+        row.starting_hit_points;
+
+      rebuildPips(
+        'hp',
+        row.starting_hit_points,
+        row.starting_hit_points
+      );
+    }
+
+    const cur =
+      document.getElementById(
+        's-cur-hp'
+      );
+
+    if (cur) {
+      cur.value =
+        row.starting_hit_points;
+    }
+
+    if (
+      typeof wizardData !==
+      'undefined'
+    ) {
+      wizardData.max_hp =
+        row.starting_hit_points;
+
+      wizardData.current_hp =
+        row.starting_hit_points;
+    }
+
+    if (
+      typeof charPageData !==
+        'undefined' &&
+      charPageData
+    ) {
+      charPageData.max_hp =
+        row.starting_hit_points;
+
+      charPageData.current_hp =
+        row.starting_hit_points;
+    }
   }
-  const infoId = dropId ? dropId.replace('-drop','-info') : 'class-info';
-  const info = document.getElementById(infoId);
+
+  const infoId =
+    dropId
+      ? dropId.replace(
+          '-drop',
+          '-info'
+        )
+      : 'class-info';
+
+  const info =
+    document.getElementById(
+      infoId
+    );
+
   if (info) {
     info.style.display = 'block';
-    info.innerHTML = `<strong>${row.name}</strong>${row.description ? ' — ' + row.description.slice(0,120) + (row.description.length>120?'…':'') : ''}
-      ${row.starting_hit_points ? `<br><span style="color:var(--emerald)">Starting HP: ${row.starting_hit_points}</span>` : ''}
-      ${row.starting_evasion ? ` · <span style="color:var(--sapphire)">Evasion: ${row.starting_evasion}</span>` : ''}
-      ${row.class_items ? `<br>Class Items: ${row.class_items}` : ''}`;
-  }
-  if (typeof wizardData !== 'undefined') wizardData.class = row.name;
-  if (typeof charPageData !== 'undefined' && charPageData) charPageData.class = row.name;
-}
 
+    info.innerHTML = `
+      <strong>${row.name}</strong>
+
+      ${
+        row.description
+          ? ' — ' +
+            row.description.slice(
+              0,
+              120
+            ) +
+            (
+              row.description.length >
+              120
+                ? '…'
+                : ''
+            )
+          : ''
+      }
+
+      ${
+        row.starting_hit_points
+          ? `
+            <br>
+            <span style="color:var(--emerald)">
+              Starting HP:
+              ${row.starting_hit_points}
+            </span>
+          `
+          : ''
+      }
+
+      ${
+        row.starting_evasion
+          ? `
+            ·
+            <span style="color:var(--sapphire)">
+              Evasion:
+              ${row.starting_evasion}
+            </span>
+          `
+          : ''
+      }
+    `;
+  }
+
+  if (
+    typeof wizardData !==
+    'undefined'
+  ) {
+    wizardData.class =
+      row.name;
+
+    wizardData.subclass = '';
+
+    // New class means the previous
+    // class item is no longer valid.
+    wizardData.class_item_loot_id =
+      null;
+
+    wizardData.class_item_name =
+      '';
+  }
+
+  if (
+    typeof charPageData !==
+      'undefined' &&
+    charPageData
+  ) {
+    charPageData.class =
+      row.name;
+
+    charPageData.subclass = '';
+
+    if (p === 'b') {
+      charPageData.class_item_loot_id =
+        null;
+    }
+  }
+
+  if (p === 'w') {
+    loadClassItemOptions(
+      'w',
+      row.name
+    );
+  }
+
+  if (p === 'b') {
+    loadClassItemOptions(
+      'b',
+      row.name
+    );
+  }
+}
 function selectSubclass(row, dropId) {
   const p = lsPrefix(dropId||'');
   const input = document.getElementById(`${p}-subclass`) || document.getElementById('s-subclass');

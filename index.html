@@ -876,44 +876,76 @@ select option { background: var(--panel); }
   color: var(--text);
   line-height: 1.5;
 }
-  .gold-handful-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+ /* ── Gold Tracker ── */
 
+.gold-tracker-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+
+  padding: 0.85rem 1rem;
   margin-bottom: 1.25rem;
-  padding: 0.7rem 0.85rem;
 
   background: rgba(14,11,20,0.35);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+
+  position: relative;
 }
 
-.gold-sack-grid {
+/* Hide the old 10 → 1 elements */
+.gold-conversion-arrow {
+  display: none;
+}
+
+.gold-denomination {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.gold-denomination-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-light);
+}
+
+.gold-slot-row {
   display: grid;
-  grid-template-columns: repeat(7, 28px);
-  gap: 6px;
+  grid-template-columns: repeat(5, 30px);
+  gap: 5px;
 }
 
-.gold-sack {
-  width: 28px;
-  height: 28px;
+
+/* Individual tracker pieces */
+
+.gold-slot {
+  width: 30px;
+  height: 30px;
 
   display: flex;
   align-items: center;
   justify-content: center;
 
   padding: 0;
-  border: none;
-  background: transparent;
+
+  border: none !important;
+  outline: none !important;
+
+  background: transparent !important;
 
   cursor: pointer;
 
   font-size: 22px;
   line-height: 1;
 
-  opacity: 0.28;
+  opacity: 0.25;
   filter: grayscale(1);
+
+  position: relative;
 
   transition:
     opacity 0.15s,
@@ -921,20 +953,118 @@ select option { background: var(--panel); }
     transform 0.15s;
 }
 
-.gold-sack.on {
+.gold-slot:hover {
+  opacity: 0.7;
+  filter: none;
+  transform: translateY(-2px);
+}
+
+.gold-slot.on {
   opacity: 1;
   filter: none;
 }
 
-.gold-sack:hover {
-  transform: translateY(-2px);
+.gold-slot:focus,
+.gold-slot:active {
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
-.gold-handful-count {
-  font-family: 'Cinzel', serif;
+
+/* Chest */
+
+.gold-chest-section .gold-slot-row {
+  display: block;
+}
+
+.gold-chest-button {
+  width: 42px;
+  height: 34px;
+}
+
+.treasure-chest-icon {
+  position: relative;
+
+  display: block;
+
+  width: 34px;
+  height: 20px;
+
+  margin-top: 6px;
+
+  background: #754719;
+  border: 2px solid #3c2411;
+
+  border-radius: 2px 2px 5px 5px;
+}
+
+/* curved chest lid */
+.treasure-chest-icon::before {
+  content: '';
+
+  position: absolute;
+
+  left: -2px;
+  top: -10px;
+
+  width: 34px;
+  height: 12px;
+
+  background: #9b6224;
+
+  border: 2px solid #3c2411;
+  border-radius: 14px 14px 2px 2px;
+}
+
+/* gold lock */
+.treasure-chest-icon::after {
+  content: '';
+
+  position: absolute;
+
+  left: 50%;
+  top: 3px;
+
+  width: 7px;
+  height: 9px;
+
+  transform: translateX(-50%);
+
+  background: var(--gold-light);
+  border: 1px solid #3c2411;
+
+  border-radius: 1px;
+}
+
+.gold-slot:not(.on) .treasure-chest-icon {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+.gold-slot.on .treasure-chest-icon {
+  opacity: 1;
+  filter: none;
+
+  box-shadow:
+    0 0 10px rgba(201,149,58,0.25);
+}
+
+
+/* Conversion rule underneath */
+
+.gold-tracker-card::after {
+  content: '10 handfuls = 1 bag · 10 bags = 1 chest';
+
+  flex-basis: 100%;
+
+  font-family: 'Crimson Pro', serif;
   font-size: 0.72rem;
-  color: var(--gold-light);
-  white-space: nowrap;
+  font-style: italic;
+
+  color: var(--muted);
+
+  padding-top: 0.25rem;
 }
 
 .inventory-tab-strip {
@@ -7664,7 +7794,9 @@ function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseIn
   const chestGrid =
     document.getElementById('gold-chest-grid');
 
-  if (!handfulGrid || !bagGrid || !chestGrid) return;
+  if (!handfulGrid || !bagGrid || !chestGrid) {
+    return;
+  }
 
   const handfuls =
     Math.max(
@@ -7693,6 +7825,10 @@ function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseIn
       )
     );
 
+
+  // -----------------------------
+  // HANDFULS
+  // -----------------------------
   handfulGrid.innerHTML = '';
 
   for (let i = 0; i < 9; i++) {
@@ -7708,16 +7844,24 @@ function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseIn
     slot.title =
       `${i + 1} Handful${i === 0 ? '' : 's'} of Gold`;
 
-    slot.onclick = () =>
-      setGoldDenomination(
+    slot.onclick = async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      await setGoldDenomination(
         characterId,
         'handful',
         i + 1
       );
+    };
 
     handfulGrid.appendChild(slot);
   }
 
+
+  // -----------------------------
+  // BAGS
+  // -----------------------------
   bagGrid.innerHTML = '';
 
   for (let i = 0; i < 9; i++) {
@@ -7733,16 +7877,24 @@ function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseIn
     slot.title =
       `${i + 1} Bag${i === 0 ? '' : 's'} of Gold`;
 
-    slot.onclick = () =>
-      setGoldDenomination(
+    slot.onclick = async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      await setGoldDenomination(
         characterId,
         'bag',
         i + 1
       );
+    };
 
     bagGrid.appendChild(slot);
   }
 
+
+  // -----------------------------
+  // CHEST
+  // -----------------------------
   chestGrid.innerHTML = '';
 
   const chest = document.createElement('button');
@@ -7750,17 +7902,24 @@ function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseIn
   chest.type = 'button';
 
   chest.className =
-    `gold-slot${chests ? ' on' : ''}`;
+    `gold-slot gold-chest-button${chests ? ' on' : ''}`;
 
-  chest.textContent = '🧰';
+  chest.innerHTML = `
+    <span class="treasure-chest-icon"></span>
+  `;
+
   chest.title = 'Chest of Gold';
 
-  chest.onclick = () =>
-    setGoldDenomination(
+  chest.onclick = async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    await setGoldDenomination(
       characterId,
       'chest',
       1
     );
+  };
 
   chestGrid.appendChild(chest);
 }
@@ -7778,12 +7937,14 @@ function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseIn
   let chests =
     Number(charPageData?.gold_chests) || 0;
 
+
   if (denomination === 'handful') {
     handfuls =
       handfuls === clickedAmount
         ? clickedAmount - 1
         : clickedAmount;
   }
+
 
   if (denomination === 'bag') {
     bags =
@@ -7792,13 +7953,24 @@ function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseIn
         : clickedAmount;
   }
 
+
   if (denomination === 'chest') {
-    chests = chests === 1 ? 0 : 1;
+    chests =
+      chests === 1
+        ? 0
+        : 1;
   }
 
-  handfuls = Math.max(0, Math.min(handfuls, 9));
-  bags = Math.max(0, Math.min(bags, 9));
-  chests = Math.max(0, Math.min(chests, 1));
+
+  handfuls =
+    Math.max(0, Math.min(handfuls, 9));
+
+  bags =
+    Math.max(0, Math.min(bags, 9));
+
+  chests =
+    Math.max(0, Math.min(chests, 1));
+
 
   const { error } = await sb
     .from('characters')
@@ -7810,7 +7982,13 @@ function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseIn
     })
     .eq('id', characterId);
 
+
   if (error) {
+    console.error(
+      'GOLD UPDATE ERROR:',
+      error
+    );
+
     toast(
       'Could not update gold: ' + error.message,
       'error'
@@ -7818,6 +7996,7 @@ function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseIn
 
     return;
   }
+
 
   if (
     charPageData &&
@@ -7827,6 +8006,7 @@ function rebuildPips(kind, max, cur) { buildPips(kind, parseInt(max)||1, parseIn
     charPageData.gold_bags = bags;
     charPageData.gold_chests = chests;
   }
+
 
   renderGoldTracker(characterId);
 }

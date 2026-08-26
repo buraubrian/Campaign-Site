@@ -9119,19 +9119,26 @@ function togglePip(kind, idx, max) {
 }
  async function saveChangesAndGoHome() {
   const builderOpen =
-    document.getElementById('char-page-panel-builder')?.classList.contains('active');
+    document
+      .getElementById('char-page-panel-builder')
+      ?.classList.contains('active');
 
   if (builderOpen) {
-    const ok = await ;
-    if (ok === false) return;
+    const ok = await saveBuilderChanges();
+
+    if (ok === false) {
+      return;
+    }
   } else {
     const ok = await saveSheetInline();
-    if (ok === false) return;
+
+    if (ok === false) {
+      return;
+    }
   }
 
   goHome();
-} 
-
+}
 async function saveSheetInline(charId) {
   const sheetId = document.getElementById('s-char-id')?.value;
 

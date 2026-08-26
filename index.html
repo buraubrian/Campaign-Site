@@ -2859,12 +2859,9 @@ async function showItemHover(anchor, itemType, itemId) {
       box.innerHTML = `
         <div class="item-hover-title">${item.name}</div>
 
-        <div class="item-hover-subtitle">
-          ${[
-            item.category,
-            item.tier ? `Tier ${item.tier}` : null
-          ].filter(Boolean).join(' · ')}
-        </div>
+       <div class="item-hover-subtitle">
+  ${item.category || 'Loot'}
+</div>
 
         ${
           item.description
@@ -4933,16 +4930,41 @@ async function loadCharacterEquipment(characterId) {
   );
 }
 
-  if (lootItems.length) {
-    const { data: loot } = await sb
-      .from('loot')
-      .select('id,name,description,tier,category')
-      .in('id', lootItems.map(i => i.item_id));
+if (lootItems.length) {
+  const { data: loot, error: lootError } = await sb
+    .from('loot')
+    .select(`
+      id,
+      name,
+      category,
+      description,
+      requires_roll,
+      roll_type,
+      roll_prompt,
+      effect_prompt,
+      persistent_effect,
+      effect_duration,
+      activation_type
+    `)
+    .in(
+      'id',
+      lootItems.map(i => i.item_id)
+    );
 
-    lootById = Object.fromEntries(
-      (loot || []).map(l => [l.id, l])
+  if (lootError) {
+    console.error(
+      'LOOT INVENTORY LOAD ERROR:',
+      lootError
     );
   }
+
+  lootById = Object.fromEntries(
+    (loot || []).map(l => [
+      l.id,
+      l
+    ])
+  );
+}
 
   const equippedItems = allItems.filter(i => i.is_equipped);
 
@@ -5195,12 +5217,12 @@ async function loadCharacterEquipment(characterId) {
               ${loot.name}
             </div>
 
-            <div class="equipment-compact-meta">
-              ${[
-                loot.category,
-                loot.tier ? `Tier ${loot.tier}` : null
-              ].filter(Boolean).join(' · ')}
-            </div>
+           <div class="equipment-compact-meta">
+  ${loot.category || 'Loot'}
+  ${item.quantity > 1
+    ? ` · Qty ${item.quantity}`
+    : ''}
+</div>
           </div>
 
           <div style="display:flex;gap:0.35rem;flex-wrap:wrap">

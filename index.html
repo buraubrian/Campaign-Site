@@ -2746,43 +2746,104 @@ async function showItemHover(anchor, itemType, itemId) {
       return;
     }
 
-    if (itemType === 'consumable') {
-      const { data: item, error } = await sb
-        .from('consumables')
-        .select('*')
-        .eq('id', itemId)
-        .single();
+  if (itemType === 'consumable') {
+  const { data: item, error } = await sb
+    .from('consumables')
+    .select(`
+      id,
+      name,
+      type,
+      description,
+      requires_roll,
+      roll_type,
+      roll_prompt,
+      effect_prompt,
+      persistent_effect,
+      effect_duration
+    `)
+    .eq('id', itemId)
+    .single();
 
-      if (error || !item) {
-        throw error || new Error('Consumable not found');
-      }
+  if (error || !item) {
+    throw error || new Error('Consumable not found');
+  }
 
-      box.innerHTML = `
-        <div class="item-hover-title">${item.name}</div>
+  box.innerHTML = `
+    <div class="item-hover-title">
+      ${item.name}
+    </div>
 
-        <div class="item-hover-subtitle">
-          ${item.category || 'Consumable'}
-        </div>
+    <div class="item-hover-subtitle">
+      ${item.type || 'Consumable'}
+    </div>
 
-        ${
-          item.effect
-            ? `
-              <div class="item-hover-section">
-                <div class="item-hover-section-title">
-                  Effect
-                </div>
+    ${
+      item.description
+        ? `
+          <div class="item-hover-section">
+            <div class="item-hover-section-title">
+              Description
+            </div>
 
-                <div class="item-hover-text">
-                  ${item.effect}
-                </div>
-              </div>
-            `
-            : ''
-        }
-      `;
-
-      return;
+            <div class="item-hover-text">
+              ${item.description}
+            </div>
+          </div>
+        `
+        : ''
     }
+
+    ${
+      item.effect_prompt
+        ? `
+          <div class="item-hover-section">
+            <div class="item-hover-section-title">
+              Effect
+            </div>
+
+            <div class="item-hover-text">
+              ${item.effect_prompt}
+            </div>
+          </div>
+        `
+        : ''
+    }
+
+    ${
+      item.requires_roll
+        ? `
+          <div class="item-hover-section">
+            <div class="item-hover-section-title">
+              Roll
+            </div>
+
+            <div class="item-hover-text">
+              ${item.roll_prompt || item.roll_type || 'Roll required'}
+            </div>
+          </div>
+        `
+        : ''
+    }
+
+    ${
+      item.persistent_effect
+        ? `
+          <div class="item-hover-section">
+            <div class="item-hover-section-title">
+              Duration
+            </div>
+
+            <div class="item-hover-text">
+              ${formatConsumableDuration(item.effect_duration)}
+            </div>
+          </div>
+        `
+        : ''
+    }
+  `;
+
+  return;
+}
 
     if (itemType === 'loot') {
       const { data: item, error } = await sb
@@ -2836,6 +2897,26 @@ async function showItemHover(anchor, itemType, itemId) {
       </div>
     `;
   }
+}
+  function formatConsumableDuration(duration) {
+  const labels = {
+    next_roll: 'Until your next roll',
+    next_damage_roll: 'Until your next damage roll',
+    next_rest: 'Until your next rest',
+    next_short_rest: 'Until your next short rest',
+    next_long_rest: 'Until your next long rest',
+    next_successful_attack: 'Until your next successful attack',
+    end_of_scene: 'Until the end of the scene',
+    minutes_equal_level: 'For a number of minutes equal to your level',
+    minutes_equal_instinct: 'For a number of minutes equal to your Instinct',
+    next_rest_or_manual: 'Until your next rest or you end the effect',
+    until_triggered: 'Until the effect is triggered',
+    until_target_marks_hp: 'Until the target marks HP',
+    next_long_rest_or_critical: 'Until your next long rest or the critical effect triggers',
+    manual: 'Until manually ended'
+  };
+
+  return labels[duration] || duration || '';
 }
  async function loadCalculatedArmor(characterId) {
   if (!characterId) return;
@@ -4829,16 +4910,28 @@ async function loadCharacterEquipment(characterId) {
     );
   }
 
-  if (consumableItems.length) {
-    const { data: consumables } = await sb
-      .from('consumables')
-      .select('id,name,effect,category')
-      .in('id', consumableItems.map(i => i.item_id));
+ if (consumableItems.length) {
+  const { data: consumables } = await sb
+    .from('consumables')
+    .select(`
+      id,
+      name,
+      type,
+      description,
+      requires_roll,
+      roll_type,
+      roll_prompt,
+      effect_prompt,
+      persistent_effect,
+      effect_duration,
+      max_quantity
+    `)
+    .in('id', consumableItems.map(i => i.item_id));
 
-    consumablesById = Object.fromEntries(
-      (consumables || []).map(c => [c.id, c])
-    );
-  }
+  consumablesById = Object.fromEntries(
+    (consumables || []).map(c => [c.id, c])
+  );
+}
 
   if (lootItems.length) {
     const { data: loot } = await sb
@@ -5059,8 +5152,8 @@ async function loadCharacterEquipment(characterId) {
             </div>
 
             <div class="equipment-compact-meta">
-              ${consumable.category || 'Consumable'}
-            </div>
+                ${consumable.type || 'Consumable'}
+           </div>
           </div>
 
           <div style="display:flex;gap:0.35rem;flex-wrap:wrap">
@@ -5636,7 +5729,11 @@ async function refreshCalculatedStats(characterId) {
 
   showEquipmentPickerCategory('weapons', characterId);
 }
-  async function showEquipmentPickerCategory(category, characterId, btn = null) {
+async function showEquipmentPickerCategory(
+  category,
+  characterId,
+  btn = null
+) {
   document
     .querySelectorAll('#picker-body .sheet-tab-chip')
     .forEach(b => b.classList.remove('active'));
@@ -5649,33 +5746,52 @@ async function refreshCalculatedStats(characterId) {
       ?.classList.add('active');
   }
 
-  const el = document.getElementById('equipment-picker-content');
+  const el =
+    document.getElementById('equipment-picker-content');
+
   if (!el) return;
 
-  // Show/hide and build Tier buttons
-  await renderEquipmentTierTabs(category, characterId);
+  await renderEquipmentTierTabs(
+    category,
+    characterId
+  );
 
   if (category === 'armor') {
-    await loadArmorEquipmentPicker(characterId, el);
+    await loadArmorEquipmentPicker(
+      characterId,
+      el
+    );
+
     return;
   }
 
   if (category === 'weapons') {
-    await loadWeaponEquipmentPicker(characterId, el);
+    await loadWeaponEquipmentPicker(
+      characterId,
+      el
+    );
+
     return;
   }
 
-  // Consumables / Loot do not use Tier buttons
-  const label =
-    category === 'consumables'
-      ? 'Consumables'
-      : 'Loot';
+  if (category === 'consumables') {
+    await loadConsumableEquipmentPicker(
+      characterId,
+      el
+    );
 
-  el.innerHTML = `
-    <div class="empty-state">
-      ${label} will appear here once that reference data is imported.
-    </div>
-  `;
+    return;
+  }
+
+  if (category === 'loot') {
+    el.innerHTML = `
+      <div class="empty-state">
+        Loot will appear here once the loot reference data is imported.
+      </div>
+    `;
+
+    return;
+  }
 }
   async function loadWeaponEquipmentPicker(characterId, el) {
   if (!el) return;
@@ -5813,6 +5929,567 @@ async function refreshCalculatedStats(characterId) {
       </div>
     `;
   }).join('');
+}
+  async function loadConsumableEquipmentPicker(
+  characterId,
+  el
+) {
+  if (!el) return;
+
+  el.innerHTML =
+    '<div class="loading">Loading consumables…</div>';
+
+  const { data: consumables, error } = await sb
+    .from('consumables')
+    .select(`
+      id,
+      name,
+      type,
+      description,
+      requires_roll,
+      roll_type,
+      roll_prompt,
+      effect_prompt,
+      persistent_effect,
+      effect_duration,
+      max_quantity
+    `)
+    .order('id');
+
+  if (error) {
+    el.innerHTML = `
+      <div
+        class="empty-state"
+        style="color:var(--ruby)"
+      >
+        Could not load consumables:
+        ${error.message}
+      </div>
+    `;
+
+    return;
+  }
+
+  if (!consumables || consumables.length === 0) {
+    el.innerHTML = `
+      <div class="empty-state">
+        No consumables are available.
+      </div>
+    `;
+
+    return;
+  }
+
+  el.innerHTML = consumables.map(item => `
+    <div
+      class="weapon-card-display"
+      style="
+        padding:1rem;
+        margin-bottom:0.75rem
+      "
+    >
+
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:1rem;
+      ">
+
+        <div style="flex:1">
+
+          <div style="
+            font-family:'Cinzel',serif;
+            color:var(--gold-light);
+            font-size:0.95rem;
+          ">
+            ${item.name}
+          </div>
+
+          <div style="
+            font-size:0.75rem;
+            color:var(--muted);
+            margin-top:0.2rem;
+          ">
+            ${item.type || 'Consumable'}
+          </div>
+
+          ${
+            item.description
+              ? `
+                <div style="
+                  font-size:0.82rem;
+                  margin-top:0.45rem;
+                  line-height:1.45;
+                ">
+                  ${item.description}
+                </div>
+              `
+              : ''
+          }
+
+          ${
+            item.requires_roll
+              ? `
+                <div style="
+                  font-size:0.76rem;
+                  color:var(--gold);
+                  margin-top:0.4rem;
+                ">
+                  Roll:
+                  ${item.roll_prompt || item.roll_type}
+                </div>
+              `
+              : ''
+          }
+
+          ${
+            item.persistent_effect
+              ? `
+                <div style="
+                  font-size:0.74rem;
+                  color:var(--amethyst);
+                  margin-top:0.35rem;
+                ">
+                  ${formatConsumableDuration(
+                    item.effect_duration
+                  )}
+                </div>
+              `
+              : ''
+          }
+
+        </div>
+
+        <button
+          class="btn btn-gold btn-sm"
+          onclick="addConsumableToCharacterInventory(
+            '${characterId}',
+            ${item.id}
+          )">
+          Add
+        </button>
+
+      </div>
+
+    </div>
+  `).join('');
+}
+  async function addConsumableToCharacterInventory(
+  characterId,
+  consumableId
+) {
+  const { data: consumable, error: consumableError } =
+    await sb
+      .from('consumables')
+      .select('id,name,max_quantity')
+      .eq('id', consumableId)
+      .single();
+
+  if (consumableError || !consumable) {
+    toast(
+      'Could not load consumable',
+      'error'
+    );
+
+    return;
+  }
+
+  const { data: existing, error: existingError } =
+    await sb
+      .from('character_items')
+      .select('id,quantity')
+      .eq('character_id', characterId)
+      .eq('item_type', 'consumable')
+      .eq('item_id', consumableId)
+      .maybeSingle();
+
+  if (existingError) {
+    toast(
+      'Could not check inventory: ' +
+      existingError.message,
+      'error'
+    );
+
+    return;
+  }
+
+  if (existing) {
+    const currentQuantity =
+      Number(existing.quantity) || 1;
+
+    const maxQuantity =
+      Number(consumable.max_quantity) || 5;
+
+    if (currentQuantity >= maxQuantity) {
+      toast(
+        `You can only carry ${maxQuantity} of this consumable.`,
+        'error'
+      );
+
+      return;
+    }
+
+    const { error: updateError } = await sb
+      .from('character_items')
+      .update({
+        quantity: currentQuantity + 1
+      })
+      .eq('id', existing.id);
+
+    if (updateError) {
+      toast(
+        'Could not add consumable: ' +
+        updateError.message,
+        'error'
+      );
+
+      return;
+    }
+  } else {
+    const { error: insertError } = await sb
+      .from('character_items')
+      .insert({
+        character_id: characterId,
+        item_type: 'consumable',
+        item_id: consumableId,
+        quantity: 1,
+        is_equipped: false,
+        equipment_slot: null
+      });
+
+    if (insertError) {
+      toast(
+        'Could not add consumable: ' +
+        insertError.message,
+        'error'
+      );
+
+      return;
+    }
+  }
+
+  toast(
+    `${consumable.name} added!`,
+    'success'
+  );
+
+  await loadCharacterEquipment(characterId);
+}
+ async function useConsumable(
+  characterId,
+  characterItemId,
+  quantity
+) {
+  const { data: inventoryItem, error: itemError } =
+    await sb
+      .from('character_items')
+      .select('id,item_id,quantity')
+      .eq('id', characterItemId)
+      .eq('character_id', characterId)
+      .single();
+
+  if (itemError || !inventoryItem) {
+    toast(
+      'Could not find consumable',
+      'error'
+    );
+
+    return;
+  }
+
+  const { data: consumable, error } = await sb
+    .from('consumables')
+    .select(`
+      id,
+      name,
+      type,
+      description,
+      requires_roll,
+      roll_type,
+      roll_prompt,
+      effect_prompt,
+      persistent_effect,
+      effect_duration
+    `)
+    .eq('id', inventoryItem.item_id)
+    .single();
+
+  if (error || !consumable) {
+    toast(
+      'Could not load consumable',
+      'error'
+    );
+
+    return;
+  }
+
+  openConsumableUsePrompt(
+    characterId,
+    inventoryItem,
+    consumable
+  );
+} 
+  function openConsumableUsePrompt(
+  characterId,
+  inventoryItem,
+  consumable
+) {
+  const existing =
+    document.getElementById(
+      'consumable-use-modal'
+    );
+
+  existing?.remove();
+
+  const modal =
+    document.createElement('div');
+
+  modal.id = 'consumable-use-modal';
+  modal.className = 'modal-overlay open';
+
+  modal.innerHTML = `
+    <div
+      class="modal-box"
+      style="max-width:460px"
+    >
+
+      <button
+        class="modal-close"
+        onclick="
+          document
+            .getElementById(
+              'consumable-use-modal'
+            )
+            ?.remove()
+        "
+      >
+        ✕
+      </button>
+
+      <h3>
+        ${consumable.name}
+      </h3>
+
+      ${
+        consumable.description
+          ? `
+            <div style="
+              font-size:0.95rem;
+              line-height:1.55;
+              margin-bottom:1rem;
+            ">
+              ${consumable.description}
+            </div>
+          `
+          : ''
+      }
+
+      ${
+        consumable.requires_roll
+          ? `
+            <div style="
+              padding:0.75rem;
+              border:1px solid var(--gold);
+              border-radius:var(--radius);
+              margin-bottom:1rem;
+            ">
+
+              <div style="
+                font-family:'Cinzel',serif;
+                color:var(--gold-light);
+                font-size:0.72rem;
+                margin-bottom:0.3rem;
+              ">
+                Roll
+              </div>
+
+              <div>
+                ${
+                  consumable.roll_prompt ||
+                  consumable.roll_type
+                }
+              </div>
+
+            </div>
+          `
+          : ''
+      }
+
+      ${
+        consumable.effect_prompt
+          ? `
+            <div style="
+              color:var(--muted);
+              margin-bottom:1rem;
+            ">
+              ${consumable.effect_prompt}
+            </div>
+          `
+          : ''
+      }
+
+      <div style="
+        display:flex;
+        gap:0.5rem;
+        justify-content:flex-end;
+      ">
+
+        <button
+          class="btn btn-ghost"
+          onclick="
+            document
+              .getElementById(
+                'consumable-use-modal'
+              )
+              ?.remove()
+          "
+        >
+          Cancel
+        </button>
+
+        <button
+          class="btn btn-gold"
+          onclick="
+            confirmConsumableUse(
+              '${characterId}',
+              ${inventoryItem.id},
+              ${consumable.id}
+            )
+          "
+        >
+          Use
+        </button>
+
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+}
+  async function confirmConsumableUse(
+  characterId,
+  characterItemId,
+  consumableId
+) {
+  const { data: consumable, error } = await sb
+    .from('consumables')
+    .select('*')
+    .eq('id', consumableId)
+    .single();
+
+  if (error || !consumable) {
+    toast(
+      'Could not use consumable',
+      'error'
+    );
+
+    return;
+  }
+
+  const { data: inventoryItem } = await sb
+    .from('character_items')
+    .select('id,quantity')
+    .eq('id', characterItemId)
+    .single();
+
+  if (!inventoryItem) return;
+
+  const quantity =
+    Number(inventoryItem.quantity) || 1;
+
+  if (quantity > 1) {
+    await sb
+      .from('character_items')
+      .update({
+        quantity: quantity - 1
+      })
+      .eq('id', characterItemId);
+  } else {
+    await sb
+      .from('character_items')
+      .delete()
+      .eq('id', characterItemId);
+  }
+
+  document
+    .getElementById(
+      'consumable-use-modal'
+    )
+    ?.remove();
+
+  if (consumable.persistent_effect) {
+    showPersistentConsumableEffect(
+      consumable
+    );
+  }
+
+  toast(
+    `${consumable.name} used`,
+    'success'
+  );
+
+  await loadCharacterEquipment(characterId);
+}
+  function showPersistentConsumableEffect(
+  consumable
+) {
+  const id =
+    `active-consumable-${consumable.id}`;
+
+  document.getElementById(id)?.remove();
+
+  const card =
+    document.createElement('div');
+
+  card.id = id;
+  card.className = 'downtime-floating-card';
+
+  card.style.right = '20px';
+  card.style.bottom = '20px';
+
+  card.innerHTML = `
+    <div class="downtime-floating-title">
+      ${consumable.name}
+    </div>
+
+    <div class="downtime-floating-text">
+      ${
+        consumable.effect_prompt ||
+        consumable.description ||
+        ''
+      }
+    </div>
+
+    ${
+      consumable.effect_duration
+        ? `
+          <div class="downtime-floating-hint">
+            ${
+              formatConsumableDuration(
+                consumable.effect_duration
+              )
+            }
+          </div>
+        `
+        : ''
+    }
+
+    <button
+      class="btn btn-ghost btn-sm"
+      style="margin-top:0.75rem"
+      onclick="
+        document
+          .getElementById('${id}')
+          ?.remove()
+      "
+    >
+      End Effect
+    </button>
+  `;
+
+  document.body.appendChild(card);
 }
   async function renderEquipmentTierTabs(category, characterId) {
   const tierEl = document.getElementById('equipment-tier-tabs');

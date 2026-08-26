@@ -10744,118 +10744,40 @@ function wizardStep2HTML() {
 
       <h3>Starting Weapons & Armor</h3>
 
-      <div class="field-row cols-2">
+      <div style="margin-top:0.75rem">
 
-        <div>
-          <label>Primary Weapon</label>
+  <div>
+    <label>Armor</label>
 
-          <button
-            class="picker-trigger${wizardData.weapon_primary ? ' has-value' : ''}"
-            onclick="openPicker(
-              'weapons',
-              'w-wpn1',
-              'Primary Weapon'
-            )"
-          >
-            <span>
-              ${
-                wizardData.weapon_primary ||
-                'Browse weapons…'
-              }
-            </span>
+    <button
+      class="picker-trigger${wizardData.armor_name ? ' has-value' : ''}"
+      onclick="openPicker(
+        'armor',
+        'w-armor',
+        'Armor'
+      )"
+      style="width:100%"
+    >
+      <span>
+        ${
+          wizardData.armor_name ||
+          'Browse armor…'
+        }
+      </span>
 
-            <span class="pt-arrow">▼</span>
-          </button>
+      <span class="pt-arrow">▼</span>
+    </button>
 
-          <input
-            type="hidden"
-            id="w-wpn1"
-            value="${
-              wizardData.weapon_primary || ''
-            }"
-          />
-        </div>
+    <input
+      type="hidden"
+      id="w-armor"
+      value="${
+        wizardData.armor_name || ''
+      }"
+    />
+  </div>
 
-        <div>
-          <label>Secondary Weapon</label>
-
-          <button
-            class="picker-trigger${wizardData.weapon_secondary ? ' has-value' : ''}"
-            onclick="openPicker(
-              'weapons',
-              'w-wpn2',
-              'Secondary Weapon'
-            )"
-          >
-            <span>
-              ${
-                wizardData.weapon_secondary ||
-                'Browse weapons…'
-              }
-            </span>
-
-            <span class="pt-arrow">▼</span>
-          </button>
-
-          <input
-            type="hidden"
-            id="w-wpn2"
-            value="${
-              wizardData.weapon_secondary || ''
-            }"
-          />
-        </div>
-
-      </div>
-
-      <div class="field-row cols-2">
-
-        <div>
-          <label>Armor</label>
-
-          <button
-            class="picker-trigger${wizardData.armor_name ? ' has-value' : ''}"
-            onclick="openPicker(
-              'armor',
-              'w-armor',
-              'Armor'
-            )"
-          >
-            <span>
-              ${
-                wizardData.armor_name ||
-                'Browse armor…'
-              }
-            </span>
-
-            <span class="pt-arrow">▼</span>
-          </button>
-
-          <input
-            type="hidden"
-            id="w-armor"
-            value="${
-              wizardData.armor_name || ''
-            }"
-          />
-        </div>
-
-        <div>
-          <label>
-            Additional Starting Inventory
-          </label>
-
-          <input
-            type="text"
-            id="w-inventory"
-            value="${
-              wizardData.inventory || ''
-            }"
-            placeholder="Other starting supplies…"
-          />
-        </div>
-
-      </div>
+</div>
 
     </div>
   `;
@@ -10885,6 +10807,24 @@ function wizardStep2HTML() {
     return;
   }
 
+  /*
+    IMPORTANT:
+
+    If the user has already clicked a class item,
+    the hidden input is now our current selection.
+
+    Do NOT overwrite that selection by going back
+    to character_items every time the buttons
+    re-render.
+  */
+  const hidden =
+    document.getElementById(
+      `${prefix}-class-item`
+    );
+
+  let selectedLootId =
+    Number(hidden?.value) || null;
+
   container.innerHTML = `
     <div
       class="loading"
@@ -10894,12 +10834,14 @@ function wizardStep2HTML() {
     </div>
   `;
 
-  const { data: classRow, error: classError } =
-    await sb
-      .from('classes')
-      .select('id,name')
-      .ilike('name', className)
-      .single();
+  const {
+    data: classRow,
+    error: classError
+  } = await sb
+    .from('classes')
+    .select('id,name')
+    .ilike('name', className)
+    .single();
 
   if (classError || !classRow) {
     container.innerHTML = `
@@ -10914,7 +10856,8 @@ function wizardStep2HTML() {
     return;
   }
 
-  currentClassId = classRow.id;
+  currentClassId =
+    classRow.id;
 
   const {
     data: options,
@@ -10928,7 +10871,10 @@ function wizardStep2HTML() {
       class_items,
       sort_order
     `)
-    .eq('class_id', classRow.id)
+    .eq(
+      'class_id',
+      classRow.id
+    )
     .order('sort_order');
 
   if (optionError) {
@@ -10950,7 +10896,10 @@ function wizardStep2HTML() {
     return;
   }
 
-  if (!options || options.length === 0) {
+  if (
+    !options ||
+    options.length === 0
+  ) {
     container.innerHTML = `
       <div class="empty-state">
         No class items have been configured
@@ -10962,7 +10911,9 @@ function wizardStep2HTML() {
   }
 
   const lootIds =
-    options.map(o => o.loot_id);
+    options.map(
+      option => option.loot_id
+    );
 
   const {
     data: lootRows,
@@ -10995,18 +10946,35 @@ function wizardStep2HTML() {
     return;
   }
 
-  let selectedLootId = null;
+  /*
+    Character Creation:
 
-  if (prefix === 'w') {
+    The selected item lives in wizardData.
+  */
+  if (
+    prefix === 'w' &&
+    !selectedLootId
+  ) {
     selectedLootId =
       Number(
         wizardData.class_item_loot_id
       ) || null;
   }
 
+  /*
+    Character Builder:
+
+    Only ask the database for the owned
+    class item on the INITIAL load.
+
+    Once the player clicks something,
+    hidden.value contains the new choice
+    and takes priority.
+  */
   if (
     prefix === 'b' &&
-    characterId
+    characterId &&
+    !selectedLootId
   ) {
     selectedLootId =
       await getCharacterClassItemLootId(
@@ -11017,11 +10985,6 @@ function wizardStep2HTML() {
       selectedLootId;
   }
 
-  const hidden =
-    document.getElementById(
-      `${prefix}-class-item`
-    );
-
   if (hidden) {
     hidden.value =
       selectedLootId || '';
@@ -11031,8 +10994,8 @@ function wizardStep2HTML() {
     options.map(option => {
       const loot =
         (lootRows || []).find(
-          l =>
-            Number(l.id) ===
+          row =>
+            Number(row.id) ===
             Number(option.loot_id)
         );
 
@@ -11055,9 +11018,13 @@ function wizardStep2HTML() {
           style="
             width:100%;
             margin-bottom:0.6rem;
+
             ${
               selected
-                ? 'border-color:var(--gold);background:rgba(201,149,58,0.08);'
+                ? `
+                  border-color:var(--gold);
+                  background:rgba(201,149,58,0.08);
+                `
                 : ''
             }
           "
@@ -11074,7 +11041,9 @@ function wizardStep2HTML() {
               selected
                 ? '✓ '
                 : ''
-            }${name}
+            }
+
+            ${name}
           </span>
 
           <span class="pt-arrow">
@@ -11088,8 +11057,6 @@ function wizardStep2HTML() {
       `;
     }).join('');
 }
-
-
 async function getCharacterClassItemLootId(
   characterId
 ) {
@@ -11491,28 +11458,80 @@ function wizardReviewHTML() {
 }
 
 function collectWizardStep() {
-  const step = WIZARD_STEPS[wizardStep].id;
-  if (step === 'getting-started') {
-    wizardData.name = v('w-name'); wizardData.pronouns = v('w-pronouns'); wizardData.level = n('w-level')||1;
+  const step =
+    WIZARD_STEPS[wizardStep].id;
+
+  if (
+    step === 'getting-started'
+  ) {
+    wizardData.name =
+      v('w-name');
+
+    wizardData.pronouns =
+      v('w-pronouns');
+
+    wizardData.level =
+      n('w-level') || 1;
   }
-  if (step === 'class-gear') {
-    wizardData.class = v('w-class'); wizardData.subclass = v('w-subclass');
-    wizardData.weapon_primary = v('w-wpn1'); wizardData.weapon_secondary = v('w-wpn2');
-    wizardData.armor_name = v('w-armor'); wizardData.inventory = v('w-inventory');
+
+  if (
+    step === 'class-gear'
+  ) {
+    wizardData.class =
+      v('w-class');
+
+    wizardData.subclass =
+      v('w-subclass');
+
+    wizardData.weapon_primary =
+      v('w-wpn1');
+
+    wizardData.weapon_secondary =
+      v('w-wpn2');
+
+    wizardData.armor_name =
+      v('w-armor');
+
+    /*
+      Class Item is already stored
+      immediately when selected in:
+
+      wizardData.class_item_loot_id
+    */
   }
-  if (step === 'domain-cards') {
-    // domain cards stored in wizardData.selectedDomainCards (array of card ids)
-    // nothing extra to collect — already stored on selection
+
+  if (
+    step === 'domain-cards'
+  ) {
+    // Already stored when selected.
   }
-  if (step === 'heritage') {
-    wizardData.ancestry = v('w-ancestry'); wizardData.community = v('w-community');
+
+  if (
+    step === 'heritage'
+  ) {
+    wizardData.ancestry =
+      v('w-ancestry');
+
+    wizardData.community =
+      v('w-community');
   }
-  if (step === 'experiences') {
-    wizardData.experience_1_name = v('w-exp1-name'); wizardData.experience_1_bonus = v('w-exp1-bonus')||'+2';
-    wizardData.experience_2_name = v('w-exp2-name'); wizardData.experience_2_bonus = v('w-exp2-bonus')||'+2';
+
+  if (
+    step === 'experiences'
+  ) {
+    wizardData.experience_1_name =
+      v('w-exp1-name');
+
+    wizardData.experience_1_bonus =
+      v('w-exp1-bonus') || '+2';
+
+    wizardData.experience_2_name =
+      v('w-exp2-name');
+
+    wizardData.experience_2_bonus =
+      v('w-exp2-bonus') || '+2';
   }
 }
-
 function previewTraitAssignment() {
   const map = { 'w-trait-2':2, 'w-trait-1a':1, 'w-trait-1b':1, 'w-trait-neg1':-1 };
   const preview = {};

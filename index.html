@@ -1857,23 +1857,23 @@ sb.auth.onAuthStateChange(async (event, session) => {
     return;
   }
 
-  // Normal app startup.
-  if (event === 'INITIAL_SESSION') {
-    if (session) {
-      await initApp(session.user);
-    } else {
-      showNormalLogin();
-    }
-    return;
+ // INITIAL_SESSION
+if (event === 'INITIAL_SESSION') {
+  if (session) {
+    setTimeout(() => initApp(session.user), 0);
+  } else {
+    showNormalLogin();
   }
+  return;
+}
 
-  // Normal login.
-  if (event === 'SIGNED_IN') {
-    if (session) {
-      await initApp(session.user);
-    }
-    return;
+// SIGNED_IN
+if (event === 'SIGNED_IN') {
+  if (session) {
+    setTimeout(() => initApp(session.user), 0);
   }
+  return;
+}
 
   // Normal logout.
   if (event === 'SIGNED_OUT') {
@@ -1881,30 +1881,42 @@ sb.auth.onAuthStateChange(async (event, session) => {
   }
 });
 async function initApp(user) {
+  if (passwordRecoveryMode) return;
+  const { data: profile, error } = await sb
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .maybeSingle();
+  // Recovery may have started while the profile was loading.
+  if (passwordRecoveryMode) return;
 
-  // Never enter the normal app during password recovery.
-  if (passwordRecoveryMode) {
+  // A valid profile is required to enter the app.
+  if (error || !profile) {
+    console.error(
+      error ? 'Profile load failed:' : 'Profile not found:',
+      error || user.id
+    );
+    currentUser = null;
+    currentProfile = null;
+    await sb.auth.signOut();
+    showNormalLogin();
+    const message = document.getElementById('auth-msg');
+    if (message) {
+      message.textContent =
+        error
+          ? 'Unable to verify your profile. Please try again.'
+          : 'Your account does not have an active profile.';
+    }
     return;
   }
   currentUser = user;
-const { data: profile, error } = await sb
-  .from('profiles')
-  .select('*')
-  .eq('id', user.id)
-  .maybeSingle();
-
-if (error) {
-  console.error('Profile load failed:', error);
-}
-
-currentProfile = profile;
-
-  // Recovery may have started while the profile was loading.
-  if (passwordRecoveryMode) {
-    return;
-  }
   currentProfile = profile;
-  document.getElementById('header-username').textContent = profile?.display_name || profile?.username || user.email;
+
+  document.getElementById('header-username').textContent =
+    profile.display_name ||
+    profile.username ||
+    user.email;
+
   showPage('page-app');
   goHome();
 }

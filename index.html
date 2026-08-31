@@ -1887,7 +1887,17 @@ async function initApp(user) {
     return;
   }
   currentUser = user;
-  const { data: profile } = await sb .from('profiles') .select('*') .eq('id', user.id) .single();
+const { data: profile, error } = await sb
+  .from('profiles')
+  .select('*')
+  .eq('id', user.id)
+  .maybeSingle();
+
+if (error) {
+  console.error('Profile load failed:', error);
+}
+
+currentProfile = profile;
 
   // Recovery may have started while the profile was loading.
   if (passwordRecoveryMode) {
